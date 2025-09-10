@@ -16,7 +16,7 @@ function performSearch() {
 
     const keywords = keywordsInput.split(',').map(k => k.trim()).filter(k => k);
     if (!keywords.length) {
-        message.textContent = 'Please enter at least one keyword.';
+        message.textContent = 'Vui lòng nhập ít nhất một từ khóa.';
         message.className = 'mb-4 p-2 rounded bg-red-200 text-red-800';
         clearHighlights(textInput);
         results.innerHTML = '';
@@ -36,15 +36,26 @@ function performSearch() {
     }
 
     if (found) {
-        message.textContent = 'Keywords found!';
+        message.textContent = 'Đã tìm thấy từ khóa!';
         message.className = 'mb-4 p-2 rounded bg-green-200 text-green-800';
         textInput.innerHTML = highlightText(text, keywords, matchCase, wholeWords);
         const chapters = extractChapters(text);
-        results.innerHTML = chapters.map(ch => `<li>${ch}</li>`).join('');
+        results.innerHTML = chapters.length ? chapters.map(ch => `<li>${ch}</li>`).join('') : '<li>Không tìm thấy chương nào.</li>';
     } else {
-        message.textContent = 'No keywords found.';
+        message.textContent = 'Không tìm thấy từ khóa.';
         message.className = 'mb-4 p-2 rounded bg-red-200 text-red-800';
         clearHighlights(textInput);
         results.innerHTML = '';
     }
+}
+
+// Clear text input and results
+function clearContent() {
+    const textInput = document.getElementById('textInput');
+    const message = document.getElementById('message');
+    const results = document.getElementById('results');
+    textInput.textContent = '';
+    message.textContent = '';
+    message.className = 'mb-4 p-2 rounded';
+    results.innerHTML = '';
 }
