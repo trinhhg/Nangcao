@@ -1,7 +1,7 @@
-/* Add custom styles here if Tailwind classes are insufficient */
 #textInput {
     min-height: 400px;
     overflow-y: auto;
+    white-space: pre-wrap; /* Preserves line breaks and formatting */
 }
 
 .highlight-pink { background-color: #ffcccc; }
