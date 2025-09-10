@@ -1,7 +1,7 @@
 #textInput {
     min-height: 400px;
     overflow-y: auto;
-    white-space: pre-wrap; /* Preserves line breaks and formatting */
+    white-space: pre-wrap; /* Giữ định dạng văn bản */
 }
 
 .highlight-pink { background-color: #ffcccc; }
