@@ -1,44 +1,45 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chapter Search</title>
+    <title>Tìm Kiếm Chương</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body class="bg-gray-100 flex h-screen">
     <!-- Settings Panel (Left) -->
     <div class="w-1/4 p-4 bg-white shadow-md">
-        <h2 class="text-xl font-bold mb-4">Settings</h2>
+        <h2 class="text-xl font-bold mb-4">Cài Đặt</h2>
         <div class="mb-4">
             <label class="block mb-2">
-                <input type="checkbox" id="matchCase" class="mr-2"> Match Case
+                <input type="checkbox" id="matchCase" class="mr-2"> Phân Biệt Chữ Hoa/Thường
             </label>
             <label class="block mb-2">
-                <input type="checkbox" id="wholeWords" class="mr-2"> Find Whole Words Only
+                <input type="checkbox" id="wholeWords" class="mr-2"> Chỉ Tìm Từ Hoàn Chỉnh
             </label>
             <label class="block mb-2">
-                Keywords (comma-separated):
-                <input type="text" id="keywords" class="w-full p-2 border rounded" placeholder="Enter keywords">
+                Từ khóa (phân cách bằng dấu phẩy):
+                <input type="text" id="keywords" class="w-full p-2 border rounded" placeholder="Nhập từ khóa">
             </label>
         </div>
         <div class="flex space-x-2">
-            <button id="saveSettings" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Save Settings</button>
-            <button id="search" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">Search</button>
+            <button id="saveSettings" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Lưu Cài Đặt</button>
+            <button id="search" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">Tìm Kiếm</button>
+            <button id="clear" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">Xóa</button>
         </div>
     </div>
 
     <!-- Text Input Panel (Center) -->
     <div class="w-2/4 p-4 bg-white shadow-md">
-        <h2 class="text-xl font-bold mb-4">Chapter Content</h2>
+        <h2 class="text-xl font-bold mb-4">Nội Dung Chương</h2>
         <div id="message" class="mb-4 p-2 rounded"></div>
-        <div id="textInput" contenteditable="true" class="w-full h-5/6 p-4 border rounded bg-gray-50 focus:outline-none"></div>
+        <div id="textInput" contenteditable="true" class="w-full h-5/6 p-4 border rounded bg-gray-50 focus:outline-none whitespace-pre-wrap"></div>
     </div>
 
     <!-- Results Panel (Right) -->
     <div class="w-1/4 p-4 bg-white shadow-md">
-        <h2 class="text-xl font-bold mb-4">Found Chapters</h2>
+        <h2 class="text-xl font-bold mb-4">Các Chương Tìm Thấy</h2>
         <ul id="results" class="list-disc pl-5"></ul>
     </div>
 
