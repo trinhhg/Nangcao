@@ -3,25 +3,29 @@ document.addEventListener('DOMContentLoaded', () => {
     loadSettings();
 
     // Các sự kiện
-    document.getElementById('search').addEventListener('click', performSearch);
-    document.getElementById('clear').addEventListener('click', clearContent);
+    const searchBtn = document.getElementById('search');
+    const clearBtn = document.getElementById('clear');
+    const matchCase = document.getElementById('matchCase');
+    const wholeWords = document.getElementById('wholeWords');
+    const keywords = document.getElementById('keywords');
+    const fontFamily = document.getElementById('fontFamily');
+    const fontSize = document.getElementById('fontSize');
 
-    // Tự động lưu và áp dụng cài đặt khi thay đổi
-    document.getElementById('matchCase').addEventListener('change', () => {
-        saveSettings();
-    });
-    document.getElementById('wholeWords').addEventListener('change', () => {
-        saveSettings();
-    });
-    document.getElementById('keywords').addEventListener('input', () => {
-        saveSettings();
-    });
-    document.getElementById('fontFamily').addEventListener('change', () => {
-        document.getElementById('textInput').style.fontFamily = document.getElementById('fontFamily').value;
-        saveSettings();
-    });
-    document.getElementById('fontSize').addEventListener('change', () => {
-        document.getElementById('textInput').style.fontSize = document.getElementById('fontSize').value;
-        saveSettings();
-    });
+    if (searchBtn) searchBtn.addEventListener('click', performSearch);
+    if (clearBtn) clearBtn.addEventListener('click', clearContent);
+    if (matchCase) matchCase.addEventListener('change', () => saveSettings());
+    if (wholeWords) wholeWords.addEventListener('change', () => saveSettings());
+    if (keywords) keywords.addEventListener('input', () => saveSettings());
+    if (fontFamily) {
+        fontFamily.addEventListener('change', () => {
+            document.getElementById('textInput').style.fontFamily = fontFamily.value;
+            saveSettings();
+        });
+    }
+    if (fontSize) {
+        fontSize.addEventListener('change', () => {
+            document.getElementById('textInput').style.fontSize = fontSize.value;
+            saveSettings();
+        });
+    }
 });
