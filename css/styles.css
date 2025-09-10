@@ -1,0 +1,11 @@
+/* Add custom styles here if Tailwind classes are insufficient */
+#textInput {
+    min-height: 400px;
+    overflow-y: auto;
+}
+
+.highlight-pink { background-color: #ffcccc; }
+.highlight-yellow { background-color: #ffff99; }
+.highlight-blue { background-color: #99ccff; }
+.highlight-green { background-color: #ccffcc; }
+.highlight-orange { background-color: #ffcc99; }
