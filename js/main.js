@@ -5,8 +5,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Event listeners
     document.getElementById('saveSettings').addEventListener('click', () => {
         saveSettings();
-        alert('Settings saved!');
+        alert('Đã lưu cài đặt!');
     });
 
     document.getElementById('search').addEventListener('click', performSearch);
+    document.getElementById('clear').addEventListener('click', clearContent);
 });
