@@ -5,11 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tìm Kiếm Chương</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@yaireo/tagify/dist/tagify.css" rel="stylesheet">
     <link rel="stylesheet" href="index.css">
 </head>
 <body class="bg-gray-100 flex h-screen">
     <!-- Settings Panel (Left) -->
-    <div class="w-1/4 p-4 bg-white shadow-md overflow-y-auto">
+    <div class="w-1/3 p-4 bg-white shadow-md overflow-y-auto">
         <div class="tabs flex mb-4">
             <button class="tab-button active px-3 py-1 bg-gray-200 text-sm rounded mr-2" data-tab="main">Tab Chính</button>
             <button class="tab-button px-3 py-1 bg-gray-200 text-sm rounded" data-tab="settings">Tab Settings</button>
@@ -26,9 +27,8 @@
                     <input type="checkbox" id="wholeWords" class="mr-2"> Chỉ Tìm Từ Hoàn Chỉnh
                 </label>
                 <label class="block mb-2">
-                    Từ khóa (nhập và nhấn Enter hoặc phẩy):
-                    <div id="keywords-container" class="w-full p-2 border rounded flex flex-wrap items-center bg-gray-50 min-h-[40px] cursor-text"></div>
-                    <input type="text" id="keywords-input" class="hidden" placeholder="Nhập từ khóa">
+                    Từ khóa:
+                    <input type="text" id="keywords-input" name="keywords" placeholder="Nhập từ khóa, nhấn Enter..." class="w-full p-2 border rounded bg-gray-50">
                 </label>
             </div>
             <div class="flex space-x-2 mb-4">
@@ -83,15 +83,16 @@
         </div>
     </div>
 
-    <!-- Text Input Panel (Center, Expanded) -->
-    <div class="w-3/4 p-4 bg-white shadow-md relative">
+    <!-- Text Input Panel (Center, Adjusted Width) -->
+    <div class="w-2/3 p-4 bg-white shadow-md relative">
         <h2 class="text-xl font-bold mb-4">Nội Dung Chương</h2>
         <div id="message" class="mb-4 p-2 rounded"></div>
         <textarea id="textInput" class="w-full p-4 border rounded bg-gray-50 focus:outline-none whitespace-pre-wrap resize-none" style="height: 80vh;"></textarea>
-        <div id="highlight-overlay" class="absolute top-0 left-0 w-full h-full p-4 pointer-events-none overflow-auto bg-transparent whitespace-pre-wrap" style="z-index: 1; opacity: 0.8;"></div>
+        <div id="highlight-overlay" class="absolute top-[60px] left-0 w-full h-[calc(80vh+16px)] p-4 pointer-events-none overflow-auto bg-transparent whitespace-pre-wrap" style="z-index: 1; opacity: 0.8;"></div>
     </div>
 
     <div id="notification-container"></div>
+    <script src="https://cdn.jsdelivr.net/npm/@yaireo/tagify/dist/tagify.min.js"></script>
     <script src="index.js"></script>
 </body>
 </html>
