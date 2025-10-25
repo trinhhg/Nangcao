@@ -5,71 +5,93 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tìm Kiếm Chương</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/index.css">
 </head>
 <body class="bg-gray-100 flex h-screen">
     <!-- Settings Panel (Left) -->
     <div class="w-1/4 p-4 bg-white shadow-md overflow-y-auto">
-        <h2 class="text-xl font-bold mb-4">Cài Đặt</h2>
-        <div class="mb-4">
-            <label class="block mb-2">
-                <input type="checkbox" id="matchCase" class="mr-2"> Phân Biệt Chữ Hoa/Thường
-            </label>
-            <label class="block mb-2">
-                <input type="checkbox" id="wholeWords" class="mr-2"> Chỉ Tìm Từ Hoàn Chỉnh
-            </label>
-            <label class="block mb-2">
-                Từ khóa (nhập và nhấn Enter hoặc phẩy):
-                <div id="keywords-container" class="w-full p-2 border rounded flex flex-wrap items-center bg-gray-50 min-h-[40px] cursor-text"></div>
-                <input type="text" id="keywords-input" class="hidden" placeholder="Nhập từ khóa">
-            </label>
+        <div class="tabs flex mb-4">
+            <button class="tab-button active px-3 py-1 bg-gray-200 text-sm rounded mr-2" data-tab="main">Tab Chính</button>
+            <button class="tab-button px-3 py-1 bg-gray-200 text-sm rounded" data-tab="settings">Tab Settings</button>
         </div>
-        <div class="flex space-x-2 mb-4">
-            <button id="search" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">Tìm Kiếm</button>
-            <button id="clear" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">Xóa</button>
+
+        <!-- Tab Main -->
+        <div id="main" class="tab-content active">
+            <h2 class="text-xl font-bold mb-4">Cài Đặt</h2>
+            <div class="mb-4">
+                <label class="block mb-2">
+                    <input type="checkbox" id="matchCase" class="mr-2"> Phân Biệt Chữ Hoa/Thường
+                </label>
+                <label class="block mb-2">
+                    <input type="checkbox" id="wholeWords" class="mr-2"> Chỉ Tìm Từ Hoàn Chỉnh
+                </label>
+                <label class="block mb-2">
+                    Từ khóa (nhập và nhấn Enter hoặc phẩy):
+                    <div id="keywords-container" class="w-full p-2 border rounded flex flex-wrap items-center bg-gray-50 min-h-[40px] cursor-text"></div>
+                    <input type="text" id="keywords-input" class="hidden" placeholder="Nhập từ khóa">
+                </label>
+            </div>
+            <div class="flex space-x-2 mb-4">
+                <button id="search" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">Tìm Kiếm</button>
+                <button id="clear" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">Xóa</button>
+                <button id="replace" class="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600">Replace</button>
+            </div>
+            <div class="mt-4">
+                <label class="block mb-2">
+                    Font Chữ:
+                    <select id="fontFamily" class="w-full p-2 border rounded">
+                        <option value="Arial">Arial</option>
+                        <option value="Times New Roman">Times New Roman</option>
+                        <option value="Courier New">Courier New</option>
+                        <option value="Verdana">Verdana</option>
+                    </select>
+                </label>
+                <label class="block mb-2">
+                    Kích Thước Chữ:
+                    <select id="fontSize" class="w-full p-2 border rounded">
+                        <option value="12px">12px</option>
+                        <option value="14px">14px</option>
+                        <option value="16px">16px</option>
+                        <option value="18px">18px</option>
+                        <option value="20px">20px</option>
+                    </select>
+                </label>
+            </div>
         </div>
-        <!-- Find and Replace Section -->
-        <h3 class="text-lg font-bold mb-2">Find and Replace</h3>
-        <div id="replace-pairs" class="mb-4"></div>
-        <button id="add-pair" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 mb-2">Thêm Cặp</button>
-        <button id="replace" class="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600">Replace</button>
-        <div class="mt-4">
-            <label class="block mb-2">
-                Font Chữ:
-                <select id="fontFamily" class="w-full p-2 border rounded">
-                    <option value="Arial">Arial</option>
-                    <option value="Times New Roman">Times New Roman</option>
-                    <option value="Courier New">Courier New</option>
-                    <option value="Verdana">Verdana</option>
+
+        <!-- Tab Settings -->
+        <div id="settings" class="tab-content">
+            <h2 class="text-xl font-bold mb-4">Cài đặt tìm kiếm và thay thế</h2>
+            <div class="mode-controls">
+                <label for="mode-select" class="mr-2">Chọn chế độ:</label>
+                <select id="mode-select">
+                    <option value="default">Mặc định</option>
                 </select>
-            </label>
-            <label class="block mb-2">
-                Kích Thước Chữ:
-                <select id="fontSize" class="w-full p-2 border rounded">
-                    <option value="12px">12px</option>
-                    <option value="14px">14px</option>
-                    <option value="16px">16px</option>
-                    <option value="18px">18px</option>
-                    <option value="20px">20px</option>
-                </select>
-            </label>
+                <button id="add-mode" class="px-2 py-1 bg-blue-500 text-white rounded text-sm">Thêm chế độ mới</button>
+                <button id="copy-mode" class="px-2 py-1 bg-blue-500 text-white rounded text-sm">Sao Chép Chế Độ</button>
+                <button id="match-case" class="px-2 py-1 bg-gray-500 text-white rounded text-sm">Match Case: Tắt</button>
+                <button id="export-settings" class="px-2 py-1 bg-blue-500 text-white rounded text-sm">Xuất Cài Đặt</button>
+                <button id="import-settings" class="px-2 py-1 bg-blue-500 text-white rounded text-sm">Nhập Cài Đặt</button>
+                <button id="rename-mode" class="px-2 py-1 bg-gray-500 text-white rounded text-sm" style="display: none;">Đổi Tên</button>
+                <button id="delete-mode" class="px-2 py-1 bg-red-500 text-white rounded text-sm" style="display: none;">Xóa Chế Độ</button>
+            </div>
+            <div class="action-buttons mt-2">
+                <button id="add-pair" class="px-4 py-2 bg-blue-500 text-white rounded">Thêm</button>
+                <button id="save-settings" class="px-4 py-2 bg-blue-500 text-white rounded">Lưu cài đặt</button>
+            </div>
+            <div id="punctuation-list" class="mt-4"></div>
         </div>
     </div>
 
-    <!-- Text Input Panel (Center) -->
-    <div class="w-2/4 p-4 bg-white shadow-md relative">
+    <!-- Text Input Panel (Center, Expanded) -->
+    <div class="w-3/4 p-4 bg-white shadow-md relative">
         <h2 class="text-xl font-bold mb-4">Nội Dung Chương</h2>
         <div id="message" class="mb-4 p-2 rounded"></div>
         <textarea id="textInput" class="w-full p-4 border rounded bg-gray-50 focus:outline-none whitespace-pre-wrap resize-none" style="height: 80vh;"></textarea>
         <div id="highlight-overlay" class="absolute top-0 left-0 w-full h-full p-4 pointer-events-none overflow-auto bg-transparent whitespace-pre-wrap" style="z-index: 1; opacity: 0.8;"></div>
     </div>
 
-    <!-- Results Panel (Right) -->
-    <div class="w-1/4 p-4 bg-white shadow-md">
-        <h2 class="text-xl font-bold mb-4">Các Chương Tìm Thấy</h2>
-        <ul id="results" class="list-disc pl-5"></ul>
-    </div>
-
-    <script src="js/script.js"></script>
+    <div id="notification-container"></div>
+    <script src="js/index.js"></script>
 </body>
 </html>
