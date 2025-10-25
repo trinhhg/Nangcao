@@ -9,7 +9,7 @@
 </head>
 <body class="bg-gray-100 flex h-screen">
     <!-- Settings Panel (Left) -->
-    <div class="w-1/4 p-4 bg-white shadow-md">
+    <div class="w-1/4 p-4 bg-white shadow-md overflow-y-auto">
         <h2 class="text-xl font-bold mb-4">Cài Đặt</h2>
         <div class="mb-4">
             <label class="block mb-2">
@@ -19,14 +19,20 @@
                 <input type="checkbox" id="wholeWords" class="mr-2"> Chỉ Tìm Từ Hoàn Chỉnh
             </label>
             <label class="block mb-2">
-                Từ khóa (phân cách bằng dấu phẩy):
-                <input type="text" id="keywords" class="w-full p-2 border rounded" placeholder="Nhập từ khóa">
+                Từ khóa (nhập và nhấn Enter hoặc phẩy):
+                <div id="keywords-container" class="w-full p-2 border rounded flex flex-wrap items-center bg-gray-50 min-h-[40px] cursor-text"></div>
+                <input type="text" id="keywords-input" class="hidden" placeholder="Nhập từ khóa">
             </label>
         </div>
-        <div class="flex space-x-2">
+        <div class="flex space-x-2 mb-4">
             <button id="search" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">Tìm Kiếm</button>
             <button id="clear" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">Xóa</button>
         </div>
+        <!-- Find and Replace Section -->
+        <h3 class="text-lg font-bold mb-2">Find and Replace</h3>
+        <div id="replace-pairs" class="mb-4"></div>
+        <button id="add-pair" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 mb-2">Thêm Cặp</button>
+        <button id="replace" class="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600">Replace</button>
         <div class="mt-4">
             <label class="block mb-2">
                 Font Chữ:
@@ -51,10 +57,11 @@
     </div>
 
     <!-- Text Input Panel (Center) -->
-    <div class="w-2/4 p-4 bg-white shadow-md">
+    <div class="w-2/4 p-4 bg-white shadow-md relative">
         <h2 class="text-xl font-bold mb-4">Nội Dung Chương</h2>
         <div id="message" class="mb-4 p-2 rounded"></div>
-        <div id="textInput" contenteditable="true" class="w-full h-5/6 p-4 border rounded bg-gray-50 focus:outline-none whitespace-pre-wrap"></div>
+        <textarea id="textInput" class="w-full p-4 border rounded bg-gray-50 focus:outline-none whitespace-pre-wrap resize-none" style="height: 80vh;"></textarea>
+        <div id="highlight-overlay" class="absolute top-0 left-0 w-full h-full p-4 pointer-events-none overflow-auto bg-transparent whitespace-pre-wrap" style="z-index: 1; opacity: 0.8;"></div>
     </div>
 
     <!-- Results Panel (Right) -->
@@ -63,9 +70,6 @@
         <ul id="results" class="list-disc pl-5"></ul>
     </div>
 
-    <script src="js/storage.js"></script>
-    <script src="js/highlight.js"></script>
-    <script src="js/search.js"></script>
-    <script src="js/main.js"></script>
+    <script src="js/script.js"></script>
 </body>
 </html>
