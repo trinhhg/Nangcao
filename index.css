@@ -1,0 +1,164 @@
+#textInput {
+    min-height: 80vh;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    font-family: Arial;
+    font-size: 16px;
+    z-index: 2;
+    position: relative;
+    background: transparent;
+}
+
+#highlight-overlay {
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    color: transparent;
+}
+
+.highlight-pink { background-color: #ffcccc; }
+.highlight-yellow { background-color: #ffff99; }
+.highlight-blue { background-color: #99ccff; }
+.highlight-green { background-color: #ccffcc; }
+.highlight-orange { background-color: #ffcc99; }
+.highlight-purple { background-color: #e6ccff; }
+
+#keywords-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    padding: 5px;
+}
+
+.tag {
+    background: #e0e0e0;
+    padding: 5px 10px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.tag .remove-tag {
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.tab-button {
+    transition: background 0.2s;
+}
+
+.tab-button.active {
+    background: #007bff;
+    color: white;
+}
+
+.tab-button:hover {
+    background: #d0d0d0;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.mode-controls {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.punctuation-item {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+    align-items: center;
+}
+
+.punctuation-item input {
+    flex: 1;
+    padding: 5px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.punctuation-item button {
+    padding: 5px 10px;
+    background: #dc3545;
+    color: white;
+    border: none;
+    cursor: pointer;
+    border-radius: 3px;
+}
+
+#notification-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.notification {
+    padding: 10px 20px;
+    border-radius: 5px;
+    color: white;
+    font-size: 14px;
+    min-width: 200px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    animation: slideIn 0.3s ease-in-out, fadeOut 0.3s ease-in-out 2.7s forwards;
+}
+
+.notification.success {
+    background-color: #28a745;
+}
+
+.notification.error {
+    background-color: #dc3545;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
+}
+
+@media (max-width: 600px) {
+    .punctuation-item {
+        flex-direction: column;
+        gap: 8px;
+    }
+    .punctuation-item input,
+    .punctuation-item button {
+        width: 100%;
+        box-sizing: border-box;
+    }
+}
