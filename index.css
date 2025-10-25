@@ -12,7 +12,7 @@
 #highlight-overlay {
     font-family: inherit;
     font-size: inherit;
-    line-height: inherit;
+    line-height: 1.5;
     color: transparent;
 }
 
@@ -23,27 +23,17 @@
 .highlight-orange { background-color: #ffcc99; }
 .highlight-purple { background-color: #e6ccff; }
 
-.tagify {
-    background: #f7fafc;
-    border: 1px solid #cbd5e0;
-    border-radius: 4px;
-    padding: 5px;
-    min-height: 40px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-}
-
-.tagify__tag {
+#keywords-tags .tag {
     background: #e0e0e0;
-    border-radius: 20px;
     padding: 5px 10px;
-    display: flex;
+    border-radius: 20px;
+    display: inline-flex;
     align-items: center;
     gap: 5px;
+    margin: 5px 5px 0 0;
 }
 
-.tagify__tag__removeBtn {
+#keywords-tags .tag .remove-tag {
     cursor: pointer;
     font-weight: bold;
 }
