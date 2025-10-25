@@ -1,42 +1,19 @@
-/* Textarea and Highlight Overlay */
-.container {
-    position: relative;
-    width: 100%;
-}
-
-#textInput, #highlight-overlay {
-    font-family: Arial, sans-serif;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    width: 100%;
+#textInput {
     min-height: 80vh;
-    padding: 16px;
-    box-sizing: border-box;
-    line-height: 1.5;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    font-family: Arial;
     font-size: 16px;
+    z-index: 2;
+    position: relative;
+    background: transparent;
 }
 
 #highlight-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: 1.5;
     color: transparent;
-    pointer-events: none;
-    z-index: 0;
-    overflow-y: auto;
-}
-
-#textInput {
-    position: relative;
-    background: transparent;
-    z-index: 1;
-    color: black;
-}
-
-mark {
-    color: black;
-    border-radius: 2px;
-    padding: 0 2px;
 }
 
 .highlight-pink { background-color: #ffcccc; }
@@ -46,7 +23,6 @@ mark {
 .highlight-orange { background-color: #ffcc99; }
 .highlight-purple { background-color: #e6ccff; }
 
-/* Keywords Tags */
 #keywords-tags .tag {
     background: #e0e0e0;
     padding: 5px 10px;
@@ -55,7 +31,6 @@ mark {
     align-items: center;
     gap: 5px;
     margin: 5px 5px 0 0;
-    font-size: 14px;
 }
 
 #keywords-tags .tag .remove-tag {
@@ -63,7 +38,6 @@ mark {
     font-weight: bold;
 }
 
-/* General Styles */
 .tab-button {
     transition: background 0.2s;
 }
@@ -111,7 +85,7 @@ mark {
     padding: 5px;
     font-size: 14px;
     border: 1px solid #ccc;
-    border-radius: 8px;
+    border-radius: 4px;
 }
 
 .punctuation-item button {
@@ -120,7 +94,7 @@ mark {
     color: white;
     border: none;
     cursor: pointer;
-    border-radius: 8px;
+    border-radius: 3px;
 }
 
 #notification-container {
@@ -135,7 +109,7 @@ mark {
 
 .notification {
     padding: 10px 20px;
-    border-radius: 8px;
+    border-radius: 5px;
     color: white;
     font-size: 14px;
     min-width: 200px;
