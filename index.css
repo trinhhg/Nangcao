@@ -23,23 +23,27 @@
 .highlight-orange { background-color: #ffcc99; }
 .highlight-purple { background-color: #e6ccff; }
 
-#keywords-container {
+.tagify {
+    background: #f7fafc;
+    border: 1px solid #cbd5e0;
+    border-radius: 4px;
+    padding: 5px;
+    min-height: 40px;
     display: flex;
     flex-wrap: wrap;
     gap: 5px;
-    padding: 5px;
 }
 
-.tag {
+.tagify__tag {
     background: #e0e0e0;
-    padding: 5px 10px;
     border-radius: 20px;
+    padding: 5px 10px;
     display: flex;
     align-items: center;
     gap: 5px;
 }
 
-.tag .remove-tag {
+.tagify__tag__removeBtn {
     cursor: pointer;
     font-weight: bold;
 }
