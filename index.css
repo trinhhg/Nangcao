@@ -1,52 +1,68 @@
-/* Textarea and Highlight Overlay */
 .container {
-    position: relative;
-    width: 100%;
+  position: relative;
+  width: 100%;
 }
 
-#textInput, #highlight-overlay {
-    font-family: Arial, sans-serif;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    width: 100%;
-    min-height: 80vh;
-    padding: 16px;
-    box-sizing: border-box;
-    line-height: 1.5;
-    font-size: 16px;
+.highlight-layer, textarea {
+  font-family: monospace;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  width: 100%;
+  min-height: 80vh;
+  padding: 8px;
+  box-sizing: border-box;
 }
 
-#highlight-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    color: transparent;
-    pointer-events: none;
-    z-index: 0;
-    overflow-y: auto;
+.highlight-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  color: transparent;
+  pointer-events: none;
+  z-index: 0;
 }
 
-#textInput {
-    position: relative;
-    background: transparent;
-    z-index: 1;
-    color: black;
+textarea {
+  position: relative;
+  background: transparent;
+  z-index: 1;
+  color: black;
 }
 
 mark {
-    color: black;
-    border-radius: 2px;
-    padding: 0 2px;
+  color: black;
+  border-radius: 2px;
+  padding: 0 2px;
 }
 
-.highlight-pink { background-color: #ffcccc; }
-.highlight-yellow { background-color: #ffff99; }
-.highlight-blue { background-color: #99ccff; }
-.highlight-green { background-color: #ccffcc; }
-.highlight-orange { background-color: #ffcc99; }
-.highlight-purple { background-color: #e6ccff; }
+mark.highlight-pink { background-color: #ff9ff3; }
+mark.highlight-yellow { background-color: #feca57; }
+mark.highlight-blue { background-color: #54a0ff; }
+mark.highlight-green { background-color: #1dd1a1; }
+mark.highlight-orange { background-color: #ff9f43; }
+mark.highlight-purple { background-color: #9b59b6; }
 
-/* Keywords Tags */
+#textInput {
+  position: relative;
+  z-index: 2;
+  background: transparent;
+  color: transparent; /* chữ trong textarea ẩn đi */
+  caret-color: black; /* vẫn thấy con trỏ */
+}
+
+#highlight-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  pointer-events: none; /* để vẫn chỉnh được textarea */
+  white-space: pre-wrap;
+  overflow: hidden;
+  color: black;
+  width: 100%;
+  height: 100%;
+}
+
 #keywords-tags .tag {
     background: #e0e0e0;
     padding: 5px 10px;
@@ -63,7 +79,6 @@ mark {
     font-weight: bold;
 }
 
-/* General Styles */
 .tab-button {
     transition: background 0.2s;
 }
