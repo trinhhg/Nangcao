@@ -67,7 +67,9 @@ function clearHighlights() {
 
 // Settings and search logic
 function saveSettings() {
-    const keywords = getKeywordsFromTags();
+    const keywordsInput = document.getElementById('keywords-input');
+    const tagify = keywordsInput.tagify;
+    const keywords = tagify ? tagify.value.map(tag => tag.value) : [];
     const settings = {
         matchCase: document.getElementById('matchCase').checked,
         wholeWords: document.getElementById('wholeWords').checked,
@@ -81,10 +83,14 @@ function saveSettings() {
 function loadSettings() {
     const settings = JSON.parse(localStorage.getItem('searchSettings'));
     const textInput = document.getElementById('textInput');
+    const keywordsInput = document.getElementById('keywords-input');
     if (settings) {
         document.getElementById('matchCase').checked = settings.matchCase || false;
         document.getElementById('wholeWords').checked = settings.wholeWords || false;
-        setKeywordsToTags(settings.keywords ? settings.keywords.split(',') : []);
+        if (keywordsInput.tagify) {
+            keywordsInput.tagify.removeAllTags();
+            keywordsInput.tagify.addTags(settings.keywords ? settings.keywords.split(',') : []);
+        }
         textInput.style.fontFamily = settings.fontFamily || 'Arial';
         textInput.style.fontSize = settings.fontSize || '16px';
         document.getElementById('fontFamily').value = settings.fontFamily || 'Arial';
@@ -97,7 +103,9 @@ function loadSettings() {
 
 function performSearch() {
     const textInput = document.getElementById('textInput');
-    const keywords = getKeywordsFromTags();
+    const keywordsInput = document.getElementById('keywords-input');
+    const tagify = keywordsInput.tagify;
+    const keywords = tagify ? tagify.value.map(tag => tag.value) : [];
     const matchCase = document.getElementById('matchCase').checked;
     const wholeWords = document.getElementById('wholeWords').checked;
     const message = document.getElementById('message');
@@ -140,31 +148,6 @@ function clearContent() {
     message.textContent = '';
     message.className = 'mb-4 p-2 rounded';
     clearHighlights();
-}
-
-// Tag input logic
-function getKeywordsFromTags() {
-    return Array.from(document.querySelectorAll('.tag')).map(tag => tag.textContent.slice(0, -1).trim());
-}
-
-function setKeywordsToTags(keywords) {
-    const container = document.getElementById('keywords-container');
-    container.innerHTML = '';
-    keywords.forEach(addTag);
-}
-
-function addTag(keyword) {
-    if (!keyword) return;
-    const container = document.getElementById('keywords-container');
-    const tag = document.createElement('span');
-    tag.className = 'tag';
-    tag.textContent = keyword;
-    const remove = document.createElement('span');
-    remove.className = 'remove-tag';
-    remove.textContent = 'x';
-    remove.onclick = () => { tag.remove(); saveSettings(); };
-    tag.appendChild(remove);
-    container.appendChild(tag);
 }
 
 // Replace logic (from reference)
@@ -381,6 +364,18 @@ function addReplacePair(find = '', replace = '') {
 
 // Main logic
 document.addEventListener('DOMContentLoaded', () => {
+    // Initialize Tagify
+    const keywordsInput = document.getElementById('keywords-input');
+    const tagify = new Tagify(keywordsInput, {
+        originalInputValueFormat: valuesArr => valuesArr.map(item => item.value).join(','),
+        dropdown: {
+            enabled: 0,
+            maxItems: 10,
+            position: 'all'
+        }
+    });
+    keywordsInput.tagify = tagify;
+
     loadSettings();
     loadModes();
     updateLanguage();
@@ -395,8 +390,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const fontFamily = document.getElementById('fontFamily');
     const fontSize = document.getElementById('fontSize');
     const textInput = document.getElementById('textInput');
-    const keywordsContainer = document.getElementById('keywords-container');
-    const keywordsInput = document.getElementById('keywords-input');
     const matchCaseBtn = document.getElementById('match-case');
     const deleteModeBtn = document.getElementById('delete-mode');
     const renameModeBtn = document.getElementById('rename-mode');
@@ -568,16 +561,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    keywordsContainer.onclick = () => keywordsInput.focus();
-    keywordsInput.onkeydown = (e) => {
-        if (e.key === 'Enter' || e.key === ',') {
-            e.preventDefault();
-            const value = keywordsInput.value.trim();
-            if (value) addTag(value);
-            keywordsInput.value = '';
-            saveSettings();
-        }
-    };
+    // Tagify event listeners
+    tagify.on('add', saveSettings).on('remove', saveSettings);
+
     textInput.oninput = () => {
         clearHighlights();
     };
