@@ -1,19 +1,42 @@
-#textInput {
-    min-height: 80vh;
-    overflow-y: auto;
-    white-space: pre-wrap;
-    font-family: Arial;
-    font-size: 16px;
-    z-index: 2;
+/* Textarea and Highlight Overlay */
+.container {
     position: relative;
-    background: transparent;
+    width: 100%;
+}
+
+#textInput, #highlight-overlay {
+    font-family: Arial, sans-serif;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    width: 100%;
+    min-height: 80vh;
+    padding: 16px;
+    box-sizing: border-box;
+    line-height: 1.5;
+    font-size: 16px;
 }
 
 #highlight-overlay {
-    font-family: inherit;
-    font-size: inherit;
-    line-height: 1.5;
+    position: absolute;
+    top: 0;
+    left: 0;
     color: transparent;
+    pointer-events: none;
+    z-index: 0;
+    overflow-y: auto;
+}
+
+#textInput {
+    position: relative;
+    background: transparent;
+    z-index: 1;
+    color: black;
+}
+
+mark {
+    color: black;
+    border-radius: 2px;
+    padding: 0 2px;
 }
 
 .highlight-pink { background-color: #ffcccc; }
@@ -23,6 +46,7 @@
 .highlight-orange { background-color: #ffcc99; }
 .highlight-purple { background-color: #e6ccff; }
 
+/* Keywords Tags */
 #keywords-tags .tag {
     background: #e0e0e0;
     padding: 5px 10px;
@@ -31,6 +55,7 @@
     align-items: center;
     gap: 5px;
     margin: 5px 5px 0 0;
+    font-size: 14px;
 }
 
 #keywords-tags .tag .remove-tag {
@@ -38,6 +63,7 @@
     font-weight: bold;
 }
 
+/* General Styles */
 .tab-button {
     transition: background 0.2s;
 }
@@ -85,7 +111,7 @@
     padding: 5px;
     font-size: 14px;
     border: 1px solid #ccc;
-    border-radius: 4px;
+    border-radius: 8px;
 }
 
 .punctuation-item button {
@@ -94,7 +120,7 @@
     color: white;
     border: none;
     cursor: pointer;
-    border-radius: 3px;
+    border-radius: 8px;
 }
 
 #notification-container {
@@ -109,7 +135,7 @@
 
 .notification {
     padding: 10px 20px;
-    border-radius: 5px;
+    border-radius: 8px;
     color: white;
     font-size: 14px;
     min-width: 200px;
