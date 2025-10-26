@@ -41,6 +41,20 @@ let matchCaseEnabled = false;
 let currentMode = 'default';
 const LOCAL_STORAGE_KEY = 'local_settings';
 
+// Khởi tạo CodeMirror Editor
+let editor;
+document.addEventListener('DOMContentLoaded', () => {
+  editor = CodeMirror.fromTextArea(document.getElementById('editor'), {
+    lineNumbers: true,
+    mode: 'text/plain',
+    matchBrackets: true,
+    lineWrapping: true,
+    extraKeys: { 'Ctrl-F': 'findPersistent' },
+    height: '80vh'
+  });
+  editor.setValue("Ví dụ: Tôi đang kiểm tra highlight động bằng CodeMirror. Hãy thử nhập các từ như 'highlight', 'CodeMirror', hoặc 'động' vào ô dưới đây!");
+});
+
 // Danh sách từ khóa
 let keywords = [];
 
@@ -63,36 +77,27 @@ document.getElementById('keywords-input').addEventListener('keydown', function (
 
 // Hàm highlight
 function highlightKeywords(isReplace = false) {
-  const text = editor.root.innerText;
-  editor.model.change(writer => {
-    const range = editor.model.document.getRoot().getChild(0).getRange();
-    writer.removeAttribute('background', range);
-  });
+  if (!editor) return;
 
-  keywords.forEach(word => {
-    const regex = new RegExp(word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
-    let match;
-    while ((match = regex.exec(text)) !== null) {
-      editor.model.change(writer => {
-        const range = writer.createRange(
-          writer.createPositionFromPath(editor.model.document.getRoot(), [0, match.index]),
-          writer.createPositionFromPath(editor.model.document.getRoot(), [0, match.index + word.length])
-        );
-        writer.setAttribute('background', isReplace ? '#a29bfe' : pickColor(word), range);
-      });
-    }
-  });
+  editor.removeOverlay();
+  const text = editor.getValue();
+  const regex = keywords.map(word => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+  if (regex) {
+    const searchMode = {
+      name: 'search',
+      token: function(stream) {
+        if (stream.match(new RegExp(regex, 'gi'))) {
+          return 'highlight' + (isReplace ? '-purple' : '');
+        }
+        stream.next();
+      }
+    };
+    editor.setOption('mode', searchMode);
+  }
 }
 
 // Tạo màu riêng cho mỗi từ khóa
-function pickColor(keyword) {
-  const colors = ["#ff9ff3", "#feca57", "#54a0ff", "#1dd1a1", "#ff9f43", "#9b59b6"];
-  let hash = 0;
-  for (let i = 0; i < keyword.length; i++) {
-    hash = keyword.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return colors[Math.abs(hash) % colors.length];
-}
+// Note: CodeMirror không hỗ trợ màu riêng cho từng từ, nên dùng một lớp highlight chung. Nếu cần màu riêng, cần addon phức tạp hơn.
 
 // Tag logic
 function getKeywordsFromTags() {
@@ -130,14 +135,8 @@ function addTagToList(keyword) {
 
 // Clear highlight button
 document.getElementById('clear-highlight').addEventListener('click', () => {
-  editor.model.change(writer => {
-    const range = editor.model.document.getRoot().getChild(0).getRange();
-    writer.removeAttribute('background', range);
-  });
+  editor.removeOverlay();
 });
-
-// Văn bản mẫu để test
-editor.setData("Ví dụ: Tôi đang kiểm tra highlight động bằng CKEditor. Hãy thử nhập các từ như 'highlight', 'CKEditor', hoặc 'động' vào ô dưới đây!");
 
 // Load settings
 function loadSettings() {
@@ -155,11 +154,9 @@ function loadSettings() {
         highlightKeywords();
         fontFamilySelect.value = settings.fontFamily || 'Arial';
         fontSizeSelect.value = settings.fontSize || '16px';
-        editor.model.change(writer => {
-          const range = editor.model.document.getRoot().getChild(0).getRange();
-          writer.setAttribute('fontFamily', settings.fontFamily || 'Arial', range);
-          writer.setAttribute('fontSize', settings.fontSize || '16px', range);
-        });
+        editor.getWrapperElement().style.fontFamily = settings.fontFamily || 'Arial';
+        editor.getWrapperElement().style.fontSize = settings.fontSize || '16px';
+        editor.refresh();
     }
 }
 
@@ -184,14 +181,11 @@ function performSearch() {
     if (keywords.length === 0) {
         message.textContent = 'Vui lòng nhập ít nhất một từ khóa.';
         message.className = 'mb-4 p-2 rounded bg-red-200 text-red-800';
-        editor.model.change(writer => {
-          const range = editor.model.document.getRoot().getChild(0).getRange();
-          writer.removeAttribute('background', range);
-        });
+        editor.removeOverlay();
         return;
     }
 
-    const text = editor.getData().replace(/<[^>]+>/g, '');
+    const text = editor.getValue();
     let found = false;
     for (const keyword of keywords) {
         const regex = wholeWords
@@ -210,21 +204,15 @@ function performSearch() {
     } else {
         message.textContent = 'Không tìm thấy từ khóa.';
         message.className = 'mb-4 p-2 rounded bg-red-200 text-red-800';
-        editor.model.change(writer => {
-          const range = editor.model.document.getRoot().getChild(0).getRange();
-          writer.removeAttribute('background', range);
-        });
+        editor.removeOverlay();
     }
 }
 
 function clearContent() {
-    editor.setData('');
+    editor.setValue('');
     document.getElementById('message').textContent = '';
     document.getElementById('message').className = 'mb-4 p-2 rounded';
-    editor.model.change(writer => {
-      const range = editor.model.document.getRoot().getChild(0).getRange();
-      writer.removeAttribute('background', range);
-    });
+    editor.removeOverlay();
 }
 
 // Replace logic
@@ -237,7 +225,7 @@ function performReplace() {
     const modeSettings = settings.modes[currentMode] || { pairs: [] };
     const pairs = modeSettings.pairs || [];
 
-    if (!editor.getData().trim()) {
+    if (!editor.getValue().trim()) {
         message.textContent = translations[currentLang].noTextToReplace;
         message.className = 'mb-4 p-2 rounded bg-red-200 text-red-800';
         return;
@@ -249,7 +237,7 @@ function performReplace() {
         return;
     }
 
-    let text = editor.getData().replace(/<[^>]+>/g, '');
+    let text = editor.getValue();
     let replacedWords = [];
     pairs.forEach(pair => {
         let find = pair.find;
@@ -263,7 +251,7 @@ function performReplace() {
             return replace;
         });
     });
-    editor.setData(text);
+    editor.setValue(text);
     message.textContent = translations[currentLang].textReplaced;
     message.className = 'mb-4 p-2 rounded bg-green-200 text-green-800';
     highlightKeywords(true);
@@ -470,20 +458,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (wholeWords) wholeWords.addEventListener('change', () => { saveSettings(); highlightKeywords(); });
     if (fontFamily) {
         fontFamily.addEventListener('change', () => {
-            editor.model.change(writer => {
-              const range = editor.model.document.getRoot().getRange();
-              writer.setAttribute('fontFamily', fontFamily.value, range);
-            });
+            editor.getWrapperElement().style.fontFamily = fontFamily.value;
             saveSettings();
+            editor.refresh();
         });
     }
     if (fontSize) {
         fontSize.addEventListener('change', () => {
-            editor.model.change(writer => {
-              const range = editor.model.document.getRoot().getRange();
-              writer.setAttribute('fontSize', fontSize.value, range);
-            });
+            editor.getWrapperElement().style.fontSize = fontSize.value;
             saveSettings();
+            editor.refresh();
         });
     }
     if (matchCaseBtn) matchCaseBtn.addEventListener('click', () => {
@@ -615,7 +599,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Clear highlight button
     if (clearHighlightBtn) clearHighlightBtn.addEventListener('click', () => {
-        clearHighlights();
+        editor.removeOverlay();
     });
 
     // Keywords input event
@@ -638,12 +622,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // CKEditor input event for auto highlight
-    if (editor) {
-      editor.model.document.on('change:data', () => {
+    // CodeMirror input event for auto highlight
+    editor.on('change', function() {
         highlightKeywords();
-      });
-    }
+    });
 
     // Tab switching with dynamic width
     document.querySelectorAll('.tab-button').forEach(button => {
