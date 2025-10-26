@@ -40,23 +40,6 @@ let currentLang = 'vn';
 let matchCaseEnabled = false;
 let currentMode = 'default';
 const LOCAL_STORAGE_KEY = 'local_settings';
-let editor;
-
-// Khởi tạo CKEditor
-document.addEventListener('DOMContentLoaded', () => {
-  ClassicEditor
-    .create(document.querySelector('#editor'), {
-      toolbar: ['bold', 'italic', 'undo', 'redo'], // Tùy chỉnh toolbar cơ bản
-      height: '80vh'
-    })
-    .then(newEditor => {
-      editor = newEditor;
-      editor.setData("Ví dụ: Tôi đang kiểm tra highlight động bằng CKEditor. Hãy thử nhập các từ như 'highlight', 'CKEditor', hoặc 'động' vào ô dưới đây!");
-    })
-    .catch(error => {
-      console.error('Lỗi khi khởi tạo CKEditor:', error);
-    });
-});
 
 // Danh sách từ khóa
 let keywords = [];
@@ -80,33 +63,22 @@ document.getElementById('keywords-input').addEventListener('keydown', function (
 
 // Hàm highlight
 function highlightKeywords(isReplace = false) {
-  if (!editor) return;
-
-  // Xóa highlight cũ
+  const text = editor.root.innerText;
   editor.model.change(writer => {
-    const range = editor.model.document.getRoot().getRange();
-    for (const node of range.getItems()) {
-      if (node.is('element', 'span') && node.getAttribute('class')?.includes('highlight')) {
-        writer.removeAttribute('class', node);
-      }
-    }
+    const range = editor.model.document.getRoot().getChild(0).getRange();
+    writer.removeAttribute('background', range);
   });
 
-  // Highlight theo từ khóa
-  const text = editor.getData().replace(/<[^>]+>/g, ''); // Lấy text thô, bỏ tag HTML
   keywords.forEach(word => {
-    const regex = new RegExp(`\\b${word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
+    const regex = new RegExp(word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
     let match;
-    const viewFragment = editor.data.processor.toView(text);
-    const viewDocument = editor.editing.view.document;
     while ((match = regex.exec(text)) !== null) {
-      const position = editor.model.document.selection.getFirstPosition();
       editor.model.change(writer => {
         const range = writer.createRange(
-          writer.createPositionAt(position.parent, match.index),
-          writer.createPositionAt(position.parent, match.index + word.length)
+          writer.createPositionFromPath(editor.model.document.getRoot(), [0, match.index]),
+          writer.createPositionFromPath(editor.model.document.getRoot(), [0, match.index + word.length])
         );
-        writer.wrap(range, { attributes: { class: isReplace ? 'highlight-purple' : pickColor(word) } });
+        writer.setAttribute('background', isReplace ? '#a29bfe' : pickColor(word), range);
       });
     }
   });
@@ -114,7 +86,7 @@ function highlightKeywords(isReplace = false) {
 
 // Tạo màu riêng cho mỗi từ khóa
 function pickColor(keyword) {
-  const colors = ["highlight-pink", "highlight-yellow", "highlight-blue", "highlight-green", "highlight-orange", "highlight-purple"];
+  const colors = ["#ff9ff3", "#feca57", "#54a0ff", "#1dd1a1", "#ff9f43", "#9b59b6"];
   let hash = 0;
   for (let i = 0; i < keyword.length; i++) {
     hash = keyword.charCodeAt(i) + ((hash << 5) - hash);
@@ -158,17 +130,14 @@ function addTagToList(keyword) {
 
 // Clear highlight button
 document.getElementById('clear-highlight').addEventListener('click', () => {
-  if (editor) {
-    editor.model.change(writer => {
-      const range = editor.model.document.getRoot().getRange();
-      for (const node of range.getItems()) {
-        if (node.is('element', 'span') && node.getAttribute('class')?.includes('highlight')) {
-          writer.removeAttribute('class', node);
-        }
-      }
-    });
-  }
+  editor.model.change(writer => {
+    const range = editor.model.document.getRoot().getChild(0).getRange();
+    writer.removeAttribute('background', range);
+  });
 });
+
+// Văn bản mẫu để test
+editor.setData("Ví dụ: Tôi đang kiểm tra highlight động bằng CKEditor. Hãy thử nhập các từ như 'highlight', 'CKEditor', hoặc 'động' vào ô dưới đây!");
 
 // Load settings
 function loadSettings() {
@@ -186,9 +155,11 @@ function loadSettings() {
         highlightKeywords();
         fontFamilySelect.value = settings.fontFamily || 'Arial';
         fontSizeSelect.value = settings.fontSize || '16px';
-        if (editor) {
-          editor.setData(editor.getData(), { styles: { 'font-family': settings.fontFamily || 'Arial', 'font-size': settings.fontSize || '16px' } });
-        }
+        editor.model.change(writer => {
+          const range = editor.model.document.getRoot().getChild(0).getRange();
+          writer.setAttribute('fontFamily', settings.fontFamily || 'Arial', range);
+          writer.setAttribute('fontSize', settings.fontSize || '16px', range);
+        });
     }
 }
 
@@ -213,7 +184,10 @@ function performSearch() {
     if (keywords.length === 0) {
         message.textContent = 'Vui lòng nhập ít nhất một từ khóa.';
         message.className = 'mb-4 p-2 rounded bg-red-200 text-red-800';
-        clearHighlights();
+        editor.model.change(writer => {
+          const range = editor.model.document.getRoot().getChild(0).getRange();
+          writer.removeAttribute('background', range);
+        });
         return;
     }
 
@@ -236,30 +210,21 @@ function performSearch() {
     } else {
         message.textContent = 'Không tìm thấy từ khóa.';
         message.className = 'mb-4 p-2 rounded bg-red-200 text-red-800';
-        clearHighlights();
+        editor.model.change(writer => {
+          const range = editor.model.document.getRoot().getChild(0).getRange();
+          writer.removeAttribute('background', range);
+        });
     }
 }
 
 function clearContent() {
-    if (editor) {
-      editor.setData('');
-      document.getElementById('message').textContent = '';
-      document.getElementById('message').className = 'mb-4 p-2 rounded';
-      clearHighlights();
-    }
-}
-
-function clearHighlights() {
-  if (editor) {
+    editor.setData('');
+    document.getElementById('message').textContent = '';
+    document.getElementById('message').className = 'mb-4 p-2 rounded';
     editor.model.change(writer => {
-      const range = editor.model.document.getRoot().getRange();
-      for (const node of range.getItems()) {
-        if (node.is('element', 'span') && node.getAttribute('class')?.includes('highlight')) {
-          writer.removeAttribute('class', node);
-        }
-      }
+      const range = editor.model.document.getRoot().getChild(0).getRange();
+      writer.removeAttribute('background', range);
     });
-  }
 }
 
 // Replace logic
@@ -505,17 +470,19 @@ document.addEventListener('DOMContentLoaded', () => {
     if (wholeWords) wholeWords.addEventListener('change', () => { saveSettings(); highlightKeywords(); });
     if (fontFamily) {
         fontFamily.addEventListener('change', () => {
-            if (editor) {
-              editor.setData(editor.getData(), { styles: { 'font-family': fontFamily.value } });
-            }
+            editor.model.change(writer => {
+              const range = editor.model.document.getRoot().getRange();
+              writer.setAttribute('fontFamily', fontFamily.value, range);
+            });
             saveSettings();
         });
     }
     if (fontSize) {
         fontSize.addEventListener('change', () => {
-            if (editor) {
-              editor.setData(editor.getData(), { styles: { 'font-size': fontSize.value } });
-            }
+            editor.model.change(writer => {
+              const range = editor.model.document.getRoot().getRange();
+              writer.setAttribute('fontSize', fontSize.value, range);
+            });
             saveSettings();
         });
     }
