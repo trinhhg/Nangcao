@@ -40,10 +40,22 @@ let currentLang = 'vn';
 let matchCaseEnabled = false;
 let currentMode = 'default';
 const LOCAL_STORAGE_KEY = 'local_settings';
+let editor;
 
-// Khởi tạo Quill Editor
-var quill = new Quill('#editor', {
-  theme: 'snow'
+// Khởi tạo CKEditor
+document.addEventListener('DOMContentLoaded', () => {
+  ClassicEditor
+    .create(document.querySelector('#editor'), {
+      toolbar: ['bold', 'italic', 'undo', 'redo'], // Tùy chỉnh toolbar cơ bản
+      height: '80vh'
+    })
+    .then(newEditor => {
+      editor = newEditor;
+      editor.setData("Ví dụ: Tôi đang kiểm tra highlight động bằng CKEditor. Hãy thử nhập các từ như 'highlight', 'CKEditor', hoặc 'động' vào ô dưới đây!");
+    })
+    .catch(error => {
+      console.error('Lỗi khi khởi tạo CKEditor:', error);
+    });
 });
 
 // Danh sách từ khóa
@@ -68,27 +80,41 @@ document.getElementById('keywords-input').addEventListener('keydown', function (
 
 // Hàm highlight
 function highlightKeywords(isReplace = false) {
-  const text = quill.root.innerText;
-  quill.formatText(0, quill.getLength(), { background: false });
-  
-  let i = 0;
-  function step() {
-    if (i >= keywords.length) return;
-    const word = keywords[i];
-    const regex = new RegExp(word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
-    let match;
-    while ((match = regex.exec(text)) !== null) {
-      quill.formatText(match.index, word.length, { background: isReplace ? '#a29bfe' : pickColor(word) });
+  if (!editor) return;
+
+  // Xóa highlight cũ
+  editor.model.change(writer => {
+    const range = editor.model.document.getRoot().getRange();
+    for (const node of range.getItems()) {
+      if (node.is('element', 'span') && node.getAttribute('class')?.includes('highlight')) {
+        writer.removeAttribute('class', node);
+      }
     }
-    i++;
-    requestAnimationFrame(step);
-  }
-  requestAnimationFrame(step);
+  });
+
+  // Highlight theo từ khóa
+  const text = editor.getData().replace(/<[^>]+>/g, ''); // Lấy text thô, bỏ tag HTML
+  keywords.forEach(word => {
+    const regex = new RegExp(`\\b${word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
+    let match;
+    const viewFragment = editor.data.processor.toView(text);
+    const viewDocument = editor.editing.view.document;
+    while ((match = regex.exec(text)) !== null) {
+      const position = editor.model.document.selection.getFirstPosition();
+      editor.model.change(writer => {
+        const range = writer.createRange(
+          writer.createPositionAt(position.parent, match.index),
+          writer.createPositionAt(position.parent, match.index + word.length)
+        );
+        writer.wrap(range, { attributes: { class: isReplace ? 'highlight-purple' : pickColor(word) } });
+      });
+    }
+  });
 }
 
 // Tạo màu riêng cho mỗi từ khóa
 function pickColor(keyword) {
-  const colors = ["#ff9ff3", "#feca57", "#54a0ff", "#1dd1a1", "#ff9f43", "#9b59b6"];
+  const colors = ["highlight-pink", "highlight-yellow", "highlight-blue", "highlight-green", "highlight-orange", "highlight-purple"];
   let hash = 0;
   for (let i = 0; i < keyword.length; i++) {
     hash = keyword.charCodeAt(i) + ((hash << 5) - hash);
@@ -132,11 +158,17 @@ function addTagToList(keyword) {
 
 // Clear highlight button
 document.getElementById('clear-highlight').addEventListener('click', () => {
-  quill.formatText(0, quill.getLength(), { background: false });
+  if (editor) {
+    editor.model.change(writer => {
+      const range = editor.model.document.getRoot().getRange();
+      for (const node of range.getItems()) {
+        if (node.is('element', 'span') && node.getAttribute('class')?.includes('highlight')) {
+          writer.removeAttribute('class', node);
+        }
+      }
+    });
+  }
 });
-
-// Văn bản mẫu để test
-quill.setText("Ví dụ: Tôi đang kiểm tra highlight động bằng Quill.js. Hãy thử nhập các từ như 'highlight', 'Quill', hoặc 'động' vào ô dưới đây!");
 
 // Load settings
 function loadSettings() {
@@ -154,8 +186,9 @@ function loadSettings() {
         highlightKeywords();
         fontFamilySelect.value = settings.fontFamily || 'Arial';
         fontSizeSelect.value = settings.fontSize || '16px';
-        quill.root.style.fontFamily = settings.fontFamily || 'Arial';
-        quill.root.style.fontSize = settings.fontSize || '16px';
+        if (editor) {
+          editor.setData(editor.getData(), { styles: { 'font-family': settings.fontFamily || 'Arial', 'font-size': settings.fontSize || '16px' } });
+        }
     }
 }
 
@@ -180,11 +213,11 @@ function performSearch() {
     if (keywords.length === 0) {
         message.textContent = 'Vui lòng nhập ít nhất một từ khóa.';
         message.className = 'mb-4 p-2 rounded bg-red-200 text-red-800';
-        quill.formatText(0, quill.getLength(), { background: false });
+        clearHighlights();
         return;
     }
 
-    const text = quill.getText();
+    const text = editor.getData().replace(/<[^>]+>/g, '');
     let found = false;
     for (const keyword of keywords) {
         const regex = wholeWords
@@ -203,15 +236,30 @@ function performSearch() {
     } else {
         message.textContent = 'Không tìm thấy từ khóa.';
         message.className = 'mb-4 p-2 rounded bg-red-200 text-red-800';
-        quill.formatText(0, quill.getLength(), { background: false });
+        clearHighlights();
     }
 }
 
 function clearContent() {
-    quill.setText('');
-    document.getElementById('message').textContent = '';
-    document.getElementById('message').className = 'mb-4 p-2 rounded';
-    quill.formatText(0, quill.getLength(), { background: false });
+    if (editor) {
+      editor.setData('');
+      document.getElementById('message').textContent = '';
+      document.getElementById('message').className = 'mb-4 p-2 rounded';
+      clearHighlights();
+    }
+}
+
+function clearHighlights() {
+  if (editor) {
+    editor.model.change(writer => {
+      const range = editor.model.document.getRoot().getRange();
+      for (const node of range.getItems()) {
+        if (node.is('element', 'span') && node.getAttribute('class')?.includes('highlight')) {
+          writer.removeAttribute('class', node);
+        }
+      }
+    });
+  }
 }
 
 // Replace logic
@@ -224,7 +272,7 @@ function performReplace() {
     const modeSettings = settings.modes[currentMode] || { pairs: [] };
     const pairs = modeSettings.pairs || [];
 
-    if (quill.getLength() <= 1) {
+    if (!editor.getData().trim()) {
         message.textContent = translations[currentLang].noTextToReplace;
         message.className = 'mb-4 p-2 rounded bg-red-200 text-red-800';
         return;
@@ -236,7 +284,7 @@ function performReplace() {
         return;
     }
 
-    let text = quill.getText();
+    let text = editor.getData().replace(/<[^>]+>/g, '');
     let replacedWords = [];
     pairs.forEach(pair => {
         let find = pair.find;
@@ -250,7 +298,7 @@ function performReplace() {
             return replace;
         });
     });
-    quill.setText(text);
+    editor.setData(text);
     message.textContent = translations[currentLang].textReplaced;
     message.className = 'mb-4 p-2 rounded bg-green-200 text-green-800';
     highlightKeywords(true);
@@ -457,13 +505,17 @@ document.addEventListener('DOMContentLoaded', () => {
     if (wholeWords) wholeWords.addEventListener('change', () => { saveSettings(); highlightKeywords(); });
     if (fontFamily) {
         fontFamily.addEventListener('change', () => {
-            quill.root.style.fontFamily = fontFamily.value;
+            if (editor) {
+              editor.setData(editor.getData(), { styles: { 'font-family': fontFamily.value } });
+            }
             saveSettings();
         });
     }
     if (fontSize) {
         fontSize.addEventListener('change', () => {
-            quill.root.style.fontSize = fontSize.value;
+            if (editor) {
+              editor.setData(editor.getData(), { styles: { 'font-size': fontSize.value } });
+            }
             saveSettings();
         });
     }
@@ -473,30 +525,130 @@ document.addEventListener('DOMContentLoaded', () => {
         saveReplaceSettings();
     });
     if (deleteModeBtn) deleteModeBtn.addEventListener('click', () => {
-        // ... (giữ nguyên code deleteModeBtn từ trước)
+        if (currentMode !== 'default') {
+            if (confirm(`Bạn có chắc chắn muốn xóa chế độ "${currentMode}"?`)) {
+                let settings = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY)) || { modes: { default: { pairs: [], matchCase: false } } };
+                if (settings.modes[currentMode]) {
+                    delete settings.modes[currentMode];
+                    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(settings));
+                    currentMode = 'default';
+                    loadModes();
+                    showNotification(translations[currentLang].modeDeleted.replace('{mode}', currentMode), 'success');
+                }
+            }
+        }
     });
     if (renameModeBtn) renameModeBtn.addEventListener('click', () => {
-        // ... (giữ nguyên code renameModeBtn từ trước)
+        const newName = prompt(translations[currentLang].renamePrompt);
+        if (newName && !newName.includes('mode_') && newName.trim() !== '' && newName !== currentMode) {
+            let settings = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY)) || { modes: { default: { pairs: [], matchCase: false } } };
+            if (settings.modes[currentMode]) {
+                settings.modes[newName] = settings.modes[currentMode];
+                delete settings.modes[currentMode];
+                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(settings));
+                currentMode = newName;
+                loadModes();
+                showNotification(translations[currentLang].renameSuccess.replace('{mode}', newName), 'success');
+            } else {
+                showNotification(translations[currentLang].renameError, 'error');
+            }
+        }
     });
     if (addModeBtn) addModeBtn.addEventListener('click', () => {
-        // ... (giữ nguyên code addModeBtn từ trước)
+        const newMode = prompt(translations[currentLang].newModePrompt);
+        if (newMode && !newMode.includes('mode_') && newMode.trim() !== '' && newMode !== 'default') {
+            let settings = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY)) || { modes: { default: { pairs: [], matchCase: false } } };
+            if (settings.modes[newMode]) {
+                showNotification(translations[currentLang].invalidModeName, 'error');
+                return;
+            }
+            settings.modes[newMode] = { pairs: [], matchCase: false };
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(settings));
+            currentMode = newMode;
+            loadModes();
+            showNotification(translations[currentLang].modeCreated.replace('{mode}', newMode), 'success');
+        } else {
+            showNotification(translations[currentLang].invalidModeName, 'error');
+        }
     });
     if (copyModeBtn) copyModeBtn.addEventListener('click', () => {
-        // ... (giữ nguyên code copyModeBtn từ trước)
+        const newMode = prompt(translations[currentLang].newModePrompt);
+        if (newMode && !newMode.includes('mode_') && newMode.trim() !== '' && newMode !== 'default') {
+            let settings = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY)) || { modes: { default: { pairs: [], matchCase: false } } };
+            if (settings.modes[newMode]) {
+                showNotification(translations[currentLang].invalidModeName, 'error');
+                return;
+            }
+            settings.modes[newMode] = JSON.parse(JSON.stringify(settings.modes[currentMode] || { pairs: [], matchCase: false }));
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(settings));
+            currentMode = newMode;
+            loadModes();
+            showNotification(translations[currentLang].modeCreated.replace('{mode}', newMode), 'success');
+        } else {
+            showNotification(translations[currentLang].invalidModeName, 'error');
+        }
     });
     if (exportSettingsBtn) exportSettingsBtn.addEventListener('click', () => {
-        // ... (giữ nguyên code exportSettingsBtn từ trước)
+        try {
+            let settings = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY)) || { modes: { default: { pairs: [], matchCase: false } } };
+            const blob = new Blob([JSON.stringify(settings, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'extension_settings.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showNotification(translations[currentLang].settingsExported, 'success');
+        } catch (err) {
+            showNotification(translations[currentLang].importError, 'error');
+        }
     });
     if (importSettingsBtn) importSettingsBtn.addEventListener('click', () => {
-        // ... (giữ nguyên code importSettingsBtn từ trước)
+        try {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const settings = JSON.parse(e.target.result);
+                            if (!settings.modes || typeof settings.modes !== 'object') {
+                                throw new Error('Cấu trúc file JSON không hợp lệ');
+                            }
+                            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(settings));
+                            loadModes();
+                            showNotification(translations[currentLang].settingsImported, 'success');
+                        } catch (err) {
+                            showNotification(translations[currentLang].importError, 'error');
+                        }
+                    };
+                    reader.readAsText(file);
+                } else {
+                    showNotification(translations[currentLang].importError, 'error');
+                }
+            });
+            document.body.appendChild(input);
+            input.click();
+            document.body.removeChild(input);
+        } catch (err) {
+            showNotification(translations[currentLang].importError, 'error');
+        }
     });
     if (modeSelect) modeSelect.addEventListener('change', (e) => {
-        // ... (giữ nguyên code modeSelect từ trước)
+        currentMode = e.target.value;
+        loadReplacePairs();
+        showNotification(translations[currentLang].switchedMode.replace('{mode}', currentMode), 'success');
+        updateModeButtons();
     });
 
     // Clear highlight button
     if (clearHighlightBtn) clearHighlightBtn.addEventListener('click', () => {
-        quill.formatText(0, quill.getLength(), { background: false });
+        clearHighlights();
     });
 
     // Keywords input event
@@ -519,10 +671,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Quill input event for auto highlight
-    quill.on('text-change', function() {
+    // CKEditor input event for auto highlight
+    if (editor) {
+      editor.model.document.on('change:data', () => {
         highlightKeywords();
-    });
+      });
+    }
 
     // Tab switching with dynamic width
     document.querySelectorAll('.tab-button').forEach(button => {
