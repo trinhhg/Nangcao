@@ -1,12 +1,20 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tìm Kiếm Chương</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="index.css">
-    <script src="https://cdn.ckeditor.com/ckeditor5/41.3.1/classic/ckeditor.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tìm Kiếm Chương</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+
+  <!-- CodeMirror qua CDN -->
+  <link rel="stylesheet" href="https://unpkg.com/codemirror@5.65.13/lib/codemirror.css">
+  <script src="https://unpkg.com/codemirror@5.65.13/lib/codemirror.js"></script>
+  <script src="https://unpkg.com/codemirror@5.65.13/addon/search/searchcursor.js"></script>
+  <script src="https://unpkg.com/codemirror@5.65.13/addon/search/search.js"></script>
+  <script src="https://unpkg.com/codemirror@5.65.13/addon/search/match-highlighter.js"></script>
+
+  <!-- CSS riêng -->
+  <link rel="stylesheet" href="index.css">
 </head>
 <body class="bg-gray-100 flex h-screen">
     <!-- Settings Panel (Left) -->
@@ -85,7 +93,7 @@
     <div id="text-panel" class="w-3/4 p-4 bg-white shadow-md relative">
         <h2 class="text-xl font-bold mb-4">Nội Dung Chương</h2>
         <div id="message" class="mb-4 p-2 rounded"></div>
-        <div id="editor" class="border rounded-md" style="height: 80vh;"></div>
+        <textarea id="editor" class="w-full h-[80vh] border rounded-md"></textarea>
     </div>
 
     <div id="notification-container"></div>
