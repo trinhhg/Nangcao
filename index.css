@@ -40,28 +40,7 @@ mark.highlight-yellow { background-color: #feca57; }
 mark.highlight-blue { background-color: #54a0ff; }
 mark.highlight-green { background-color: #1dd1a1; }
 mark.highlight-orange { background-color: #ff9f43; }
-mark.highlight-purple { background-color: #9b59b6; }
-
-#textInput {
-  position: relative;
-  z-index: 2;
-  background: transparent;
-  color: transparent; /* chữ trong textarea ẩn đi */
-  caret-color: black; /* vẫn thấy con trỏ */
-}
-
-#highlight-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 1;
-  pointer-events: none; /* để vẫn chỉnh được textarea */
-  white-space: pre-wrap;
-  overflow: hidden;
-  color: black;
-  width: 100%;
-  height: 100%;
-}
+mark.highlight-purple { background-color: #a29bfe; } /* Changed to lighter purple */
 
 #keywords-tags .tag {
     background: #e0e0e0;
