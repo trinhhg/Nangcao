@@ -72,12 +72,17 @@ function updateHighlight() {
     const matchCase = document.getElementById('matchCase').checked;
     const wholeWords = document.getElementById('wholeWords').checked;
 
-    if (!keywords.length || !textInput.value) {
+    if (keywords.length === 0) {
         overlay.innerHTML = '';
         return;
     }
 
     overlay.innerHTML = highlightText(textInput.value, keywords, matchCase, wholeWords);
+}
+
+function clearHighlights() {
+    const overlay = document.getElementById('highlight-overlay');
+    overlay.innerHTML = '';
 }
 
 // Settings and search logic
@@ -358,7 +363,7 @@ function saveReplaceSettings() {
         pairs: pairs.filter(pair => pair.find || pair.replace),
         matchCase: matchCaseEnabled
     };
-    localStorage.setItem('local_settings', JSON.stringify(settings));
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(settings));
     showNotification(translations[currentLang].settingsSaved.replace('{mode}', currentMode), 'success');
 }
 
