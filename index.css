@@ -1,46 +1,35 @@
-.container {
-  position: relative;
+body {
+  font-family: "Segoe UI", sans-serif;
+  background: #f8f9fa;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  color: #333;
+}
+
+h2 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+#editor {
+  height: 80vh;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+#keyword-box {
+  margin-top: 20px;
+}
+
+#keyword-input {
   width: 100%;
+  padding: 8px 12px;
+  font-size: 16px;
+  border: 1px solid #aaa;
+  border-radius: 5px;
 }
-
-.highlight-layer, textarea {
-  font-family: monospace;
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  width: 100%;
-  min-height: 80vh;
-  padding: 8px;
-  box-sizing: border-box;
-}
-
-.highlight-layer {
-  position: absolute;
-  top: 0;
-  left: 0;
-  color: transparent;
-  pointer-events: none;
-  z-index: 0;
-}
-
-textarea {
-  position: relative;
-  background: transparent;
-  z-index: 1;
-  color: black;
-}
-
-mark {
-  color: black;
-  border-radius: 2px;
-  padding: 0 2px;
-}
-
-mark.highlight-pink { background-color: #ff9ff3; }
-mark.highlight-yellow { background-color: #feca57; }
-mark.highlight-blue { background-color: #54a0ff; }
-mark.highlight-green { background-color: #1dd1a1; }
-mark.highlight-orange { background-color: #ff9f43; }
-mark.highlight-purple { background-color: #a29bfe; } /* Changed to lighter purple */
 
 #keywords-tags .tag {
     background: #e0e0e0;
