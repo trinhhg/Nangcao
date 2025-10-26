@@ -68,21 +68,22 @@ document.getElementById('keywords-input').addEventListener('keydown', function (
 
 // Hàm highlight
 function highlightKeywords(isReplace = false) {
-  const text = quill.getText();
-
-  // Xóa highlight cũ
-  quill.formatText(0, text.length, { background: false });
-
-  // Highlight theo từ khóa
-  keywords.forEach(word => {
-    let regex = new RegExp(word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+  const text = quill.root.innerText;
+  quill.formatText(0, quill.getLength(), { background: false });
+  
+  let i = 0;
+  function step() {
+    if (i >= keywords.length) return;
+    const word = keywords[i];
+    const regex = new RegExp(word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
     let match;
     while ((match = regex.exec(text)) !== null) {
-      quill.formatText(match.index, word.length, {
-        background: isReplace ? '#a29bfe' : pickColor(word)
-      });
+      quill.formatText(match.index, word.length, { background: isReplace ? '#a29bfe' : pickColor(word) });
     }
-  });
+    i++;
+    requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
 }
 
 // Tạo màu riêng cho mỗi từ khóa
@@ -260,38 +261,163 @@ function escapeRegExp(string) {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-// Settings tab logic (giữ nguyên)
-
+// Settings tab logic
 function updateLanguage() {
-    // ... (giữ nguyên code updateLanguage từ trước)
+    const elements = {
+        settingsTitle: document.getElementById('settings-title'),
+        modeLabel: document.getElementById('mode-label'),
+        addMode: document.getElementById('add-mode'),
+        copyMode: document.getElementById('copy-mode'),
+        matchCase: document.getElementById('match-case'),
+        findPlaceholder: document.querySelector('.punctuation-item .find'),
+        replacePlaceholder: document.querySelector('.punctuation-item .replace'),
+        removeButton: document.querySelector('.punctuation-item .remove'),
+        addPair: document.getElementById('add-pair'),
+        saveSettings: document.getElementById('save-settings'),
+        exportSettings: document.getElementById('export-settings'),
+        importSettings: document.getElementById('import-settings')
+    };
+
+    if (elements.settingsTitle) elements.settingsTitle.textContent = translations[currentLang].settingsTitle;
+    if (elements.modeLabel) elements.modeLabel.textContent = translations[currentLang].modeLabel;
+    if (elements.addMode) elements.addMode.textContent = translations[currentLang].addMode;
+    if (elements.copyMode) elements.copyMode.textContent = translations[currentLang].copyMode;
+    if (elements.matchCase) elements.matchCase.textContent = matchCaseEnabled ? translations[currentLang].matchCaseOn : translations[currentLang].matchCaseOff;
+    if (elements.findPlaceholder) elements.findPlaceholder.placeholder = translations[currentLang].findPlaceholder;
+    if (elements.replacePlaceholder) elements.replacePlaceholder.placeholder = translations[currentLang].replacePlaceholder;
+    if (elements.removeButton) elements.removeButton.textContent = translations[currentLang].removeButton;
+    if (elements.addPair) elements.addPair.textContent = translations[currentLang].addPair;
+    if (elements.saveSettings) elements.saveSettings.textContent = translations[currentLang].saveSettings;
+    if (elements.exportSettings) elements.exportSettings.textContent = translations[currentLang].exportSettings;
+    if (elements.importSettings) elements.importSettings.textContent = translations[currentLang].importSettings;
+
+    const punctuationItems = document.querySelectorAll('.punctuation-item');
+    punctuationItems.forEach(item => {
+        const findInput = item.querySelector('.find');
+        const replaceInput = item.querySelector('.replace');
+        const removeBtn = item.querySelector('.remove');
+        if (findInput) findInput.placeholder = translations[currentLang].findPlaceholder;
+        if (replaceInput) replaceInput.placeholder = translations[currentLang].replacePlaceholder;
+        if (removeBtn) removeBtn.textContent = translations[currentLang].removeButton;
+    });
 }
 
 function updateModeButtons() {
-    // ... (giữ nguyên code updateModeButtons từ trước)
+    const renameMode = document.getElementById('rename-mode');
+    const deleteMode = document.getElementById('delete-mode');
+    if (currentMode !== 'default' && renameMode && deleteMode) {
+        renameMode.style.display = 'inline-block';
+        deleteMode.style.display = 'inline-block';
+    } else if (renameMode && deleteMode) {
+        renameMode.style.display = 'none';
+        deleteMode.style.display = 'none';
+    }
 }
 
 function updateButtonStates() {
-    // ... (giữ nguyên code updateButtonStates từ trước)
+    const matchCaseButton = document.getElementById('match-case');
+    if (matchCaseButton) {
+        matchCaseButton.textContent = matchCaseEnabled ? translations[currentLang].matchCaseOn : translations[currentLang].matchCaseOff;
+        matchCaseButton.style.background = matchCaseEnabled ? '#28a745' : '#6c757d';
+    }
 }
 
 function showNotification(message, type = 'success') {
-    // ... (giữ nguyên code showNotification từ trước)
+    const container = document.getElementById('notification-container');
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.textContent = message;
+    container.appendChild(notification);
+    setTimeout(() => notification.remove(), 3000);
 }
 
 function loadModes() {
-    // ... (giữ nguyên code loadModes từ trước)
+    const modeSelect = document.getElementById('mode-select');
+    let settings = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY)) || { modes: { default: { pairs: [], matchCase: false } } };
+    const modes = Object.keys(settings.modes || { default: {} });
+
+    modeSelect.innerHTML = '';
+    modes.forEach(mode => {
+        const option = document.createElement('option');
+        option.value = mode;
+        option.textContent = mode;
+        modeSelect.appendChild(option);
+    });
+    modeSelect.value = currentMode;
+    loadReplacePairs();
+    updateModeButtons();
 }
 
 function loadReplacePairs() {
-    // ... (giữ nguyên code loadReplacePairs từ trước)
+    const list = document.getElementById('punctuation-list');
+    let settings = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY)) || { modes: { default: { pairs: [], matchCase: false } } };
+    const modeSettings = settings.modes?.[currentMode] || { pairs: [], matchCase: false };
+    list.innerHTML = '';
+    if (!modeSettings.pairs || modeSettings.pairs.length === 0) {
+        addReplacePair('', '');
+    } else {
+        modeSettings.pairs.slice().reverse().forEach(pair => addReplacePair(pair.find || '', pair.replace || ''));
+    }
+    matchCaseEnabled = modeSettings.matchCase || false;
+    updateButtonStates();
 }
 
 function saveReplaceSettings() {
-    // ... (giữ nguyên code saveReplaceSettings từ trước)
+    const pairs = Array.from(document.querySelectorAll('.punctuation-item')).map(item => ({
+        find: item.querySelector('.find')?.value || '',
+        replace: item.querySelector('.replace')?.value || ''
+    }));
+
+    if (pairs.every(pair => !pair.find && !pair.replace)) {
+        showNotification(translations[currentLang].noPairsToSave, 'error');
+        return;
+    }
+
+    let settings = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY)) || { modes: { default: { pairs: [], matchCase: false } } };
+    settings.modes[currentMode] = {
+        pairs: pairs.filter(pair => pair.find || pair.replace),
+        matchCase: matchCaseEnabled
+    };
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(settings));
+    showNotification(translations[currentLang].settingsSaved.replace('{mode}', currentMode), 'success');
 }
 
 function addReplacePair(find = '', replace = '') {
-    // ... (giữ nguyên code addReplacePair từ trước)
+    const list = document.getElementById('punctuation-list');
+    const item = document.createElement('div');
+    item.className = 'punctuation-item';
+
+    const findInput = document.createElement('input');
+    findInput.type = 'text';
+    findInput.className = 'find';
+    findInput.placeholder = translations[currentLang].findPlaceholder;
+    findInput.value = find;
+
+    const replaceInput = document.createElement('input');
+    replaceInput.type = 'text';
+    replaceInput.className = 'replace';
+    replaceInput.placeholder = translations[currentLang].replacePlaceholder;
+    replaceInput.value = replace;
+
+    const removeButton = document.createElement('button');
+    removeButton.className = 'remove';
+    removeButton.textContent = translations[currentLang].removeButton;
+
+    item.appendChild(findInput);
+    item.appendChild(replaceInput);
+    item.appendChild(removeButton);
+    if (list.firstChild) {
+        list.insertBefore(item, list.firstChild);
+    } else {
+        list.appendChild(item);
+    }
+
+    removeButton.addEventListener('click', () => {
+        item.remove();
+        saveReplaceSettings();
+    });
+    findInput.addEventListener('input', saveReplaceSettings);
+    replaceInput.addEventListener('input', saveReplaceSettings);
 }
 
 // Main logic
