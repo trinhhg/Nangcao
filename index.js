@@ -55,6 +55,11 @@ document.addEventListener('DOMContentLoaded', () => {
     autogrow: false
   });
 
+  // Theo dõi sự thay đổi nội dung để tự động highlight
+  $('#editor').on('tbwchange', function () {
+    autoHighlight();
+  });
+
   // Lắng nghe nhập từ khóa
   const keywordsInput = document.getElementById('keywords-input');
   keywordsInput.addEventListener('keydown', function (e) {
@@ -609,4 +614,4 @@ function addReplacePair(find = '', replace = '') {
   });
   findInput.addEventListener('input', saveReplaceSettings);
   replaceInput.addEventListener('input', saveReplaceSettings);
-}
+        }
