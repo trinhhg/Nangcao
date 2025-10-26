@@ -42,20 +42,17 @@ let currentMode = 'default';
 const LOCAL_STORAGE_KEY = 'local_settings';
 let keywords = [];
 
-// Khởi tạo TinyMCE
+// Khởi tạo Trumbowyg
 document.addEventListener('DOMContentLoaded', () => {
-  tinymce.init({
-    selector: '#editor',
+  $('#editor').trumbowyg({
     height: '80vh',
-    menubar: false,
-    plugins: 'lists link',
-    toolbar: 'undo redo | bold italic underline | alignleft aligncenter alignright | bullist numlist',
-    content_style: "mark.highlight1{background-color:#fff59d;} mark.highlight2{background-color:#90caf9;} mark.highlight3{background-color:#a5d6a7;}",
-    setup: function (editor) {
-      editor.on('keyup', function () {
-        autoHighlight(editor);
-      });
-    }
+    btns: [
+      ['undo', 'redo'],
+      ['bold', 'italic', 'underline'],
+      ['alignleft', 'aligncenter', 'alignright'],
+      ['unorderedList', 'orderedList']
+    ],
+    autogrow: false
   });
 
   // Lắng nghe nhập từ khóa
@@ -71,7 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       });
       this.value = '';
-      autoHighlight(tinymce.get('editor'));
+      autoHighlight();
       saveSettings();
     }
   });
@@ -107,13 +104,13 @@ document.addEventListener('DOMContentLoaded', () => {
   if (wholeWords) wholeWords.addEventListener('change', () => { saveSettings(); performSearch(); });
   if (fontFamily) {
     fontFamily.addEventListener('change', () => {
-      tinymce.activeEditor.dom.addStyle(`body { font-family: ${fontFamily.value}; }`);
+      $('#editor').trumbowyg('html', $('#editor').trumbowyg('html').replace(/<p[^>]*>/gi, `<p style="font-family: ${fontFamily.value};">`));
       saveSettings();
     });
   }
   if (fontSize) {
     fontSize.addEventListener('change', () => {
-      tinymce.activeEditor.dom.addStyle(`body { font-size: ${fontSize.value}; }`);
+      $('#editor').trumbowyg('html', $('#editor').trumbowyg('html').replace(/<p[^>]*>/gi, `<p style="font-size: ${fontSize.value};">`));
       saveSettings();
     });
   }
@@ -244,9 +241,9 @@ document.addEventListener('DOMContentLoaded', () => {
     updateModeButtons();
   });
   if (clearHighlightBtn) clearHighlightBtn.addEventListener('click', () => {
-    const editor = tinymce.get('editor');
-    const cleared = editor.getContent().replace(/<mark.*?>(.*?)<\/mark>/gi, "$1");
-    editor.setContent(cleared);
+    const editor = $('#editor').trumbowyg('html');
+    const cleared = editor.replace(/<mark.*?>(.*?)<\/mark>/gi, "$1");
+    $('#editor').trumbowyg('html', cleared);
   });
 
   // Tab switching with dynamic width
@@ -281,11 +278,11 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Hàm auto highlight
-function autoHighlight(editor) {
+function autoHighlight() {
+  const editor = $('#editor').trumbowyg('html');
   if (!editor || keywords.length === 0) return;
 
-  const content = editor.getContent();
-  let highlighted = content;
+  let highlighted = editor;
 
   keywords.forEach((word, i) => {
     const colorClass = `highlight${(i % 3) + 1}`;
@@ -294,9 +291,9 @@ function autoHighlight(editor) {
   });
 
   // Xóa highlight cũ trước khi áp dụng mới
-  const cleared = content.replace(/<mark.*?>(.*?)<\/mark>/gi, "$1");
-  editor.setContent(cleared);
-  editor.setContent(highlighted);
+  const cleared = editor.replace(/<mark.*?>(.*?)<\/mark>/gi, "$1");
+  $('#editor').trumbowyg('html', cleared);
+  $('#editor').trumbowyg('html', highlighted);
 }
 
 // Tag logic
@@ -326,7 +323,7 @@ function addTagToList(keyword) {
     if (index > -1) {
       keywords.splice(index, 1);
     }
-    autoHighlight(tinymce.get('editor'));
+    autoHighlight();
     saveSettings();
   };
   tag.appendChild(remove);
@@ -346,10 +343,10 @@ function loadSettings() {
     wholeWordsCheckbox.checked = settings.wholeWords || false;
     keywords = settings.keywords ? settings.keywords.split(',') : [];
     setKeywordsToTags(keywords);
-    autoHighlight(tinymce.get('editor'));
+    autoHighlight();
     fontFamilySelect.value = settings.fontFamily || 'Arial';
     fontSizeSelect.value = settings.fontSize || '16px';
-    tinymce.activeEditor.dom.addStyle(`body { font-family: ${settings.fontFamily || 'Arial'}; font-size: ${settings.fontSize || '16px'}; }`);
+    $('#editor').trumbowyg('html', $('#editor').trumbowyg('html').replace(/<p[^>]*>/gi, `<p style="font-family: ${settings.fontFamily || 'Arial'}; font-size: ${settings.fontSize || '16px'};">`));
   }
 }
 
@@ -370,16 +367,15 @@ function performSearch() {
   const matchCase = document.getElementById('matchCase').checked;
   const wholeWords = document.getElementById('wholeWords').checked;
   const message = document.getElementById('message');
-  const editor = tinymce.get('editor');
 
   if (keywords.length === 0) {
     message.textContent = 'Vui lòng nhập ít nhất một từ khóa.';
     message.className = 'mb-4 p-2 rounded bg-red-200 text-red-800';
-    editor.setContent(editor.getContent().replace(/<mark.*?>(.*?)<\/mark>/gi, "$1"));
+    $('#editor').trumbowyg('html', $('#editor').trumbowyg('html').replace(/<mark.*?>(.*?)<\/mark>/gi, "$1"));
     return;
   }
 
-  const text = editor.getContent().replace(/<[^>]+>/g, '');
+  const text = $('#editor').trumbowyg('html').replace(/<[^>]+>/g, '');
   let found = false;
   for (const keyword of keywords) {
     const regex = wholeWords
@@ -394,20 +390,19 @@ function performSearch() {
   if (found) {
     message.textContent = 'Đã tìm thấy từ khóa!';
     message.className = 'mb-4 p-2 rounded bg-green-200 text-green-800';
-    autoHighlight(editor);
+    autoHighlight();
   } else {
     message.textContent = 'Không tìm thấy từ khóa.';
     message.className = 'mb-4 p-2 rounded bg-red-200 text-red-800';
-    editor.setContent(editor.getContent().replace(/<mark.*?>(.*?)<\/mark>/gi, "$1"));
+    $('#editor').trumbowyg('html', $('#editor').trumbowyg('html').replace(/<mark.*?>(.*?)<\/mark>/gi, "$1"));
   }
 }
 
 function clearContent() {
-  const editor = tinymce.get('editor');
-  editor.setContent('');
+  $('#editor').trumbowyg('html', '');
   document.getElementById('message').textContent = '';
   document.getElementById('message').className = 'mb-4 p-2 rounded';
-  editor.setContent(editor.getContent().replace(/<mark.*?>(.*?)<\/mark>/gi, "$1"));
+  $('#editor').trumbowyg('html', $('#editor').trumbowyg('html').replace(/<mark.*?>(.*?)<\/mark>/gi, "$1"));
 }
 
 // Replace logic
@@ -415,13 +410,12 @@ function performReplace() {
   const matchCase = document.getElementById('matchCase').checked;
   const wholeWords = document.getElementById('wholeWords').checked;
   const message = document.getElementById('message');
-  const editor = tinymce.get('editor');
 
   let settings = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY)) || { modes: { default: { pairs: [], matchCase: false } } };
   const modeSettings = settings.modes[currentMode] || { pairs: [] };
   const pairs = modeSettings.pairs || [];
 
-  if (!editor.getContent().trim()) {
+  if (!$('#editor').trumbowyg('html').trim()) {
     message.textContent = translations[currentLang].noTextToReplace;
     message.className = 'mb-4 p-2 rounded bg-red-200 text-red-800';
     return;
@@ -433,7 +427,7 @@ function performReplace() {
     return;
   }
 
-  let text = editor.getContent().replace(/<[^>]+>/g, '');
+  let text = $('#editor').trumbowyg('html').replace(/<[^>]+>/g, '');
   let replacedWords = [];
   pairs.forEach(pair => {
     let find = pair.find;
@@ -447,10 +441,10 @@ function performReplace() {
       return replace;
     });
   });
-  editor.setContent(text);
+  $('#editor').trumbowyg('html', text);
   message.textContent = translations[currentLang].textReplaced;
   message.className = 'mb-4 p-2 rounded bg-green-200 text-green-800';
-  autoHighlight(editor);
+  autoHighlight();
 }
 
 // Escape regex
