@@ -44,6 +44,12 @@ let keywords = [];
 
 // Khởi tạo Trumbowyg
 document.addEventListener('DOMContentLoaded', () => {
+  // Kiểm tra xem jQuery đã sẵn sàng chưa
+  if (typeof jQuery === 'undefined') {
+    console.error('jQuery không được tải. Vui lòng kiểm tra kết nối mạng hoặc CDN.');
+    return;
+  }
+
   $('#editor').trumbowyg({
     height: '80vh',
     btns: [
@@ -614,4 +620,4 @@ function addReplacePair(find = '', replace = '') {
   });
   findInput.addEventListener('input', saveReplaceSettings);
   replaceInput.addEventListener('input', saveReplaceSettings);
-        }
+}
