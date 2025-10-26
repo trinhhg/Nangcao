@@ -6,9 +6,12 @@
   <title>Tìm Kiếm Chương</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 
+  <!-- Thêm jQuery qua CDN trước Trumbowyg -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js" defer></script>
+
   <!-- Trumbowyg qua CDN -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/trumbowyg@2.27.3/dist/ui/trumbowyg.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/trumbowyg@2.27.3/dist/trumbowyg.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/trumbowyg@2.27.3/dist/trumbowyg.min.js" defer></script>
 
   <!-- CSS riêng -->
   <link rel="stylesheet" href="index.css">
@@ -96,6 +99,6 @@
     </div>
 
     <div id="notification-container"></div>
-    <script src="index.js"></script>
+    <script src="index.js" defer></script>
 </body>
 </html>
