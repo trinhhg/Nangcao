@@ -17,6 +17,7 @@ h2 {
   background: white;
   border: 1px solid #ccc;
   border-radius: 6px;
+  display: none; /* Ẩn textarea gốc, TinyMCE sẽ thay thế */
 }
 
 #keyword-box {
@@ -165,3 +166,8 @@ h2 {
         box-sizing: border-box;
     }
 }
+
+/* CSS cho highlight */
+mark.highlight1 { background-color: #fff59d; }
+mark.highlight2 { background-color: #90caf9; }
+mark.highlight3 { background-color: #a5d6a7; }
