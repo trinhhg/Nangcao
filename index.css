@@ -17,7 +17,7 @@ h2 {
   background: white;
   border: 1px solid #ccc;
   border-radius: 6px;
-  display: none; /* Ẩn textarea gốc, TinyMCE sẽ thay thế */
+  display: none; /* Ẩn textarea gốc, Trumbowyg sẽ thay thế */
 }
 
 #keyword-box {
