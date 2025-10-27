@@ -1,37 +1,52 @@
-body {
-  font-family: "Segoe UI", sans-serif;
-  background: #f8f9fa;
-  max-width: 100%;
-  margin: 0;
-  padding: 0;
-  color: #333;
+/* Textarea and Highlight Overlay */
+.container {
+    position: relative;
+    width: 100%;
 }
 
-h2 {
-  text-align: center;
-  margin-bottom: 20px;
+#textInput, #highlight-overlay {
+    font-family: Arial, sans-serif;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    width: 100%;
+    min-height: 80vh;
+    padding: 16px;
+    box-sizing: border-box;
+    line-height: 1.5;
+    font-size: 16px;
 }
 
-#editor {
-  height: 80vh;
-  background: white;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  display: none; /* Ẩn textarea gốc, Trumbowyg sẽ thay thế */
+#highlight-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    color: transparent;
+    pointer-events: none;
+    z-index: 0;
+    overflow-y: auto;
 }
 
-#keyword-box {
-  margin-top: 20px;
+#textInput {
+    position: relative;
+    background: transparent;
+    z-index: 1;
+    color: black;
 }
 
-#keyword-input {
-  width: 100%;
-  padding: 8px 12px;
-  font-size: 16px;
-  border: 1px solid #aaa;
-  border-radius: 5px;
+mark {
+    color: black;
+    border-radius: 2px;
+    padding: 0 2px;
 }
 
+.highlight-pink { background-color: #ffcccc; }
+.highlight-yellow { background-color: #ffff99; }
+.highlight-blue { background-color: #99ccff; }
+.highlight-green { background-color: #ccffcc; }
+.highlight-orange { background-color: #ffcc99; }
+.highlight-purple { background-color: #e6ccff; }
+
+/* Keywords Tags */
 #keywords-tags .tag {
     background: #e0e0e0;
     padding: 5px 10px;
@@ -48,6 +63,7 @@ h2 {
     font-weight: bold;
 }
 
+/* General Styles */
 .tab-button {
     transition: background 0.2s;
 }
@@ -166,8 +182,3 @@ h2 {
         box-sizing: border-box;
     }
 }
-
-/* CSS cho highlight */
-mark.highlight1 { background-color: #fff59d; }
-mark.highlight2 { background-color: #90caf9; }
-mark.highlight3 { background-color: #a5d6a7; }
