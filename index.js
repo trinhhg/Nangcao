@@ -46,12 +46,7 @@ const highlightColors = ['highlight-pink', 'highlight-yellow', 'highlight-blue',
 const replaceHighlight = 'highlight-purple';
 
 function highlightText(text, keywords, matchCase, wholeWords, isReplace = false) {
-    let highlightedText = text
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/\n/g, "<br>");
-
+    let highlightedText = text;
     keywords.forEach((keyword, index) => {
         const colorClass = isReplace ? replaceHighlight : highlightColors[index % highlightColors.length];
         let regex;
@@ -60,24 +55,9 @@ function highlightText(text, keywords, matchCase, wholeWords, isReplace = false)
         } else {
             regex = new RegExp(keyword.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), matchCase ? 'g' : 'gi');
         }
-        highlightedText = highlightedText.replace(regex, `<mark class="${colorClass}">$&</mark>`);
+        highlightedText = highlightedText.replace(regex, `<span class="${colorClass}">$&</span>`);
     });
     return highlightedText;
-}
-
-function updateHighlight() {
-    const textInput = document.getElementById('textInput');
-    const overlay = document.getElementById('highlight-overlay');
-    const keywords = getKeywordsFromTags();
-    const matchCase = document.getElementById('matchCase').checked;
-    const wholeWords = document.getElementById('wholeWords').checked;
-
-    if (!keywords.length || !textInput.value) {
-        overlay.innerHTML = '';
-        return;
-    }
-
-    overlay.innerHTML = highlightText(textInput.value, keywords, matchCase, wholeWords);
 }
 
 function clearHighlights() {
@@ -101,24 +81,18 @@ function saveSettings() {
 function loadSettings() {
     const settings = JSON.parse(localStorage.getItem('searchSettings'));
     const textInput = document.getElementById('textInput');
-    const overlay = document.getElementById('highlight-overlay');
     if (settings) {
         document.getElementById('matchCase').checked = settings.matchCase || false;
         document.getElementById('wholeWords').checked = settings.wholeWords || false;
         setKeywordsToTags(settings.keywords ? settings.keywords.split(',') : []);
         textInput.style.fontFamily = settings.fontFamily || 'Arial';
         textInput.style.fontSize = settings.fontSize || '16px';
-        overlay.style.fontFamily = settings.fontFamily || 'Arial';
-        overlay.style.fontSize = settings.fontSize || '16px';
         document.getElementById('fontFamily').value = settings.fontFamily || 'Arial';
         document.getElementById('fontSize').value = settings.fontSize || '16px';
     } else {
         textInput.style.fontFamily = 'Arial';
         textInput.style.fontSize = '16px';
-        overlay.style.fontFamily = 'Arial';
-        overlay.style.fontSize = '16px';
     }
-    updateHighlight();
 }
 
 function performSearch() {
@@ -127,6 +101,7 @@ function performSearch() {
     const matchCase = document.getElementById('matchCase').checked;
     const wholeWords = document.getElementById('wholeWords').checked;
     const message = document.getElementById('message');
+    const overlay = document.getElementById('highlight-overlay');
 
     if (!keywords.length) {
         message.textContent = 'Vui lòng nhập ít nhất một từ khóa.';
@@ -150,7 +125,7 @@ function performSearch() {
     if (found) {
         message.textContent = 'Đã tìm thấy từ khóa!';
         message.className = 'mb-4 p-2 rounded bg-green-200 text-green-800';
-        updateHighlight();
+        overlay.innerHTML = highlightText(textContent.replace(/\n/g, '<br>'), keywords, matchCase, wholeWords);
     } else {
         message.textContent = 'Không tìm thấy từ khóa.';
         message.className = 'mb-4 p-2 rounded bg-red-200 text-red-800';
@@ -188,12 +163,12 @@ function addTagToList(keyword) {
     const remove = document.createElement('span');
     remove.className = 'remove-tag';
     remove.textContent = 'x';
-    remove.onclick = () => { tag.remove(); saveSettings(); updateHighlight(); };
+    remove.onclick = () => { tag.remove(); saveSettings(); };
     tag.appendChild(remove);
     container.appendChild(tag);
 }
 
-// Replace logic
+// Replace logic (from reference)
 function escapeRegExp(string) {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -221,6 +196,7 @@ function performReplace() {
     const matchCase = document.getElementById('matchCase').checked;
     const wholeWords = document.getElementById('wholeWords').checked;
     const message = document.getElementById('message');
+    const overlay = document.getElementById('highlight-overlay');
 
     let settings = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY)) || { modes: { default: { pairs: [], matchCase: false } } };
     const modeSettings = settings.modes[currentMode] || { pairs: [] };
@@ -242,11 +218,10 @@ function performReplace() {
     textInput.value = outputText;
     message.textContent = translations[currentLang].textReplaced;
     message.className = 'mb-4 p-2 rounded bg-green-200 text-green-800';
-    const overlay = document.getElementById('highlight-overlay');
-    overlay.innerHTML = highlightText(outputText, replacedWords, matchCase, wholeWords, true);
+    overlay.innerHTML = highlightText(outputText.replace(/\n/g, '<br>'), replacedWords, matchCase, wholeWords, true);
 }
 
-// Settings tab logic
+// Settings tab logic (from reference)
 function updateLanguage() {
     const elements = {
         settingsTitle: document.getElementById('settings-title'),
@@ -432,29 +407,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const importSettingsBtn = document.getElementById('import-settings');
     const settingsPanel = document.getElementById('settings-panel');
     const textPanel = document.getElementById('text-panel');
-    const overlay = document.getElementById('highlight-overlay');
 
     if (searchBtn) searchBtn.addEventListener('click', performSearch);
     if (clearBtn) clearBtn.addEventListener('click', clearContent);
     if (replaceBtn) replaceBtn.addEventListener('click', performReplace);
     if (addPairBtn) addPairBtn.addEventListener('click', () => addReplacePair());
     if (saveSettingsBtn) saveSettingsBtn.addEventListener('click', saveReplaceSettings);
-    if (matchCase) matchCase.addEventListener('change', () => { saveSettings(); updateHighlight(); });
-    if (wholeWords) wholeWords.addEventListener('change', () => { saveSettings(); updateHighlight(); });
+    if (matchCase) matchCase.addEventListener('change', saveSettings);
+    if (wholeWords) wholeWords.addEventListener('change', saveSettings);
     if (fontFamily) {
         fontFamily.addEventListener('change', () => {
             textInput.style.fontFamily = fontFamily.value;
-            overlay.style.fontFamily = fontFamily.value;
             saveSettings();
-            updateHighlight();
         });
     }
     if (fontSize) {
         fontSize.addEventListener('change', () => {
             textInput.style.fontSize = fontSize.value;
-            overlay.style.fontSize = fontSize.value;
             saveSettings();
-            updateHighlight();
         });
     }
     if (matchCaseBtn) {
@@ -501,7 +471,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (addModeBtn) {
         addModeBtn.addEventListener('click', () => {
             const newMode = prompt(translations[currentLang].newModePrompt);
-            if (newMode && !newMode.includes('mode_') && newName.trim() !== '' && newMode !== 'default') {
+            if (newMode && !newMode.includes('mode_') && newMode.trim() !== '' && newMode !== 'default') {
                 let settings = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY)) || { modes: { default: { pairs: [], matchCase: false } } };
                 if (settings.modes[newMode]) {
                     showNotification(translations[currentLang].invalidModeName, 'error');
@@ -610,21 +580,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 newKeywords.forEach(addTagToList);
                 keywordsInput.value = '';
                 saveSettings();
-                updateHighlight();
             }
         }
     });
 
-    // Sync scroll
-    textInput.addEventListener('scroll', () => {
-        overlay.scrollTop = textInput.scrollTop;
-        overlay.scrollLeft = textInput.scrollLeft;
-    });
-
-    // Update highlight on input
-    textInput.addEventListener('input', () => {
-        updateHighlight();
-    });
+    textInput.oninput = () => {
+        clearHighlights();
+    };
 
     // Tab switching with dynamic width
     document.querySelectorAll('.tab-button').forEach(button => {
@@ -640,13 +602,13 @@ document.addEventListener('DOMContentLoaded', () => {
             // Adjust widths
             if (tabName === 'main') {
                 settingsPanel.classList.remove('w-1/2');
-                settingsPanel.classList.add('w-1/4');
+                settingsPanel.classList.add('w-1/3');
                 textPanel.classList.remove('w-1/2');
-                textPanel.classList.add('w-3/4');
+                textPanel.classList.add('w-2/3');
             } else if (tabName === 'settings') {
-                settingsPanel.classList.remove('w-1/4');
+                settingsPanel.classList.remove('w-1/3');
                 settingsPanel.classList.add('w-1/2');
-                textPanel.classList.remove('w-3/4');
+                textPanel.classList.remove('w-2/3');
                 textPanel.classList.add('w-1/2');
             }
         });
