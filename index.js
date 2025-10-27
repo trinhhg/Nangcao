@@ -80,6 +80,11 @@ function updateHighlight() {
     overlay.innerHTML = highlightText(textInput.value, keywords, matchCase, wholeWords);
 }
 
+function clearHighlights() {
+    const overlay = document.getElementById('highlight-overlay');
+    overlay.innerHTML = '';
+}
+
 // Settings and search logic
 function saveSettings() {
     const keywords = getKeywordsFromTags();
@@ -216,7 +221,6 @@ function performReplace() {
     const matchCase = document.getElementById('matchCase').checked;
     const wholeWords = document.getElementById('wholeWords').checked;
     const message = document.getElementById('message');
-    const overlay = document.getElementById('highlight-overlay');
 
     let settings = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY)) || { modes: { default: { pairs: [], matchCase: false } } };
     const modeSettings = settings.modes[currentMode] || { pairs: [] };
@@ -238,6 +242,7 @@ function performReplace() {
     textInput.value = outputText;
     message.textContent = translations[currentLang].textReplaced;
     message.className = 'mb-4 p-2 rounded bg-green-200 text-green-800';
+    const overlay = document.getElementById('highlight-overlay');
     overlay.innerHTML = highlightText(outputText, replacedWords, matchCase, wholeWords, true);
 }
 
@@ -358,7 +363,7 @@ function saveReplaceSettings() {
         pairs: pairs.filter(pair => pair.find || pair.replace),
         matchCase: matchCaseEnabled
     };
-    localStorage.setItem('local_settings', JSON.stringify(settings));
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(settings));
     showNotification(translations[currentLang].settingsSaved.replace('{mode}', currentMode), 'success');
 }
 
@@ -496,7 +501,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (addModeBtn) {
         addModeBtn.addEventListener('click', () => {
             const newMode = prompt(translations[currentLang].newModePrompt);
-            if (newMode && !newMode.includes('mode_') && newMode.trim() !== '' && newMode !== 'default') {
+            if (newMode && !newMode.includes('mode_') && newName.trim() !== '' && newMode !== 'default') {
                 let settings = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY)) || { modes: { default: { pairs: [], matchCase: false } } };
                 if (settings.modes[newMode]) {
                     showNotification(translations[currentLang].invalidModeName, 'error');
