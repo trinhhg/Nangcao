@@ -1,20 +1,11 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tìm Kiếm Chương</title>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-
-  <!-- Thêm jQuery qua CDN trước Trumbowyg -->
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js" defer></script>
-
-  <!-- Trumbowyg qua CDN -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/trumbowyg@2.27.3/dist/ui/trumbowyg.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/trumbowyg@2.27.3/dist/trumbowyg.min.js" defer></script>
-
-  <!-- CSS riêng -->
-  <link rel="stylesheet" href="index.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tìm Kiếm Chương</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="index.css">
 </head>
 <body class="bg-gray-100 flex h-screen">
     <!-- Settings Panel (Left) -->
@@ -55,14 +46,13 @@
                 </label>
                 <label class="block mb-2">Từ khóa:</label>
                 <input type="text" id="keywords-input" placeholder="Nhập từ khóa, phân cách bằng phẩy, nhấn Enter..." class="w-full p-2 border rounded-full bg-gray-50">
+                <div id="keywords-tags" class="flex flex-wrap gap-2 mt-2"></div>
             </div>
             <div class="flex space-x-2 mb-4">
                 <button id="search" class="bg-green-500 text-white px-4 py-2 rounded-full hover:bg-green-600">Tìm Kiếm</button>
                 <button id="clear" class="bg-red-500 text-white px-4 py-2 rounded-full hover:bg-red-600">Xóa</button>
                 <button id="replace" class="bg-purple-500 text-white px-4 py-2 rounded-full hover:bg-purple-600">Replace</button>
             </div>
-            <div id="keywords-tags" class="flex flex-wrap gap-2"></div>
-            <button id="clear-highlight" class="mt-4 bg-gray-500 text-white px-4 py-2 rounded-full hover:bg-gray-600">Xóa Highlight</button>
         </div>
 
         <!-- Tab Settings -->
@@ -93,12 +83,13 @@
     <div id="text-panel" class="w-3/4 p-4 bg-white shadow-md relative">
         <h2 class="text-xl font-bold mb-4">Nội Dung Chương</h2>
         <div id="message" class="mb-4 p-2 rounded"></div>
-        <textarea id="editor">
-          Ví dụ: Tôi đang kiểm tra highlight động bằng Trumbowyg. Hãy thử nhập các từ như 'highlight', 'Trumbowyg', hoặc 'động' vào ô dưới đây!
-        </textarea>
+        <div class="container relative">
+            <div id="highlight-overlay" class="highlight-layer absolute top-0 left-0 w-full p-4 pointer-events-none bg-transparent whitespace-pre-wrap"></div>
+            <textarea id="textInput" class="w-full p-4 border rounded-md bg-transparent focus:outline-none whitespace-pre-wrap resize-none" style="height: 80vh;"></textarea>
+        </div>
     </div>
 
     <div id="notification-container"></div>
-    <script src="index.js" defer></script>
+    <script src="index.js"></script>
 </body>
 </html>
