@@ -6,10 +6,19 @@
     <title>Tìm Kiếm & Thay Thế Chương</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="index.css">
+    <style>
+        /* CSS Custom Highlight API - Nhiều màu */
+        ::highlight(hl-yellow) { background: #ffff99; color: black; }
+        ::highlight(hl-pink)   { background: #ffcccc; color: black; }
+        ::highlight(hl-blue)   { background: #99ccff; color: black; }
+        ::highlight(hl-green)  { background: #ccffcc; color: black; }
+        ::highlight(hl-orange) { background: #ffcc99; color: black; }
+        ::highlight(hl-purple) { background: #e6ccff; color: black; }
+    </style>
 </head>
 <body class="bg-gray-100 flex h-screen">
 
-    <!-- Left Panel: Tab Chính -->
+    <!-- Left Panel: Cài đặt tìm kiếm -->
     <div id="main-panel" class="w-1/4 p-4 bg-white shadow-md overflow-y-auto">
         <h2 class="text-xl font-bold mb-4">Cài Đặt Tìm Kiếm</h2>
         <div class="mb-4">
@@ -39,7 +48,7 @@
                 <input type="checkbox" id="wholeWords" class="mr-2"> Chỉ Tìm Từ Hoàn Chỉnh
             </label>
             <label class="block mb-2">Từ khóa:</label>
-            <input type="text" id="keywords-input" placeholder="Nhập từ khóa, phân cách bằng phẩy, nhấn Enter..." class="w-full p-2 border rounded-full bg-gray-50 text-sm">
+            <input type="text" id="keywords-input" placeholder="Nhập từ khóa, phẩy cách nhau, Enter..." class="w-full p-2 border rounded-full bg-gray-50 text-sm">
             <div id="keywords-tags" class="flex flex-wrap gap-1 mt-2"></div>
         </div>
         <div class="flex space-x-2">
@@ -48,20 +57,20 @@
         </div>
     </div>
 
-    <!-- Center: Text Input -->
+    <!-- Center: Văn bản (dùng contenteditable thay textarea) -->
     <div id="text-panel" class="flex-1 p-4 bg-white shadow-md relative flex flex-col">
         <h2 class="text-xl font-bold mb-2">Nội Dung Chương</h2>
         <div id="message" class="mb-2 p-2 rounded text-sm"></div>
-        <div class="container flex-1 relative">
-            <div id="highlight-overlay" class="highlight-layer absolute top-0 left-0 w-full p-4 pointer-events-none bg-transparent whitespace-pre-wrap overflow-hidden"></div>
-            <textarea id="textInput" class="w-full h-full p-4 border rounded-md bg-transparent focus:outline-none whitespace-pre-wrap resize-none" style="min-height: 60vh;"></textarea>
+        <div id="textInput"
+             contenteditable="true"
+             class="flex-1 p-4 border rounded-md focus:outline-none whitespace-pre-wrap overflow-y-auto"
+             style="min-height: 60vh; font-family: Arial; font-size: 16px; line-height: 1.6;">
         </div>
     </div>
 
     <!-- Right Panel: Settings (Find & Replace) -->
     <div id="settings-panel" class="w-1/4 p-4 bg-white shadow-md overflow-y-auto">
         <h2 class="text-xl font-bold mb-4">Cài Đặt Tìm & Thay Thế</h2>
-
         <div class="mode-controls mb-3">
             <select id="mode-select" class="p-1 text-xs border rounded"></select>
             <button id="add-mode" class="px-2 py-1 bg-blue-500 text-white rounded text-xs">Thêm</button>
@@ -72,12 +81,10 @@
             <button id="rename-mode" class="px-2 py-1 bg-gray-500 text-white rounded text-xs hidden">Đổi</button>
             <button id="delete-mode" class="px-2 py-1 bg-red-500 text-white rounded text-xs hidden">Xóa</button>
         </div>
-
         <div class="action-buttons mb-3">
             <button id="add-pair" class="px-3 py-1 bg-blue-500 text-white rounded text-xs">+ Thêm</button>
             <button id="save-settings" class="px-3 py-1 bg-blue-500 text-white rounded text-xs">Lưu</button>
         </div>
-
         <div id="punctuation-list" class="space-y-2 text-xs"></div>
     </div>
 
