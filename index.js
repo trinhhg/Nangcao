@@ -17,31 +17,27 @@ document.addEventListener('DOMContentLoaded', () => {
     const exportBtn = document.getElementById('export-settings');
     const importBtn = document.getElementById('import-settings');
     const renameModeBtn = document.getElementById('rename-mode');
-    const deleteModeBtn = document.getElementById('delete-mode'); // ĐÃ SỬA
+    const deleteModeBtn = document.getElementById('delete-mode');
     const addPairBtn = document.getElementById('add-pair');
     const saveSettingsBtn = document.getElementById('save-settings');
+    const replaceAllBtn = document.getElementById('replace-all');
     const punctuationList = document.getElementById('punctuation-list');
 
     let keywords = [];
     let currentMode = 'default';
     let matchCaseEnabled = false;
     const SETTINGS_KEY = 'replace_settings';
-
     const highlightNames = ['hl-yellow', 'hl-pink', 'hl-blue', 'hl-green', 'hl-orange', 'hl-purple'];
 
-    // === CSS CUSTOM HIGHLIGHT API ===
-    function clearAllHighlights() {
-        if (!CSS.highlights) return;
-        CSS.highlights.clear();
-    }
+    // === HIGHLIGHT API ===
+    function clearAllHighlights() { if (CSS.highlights) CSS.highlights.clear(); }
 
     function applyHighlight() {
         if (!CSS.highlights) {
-            console.warn('CSS Custom Highlight API không được hỗ trợ');
+            console.warn('CSS Custom Highlight API không hỗ trợ');
             return;
         }
         clearAllHighlights();
-
         const text = textInput.textContent || '';
         if (!text || keywords.length === 0) return;
 
@@ -69,15 +65,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             });
 
-            if (highlight.size > 0) {
-                CSS.highlights.set(name, highlight);
-            }
+            if (highlight.size > 0) CSS.highlights.set(name, highlight);
         });
     }
 
-    function escapeRegExp(str) {
-        return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    }
+    function escapeRegExp(str) { return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 
     // === TỪ KHÓA ===
     function addKeywordTag(word) {
@@ -96,41 +88,25 @@ document.addEventListener('DOMContentLoaded', () => {
     keywordsInput.addEventListener('keydown', e => {
         if (e.key === 'Enter') {
             const vals = keywordsInput.value.split(',').map(s => s.trim()).filter(s => s);
-            vals.forEach(v => {
-                if (v && !keywords.includes(v)) {
-                    keywords.push(v);
-                    addKeywordTag(v);
-                }
-            });
+            vals.forEach(v => { if (v && !keywords.includes(v)) { keywords.push(v); addKeywordTag(v); } });
             keywordsInput.value = '';
             applyHighlight();
         }
     });
 
-    // === NÚT ===
     searchBtn.onclick = applyHighlight;
-    clearBtn.onclick = () => {
-        keywords = [];
-        keywordsTags.innerHTML = '';
-        clearAllHighlights();
-    };
+    clearBtn.onclick = () => { keywords = []; keywordsTags.innerHTML = ''; clearAllHighlights(); };
 
-    // === FONT & INPUT ===
     fontFamily.onchange = () => textInput.style.fontFamily = fontFamily.value;
     fontSize.onchange = () => textInput.style.fontSize = fontSize.value;
 
-    textInput.addEventListener('input', () => {
-        setTimeout(applyHighlight, 50); // debounce nhẹ
-    });
+    textInput.addEventListener('input', () => setTimeout(applyHighlight, 50));
 
-    // === SETTINGS PANEL (Find & Replace) ===
+    // === FIND & REPLACE ===
     function loadModes() {
         const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || { modes: { default: { pairs: [], matchCase: false } } };
         modeSelect.innerHTML = '';
-        Object.keys(settings.modes).sort().forEach(m => {
-            const opt = new Option(m, m);
-            modeSelect.add(opt);
-        });
+        Object.keys(settings.modes).sort().forEach(m => modeSelect.add(new Option(m, m)));
         modeSelect.value = currentMode;
         loadPairs();
         updateModeButtons();
@@ -156,7 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <button class="remove">×</button>
         `;
         item.querySelector('.remove').onclick = () => item.remove();
-        punctuationList.appendChild(item);
+        punctuationList.insertBefore(item, punctuationList.firstChild); // THÊM VÀO ĐẦU
     }
 
     function saveSettings() {
@@ -170,6 +146,26 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
         showNotification('Đã lưu cài đặt!', 'success');
     }
+
+    replaceAllBtn.onclick = () => {
+        const pairs = Array.from(punctuationList.querySelectorAll('.punctuation-item')).map(el => ({
+            find: el.querySelector('.find').value.trim(),
+            replace: el.querySelector('.replace').value
+        })).filter(p => p.find);
+
+        if (pairs.length === 0) return showNotification('Chưa có cặp nào!', 'error');
+
+        let newText = textInput.textContent;
+        pairs.forEach(p => {
+            const flags = matchCaseEnabled ? 'g' : 'gi';
+            const regex = new RegExp(escapeRegExp(p.find), flags);
+            newText = newText.replace(regex, p.replace);
+        });
+
+        textInput.textContent = newText;
+        applyHighlight();
+        showNotification('Đã thay thế tất cả!', 'success');
+    };
 
     // === SỰ KIỆN ===
     modeSelect.onchange = () => { currentMode = modeSelect.value; loadPairs(); };
