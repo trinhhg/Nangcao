@@ -6,8 +6,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const clearBtn = document.getElementById('clear');
     const fontFamily = document.getElementById('fontFamily');
     const fontSize = document.getElementById('fontSize');
-    const matchCaseCb = document.getTextById('matchCase');
-    const wholeWordsCb = document.getElementById('wholeWords');
+    const matchCaseCb = document.getElementById('matchCase'); // ĐÃ SỬA
+    const wholeWordsCb = document.getElementById('wholeWords'); // ĐÃ SỬA
 
     const modeSelect = document.getElementById('mode-select');
     const addModeBtn = document.getElementById('add-mode');
@@ -54,12 +54,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 let match;
                 while ((match = regex.exec(text)) !== null) {
-                    // Thêm phần trước match
                     if (match.index > lastIndex) {
                         fragment.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
                     }
 
-                    // Tạo span highlight
                     const span = document.createElement('span');
                     span.className = cls;
                     span.textContent = match[0];
@@ -69,7 +67,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            // Thêm phần còn lại
             if (lastIndex < text.length) {
                 fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
             }
