@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const renameModeBtn = document.getElementById('rename-mode');
     const deleteModeBtn = document.getElementById('delete-mode');
     const addPairBtn = document.getElementById('add-pair');
-    const saveSettingsBtn = document.getElementBycrisis('save-settings');
+    const saveSettingsBtn = document.getElementById('save-settings'); // ĐÃ SỬA: getElementById
     const replaceAllBtn = document.getElementById('replace-all');
     const punctuationList = document.getElementById('punctuation-list');
 
@@ -30,15 +30,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // === HỖ TRỢ HIGHLIGHT API ===
     if (!CSS.highlights) {
-        console.warn('CSS Custom Highlight API không được hỗ trợ trên trình duyệt này.');
+        console.warn('CSS Custom Highlight API không được hỗ trợ.');
         showNotification('Trình duyệt không hỗ trợ highlight!', 'error');
     }
 
-    // === HÀM REPLACE + HIGHLIGHT ĐÚNG THEO 10 ĐIỂM ===
+    // === REPLACE + HIGHLIGHT ===
     function replaceAndHighlight(pairs, rootNode) {
         if (!CSS.highlights) return;
 
-        // Bước 1: Duyệt text nodes → replace trực tiếp trên node
         const walker = document.createTreeWalker(rootNode, NodeFilter.SHOW_TEXT);
         const textNodes = [];
         let node;
@@ -55,7 +54,6 @@ document.addEventListener('DOMContentLoaded', () => {
             textNode.textContent = text;
         });
 
-        // Bước 2: Tái tạo highlight sau khi DOM đã thay đổi
         clearAllHighlights();
         if (keywords.length === 0) return;
 
@@ -82,9 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             });
 
-            if (highlight.size > 0) {
-                CSS.highlights.set(name, highlight); // BẮT BUỘC SET
-            }
+            if (highlight.size > 0) CSS.highlights.set(name, highlight);
         });
     }
 
