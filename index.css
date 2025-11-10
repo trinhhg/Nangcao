@@ -1,47 +1,4 @@
-/* Overlay Highlight - Không thay đổi DOM */
-.container {
-    position: relative;
-    width: 100%;
-    flex: 1;
-}
-
-#textInput, #highlight-overlay {
-    font-family: Arial, sans-serif;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    width: 100%;
-    padding: 16px;
-    box-sizing: border-box;
-    line-height: 1.6;
-    font-size: 16px;
-}
-
-#highlight-overlay {
-    position: absolute;
-    top: 0; left: 0;
-    color: transparent;
-    pointer-events: none;
-    z-index: 1;
-    user-select: none;
-}
-
-#textInput {
-    position: relative;
-    background: transparent;
-    z-index: 2;
-    color: black;
-    caret-color: black;
-}
-
-/* Highlight màu */
-.highlight-pink { background: #ffcccc; }
-.highlight-yellow { background: #ffff99; }
-.highlight-blue { background: #99ccff; }
-.highlight-green { background: #ccffcc; }
-.highlight-orange { background: #ffcc99; }
-.highlight-purple { background: #e6ccff; }
-
-/* Tags từ khóa */
+/* Chỉ giữ giao diện */
 #keywords-tags .tag {
     background: #e0e0e0;
     padding: 4px 8px;
@@ -53,7 +10,6 @@
 }
 #keywords-tags .tag .remove-tag { cursor: pointer; font-weight: bold; }
 
-/* Settings Panel - Find & Replace */
 #punctuation-list .punctuation-item {
     display: flex;
     gap: 4px;
@@ -77,7 +33,6 @@
     cursor: pointer;
 }
 
-/* Notification */
 #notification-container {
     position: fixed;
     top: 20px;
