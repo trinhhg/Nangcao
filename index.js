@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const keywordsInput = document.getElementById('keywords-input');
     const keywordsTags = document.getElementById('keywords-tags');
     const searchBtn = document.getElementById('search');
-    const clearBtn = document.getElementById('clear'); // ĐÃ SỬA: getElementById
+    const clearBtn = document.getElementById('clear');
     const fontFamily = document.getElementById('fontFamily');
     const fontSize = document.getElementById('fontSize');
     const matchCaseCb = document.getElementById('matchCase');
@@ -17,8 +17,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const matchCaseBtn = document.getElementById('match-case');
     const exportBtn = document.getElementById('export-settings');
     const importBtn = document.getElementById('import-settings');
-    const renameModeBtn = document.getElementById('rename-mode');
-    const deleteModeBtn = document.getElementById('delete-mode');
+    const renameModeBtn = document.getElementById('rename-mode');     // ĐÃ CÓ TRONG HTML
+    const deleteModeBtn = document.getElementById('delete-mode');     // ĐÃ CÓ TRONG HTML
     const addPairBtn = document.getElementById('add-pair');
     const saveSettingsBtn = document.getElementById('save-settings');
     const replaceAllBtn = document.getElementById('replace-all');
@@ -31,16 +31,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const SETTINGS_KEY = 'replace_settings';
     const highlightNames = ['hl-yellow', 'hl-pink', 'hl-blue', 'hl-green', 'hl-orange', 'hl-purple'];
 
-    // === CSS CUSTOM HIGHLIGHT API ===
+    // === HIGHLIGHT ===
     function clearAllHighlights() {
         if (CSS.highlights) CSS.highlights.clear();
     }
 
     function applyHighlight() {
-        if (!CSS.highlights) {
-            console.warn('CSS Custom Highlight API không được hỗ trợ');
-            return;
-        }
+        if (!CSS.highlights) return;
         clearAllHighlights();
         if (keywords.length === 0) return;
 
@@ -67,10 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     highlight.add(range);
                 });
             });
-
-            if (highlight.size > 0) {
-                CSS.highlights.set(name, highlight);
-            }
+            if (highlight.size > 0) CSS.highlights.set(name, highlight);
         });
     }
 
@@ -118,14 +112,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     textInput.addEventListener('input', () => setTimeout(applyHighlight, 50));
 
-    // === FIND & REPLACE PANEL ===
+    // === FIND & REPLACE ===
     function loadModes() {
         const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || { modes: { default: { pairs: [], matchCase: false } } };
         modeSelect.innerHTML = '';
         Object.keys(settings.modes).sort().forEach(m => modeSelect.add(new Option(m, m)));
         modeSelect.value = currentMode;
         loadPairs();
-        updateModeButtons();
+        updateModeButtons(); // BÂY GIỜ AN TOÀN
     }
 
     function loadPairs() {
@@ -151,7 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
             item.remove();
             if (punctuationList.children.length === 0) addPair();
         };
-        punctuationList.insertBefore(item, punctuationList.firstChild); // Thêm vào đầu
+        punctuationList.insertBefore(item, punctuationList.firstChild);
     }
 
     function saveSettings() {
@@ -163,19 +157,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || { modes: {} };
         settings.modes[currentMode] = { pairs, matchCase: matchCaseEnabled };
         localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-        showNotification('Đã lưu cài đặt!', 'success');
+        showNotification('Đã lưu!', 'success');
     }
 
-    // === THAY THẾ GIỮ NGUYÊN DÒNG + HIGHLIGHT LẠI ===
     replaceAllBtn.onclick = () => {
         const pairs = Array.from(punctuationList.querySelectorAll('.punctuation-item')).map(el => ({
             find: el.querySelector('.find').value.trim(),
             replace: el.querySelector('.replace').value
         })).filter(p => p.find);
 
-        if (pairs.length === 0) return showNotification('Chưa có cặp nào!', 'error');
+        if (pairs.length === 0) return showNotification('Chưa có cặp!', 'error');
 
-        // Lấy nội dung, giữ nguyên xuống dòng
         const lines = textInput.textContent.split('\n');
         const newLines = lines.map(line => {
             let newLine = line;
@@ -188,21 +180,18 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         textInput.textContent = newLines.join('\n');
-        applyHighlight(); // Highlight lại sau khi thay
-        showNotification('Đã thay thế tất cả!', 'success');
+        applyHighlight();
+        showNotification('Đã thay thế!', 'success');
     };
 
     // === SỰ KIỆN ===
-    modeSelect.onchange = () => {
-        currentMode = modeSelect.value;
-        loadPairs();
-    };
+    modeSelect.onchange = () => { currentMode = modeSelect.value; loadPairs(); };
 
     addModeBtn.onclick = () => {
         const name = prompt('Tên chế độ mới:');
         if (!name || name === 'default') return showNotification('Tên không hợp lệ!', 'error');
         const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || { modes: {} };
-        if (settings.modes[name]) return showNotification('Tên đã tồn tại!', 'error');
+        if (settings.modes[name]) return showNotification('Đã tồn tại!', 'error');
         settings.modes[name] = { pairs: [], matchCase: false };
         localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
         currentMode = name;
@@ -240,16 +229,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url;
-        a.download = 'replace_settings.csv';
-        a.click();
+        a.href = url; a.download = 'replace_settings.csv'; a.click();
         URL.revokeObjectURL(url);
     };
 
     importBtn.onclick = () => {
         const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.csv';
+        input.type = 'file'; input.accept = '.csv';
         input.onchange = e => {
             const file = e.target.files[0];
             const reader = new FileReader();
@@ -266,20 +252,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     localStorage.setItem(SETTINGS_KEY, JSON.stringify(newSettings));
                     loadModes();
                     showNotification('Nhập thành công!', 'success');
-                } catch (err) {
-                    console.error(err);
-                    showNotification('Lỗi file CSV!', 'error');
-                }
+                } catch { showNotification('Lỗi file!', 'error'); }
             };
             reader.readAsText(file, 'UTF-8');
         };
         input.click();
     };
 
+    // === UPDATE BUTTONS ===
     function updateModeButtons() {
         const isDefault = currentMode === 'default';
-        renameModeBtn.classList.toggle('hidden', isDefault);
-        deleteModeBtn.classList.toggle('hidden', isDefault);
+        if (renameModeBtn) renameModeBtn.classList.toggle('hidden', isDefault);
+        if (deleteModeBtn) deleteModeBtn.classList.toggle('hidden', isDefault);
     }
 
     function showNotification(msg, type = 'success') {
