@@ -1,4 +1,4 @@
-/* Chỉ giữ giao diện */
+/* Giao diện chung */
 #keywords-tags .tag {
     background: #e0e0e0;
     padding: 4px 8px;
@@ -8,20 +8,27 @@
     align-items: center;
     gap: 4px;
 }
-#keywords-tags .tag .remove-tag { cursor: pointer; font-weight: bold; }
+#keywords-tags .tag .remove-tag { 
+    cursor: pointer; 
+    font-weight: bold; 
+    font-size: 14px;
+}
 
+/* Find & Replace - Thu gọn, không cuộn ngang */
 #punctuation-list .punctuation-item {
     display: flex;
     gap: 4px;
     margin-bottom: 6px;
     align-items: center;
+    flex-wrap: nowrap;
 }
 #punctuation-list .punctuation-item input {
     flex: 1;
-    padding: 6px;
+    padding: 6px 8px;
     font-size: 12px;
     border: 1px solid #ccc;
     border-radius: 4px;
+    min-width: 0;
 }
 #punctuation-list .punctuation-item button {
     padding: 4px 8px;
@@ -31,8 +38,16 @@
     border-radius: 4px;
     font-size: 11px;
     cursor: pointer;
+    white-space: nowrap;
 }
 
+/* Nút không bị tràn */
+.mode-controls button,
+.action-buttons button {
+    min-width: fit-content;
+}
+
+/* Notification */
 #notification-container {
     position: fixed;
     top: 20px;
@@ -56,3 +71,8 @@
 
 @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+
+/* Font Montserrat */
+body, select, input, button {
+    font-family: 'Montserrat', Arial, sans-serif;
+}
