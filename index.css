@@ -1,58 +1,62 @@
 /* Tags từ khóa */
 #keywords-tags .tag {
     background: #e0e0e0;
-    padding: 2px 6px;
-    border-radius: 12px;
-    font-size: 10px;
+    padding: 4px 8px;
+    border-radius: 16px;
+    font-size: 12px;
     display: inline-flex;
     align-items: center;
-    gap: 3px;
+    gap: 4px;
 }
-#keywords-tags .tag .remove-tag { cursor: pointer; font-weight: bold; font-size: 12px; }
+#keywords-tags .tag .remove-tag {
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 14px;
+}
 
-/* Ô find/replace – RÚT NGẮN 50% */
+/* Ô find/replace – RÚT NGẮN, KHÔNG CUỘN */
 #punctuation-list .punctuation-item {
     display: flex;
-    gap: 3px;
+    gap: 4px;
     align-items: center;
 }
 #punctuation-list .punctuation-item input {
     flex: 1;
-    padding: 4px 6px;
+    padding: 6px 8px;
     font-size: 11px;
     border: 1px solid #ccc;
-    border-radius: 3px;
+    border-radius: 4px;
     min-width: 0;
-    width: 50px; /* Rút ngắn */
+    max-width: 60px;
 }
 #punctuation-list .punctuation-item button {
-    padding: 3px 6px;
+    padding: 4px 8px;
     background: #dc3545;
     color: white;
     border: none;
-    border-radius: 3px;
-    font-size: 10px;
+    border-radius: 4px;
+    font-size: 11px;
     cursor: pointer;
 }
 
 /* Notification */
 #notification-container {
     position: fixed;
-    top: 16px;
-    right: 16px;
+    top: 20px;
+    right: 20px;
     z-index: 1000;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
 }
 .notification {
-    padding: 6px 12px;
-    border-radius: 4px;
+    padding: 10px 16px;
+    border-radius: 6px;
     color: white;
-    font-size: 12px;
-    min-width: 140px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
-    animation: slideIn 0.3s ease, fadeOut 0.3s ease 2.5s forwards;
+    font-size: 13px;
+    min-width: 180px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    animation: slideIn 0.3s ease, fadeOut 0.3s ease 2.7s forwards;
 }
 .notification.success { background: #28a745; }
 .notification.error { background: #dc3545; }
