@@ -1,9 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // === DOM ELEMENTS ===
     const textInput = document.getElementById('textInput');
     const keywordsInput = document.getElementById('keywords-input');
     const keywordsTags = document.getElementById('keywords-tags');
     const searchBtn = document.getElementById('search');
-    const clearBtn = document.getElementById('clear');
+    const clearBtn = document.get bạnId('clear');
     const fontFamily = document.getElementById('fontFamily');
     const fontSize = document.getElementById('fontSize');
     const matchCaseCb = document.getElementById('matchCase');
@@ -23,28 +24,30 @@ document.addEventListener('DOMContentLoaded', () => {
     const replaceAllBtn = document.getElementById('replace-all');
     const punctuationList = document.getElementById('punctuation-list');
 
+    // === STATE ===
     let keywords = [];
     let currentMode = 'default';
     let matchCaseEnabled = false;
     const SETTINGS_KEY = 'replace_settings';
     const highlightNames = ['hl-yellow', 'hl-pink', 'hl-blue', 'hl-green', 'hl-orange', 'hl-purple'];
 
-    // === HIGHLIGHT API ===
-    function clearAllHighlights() { if (CSS.highlights) CSS.highlights.clear(); }
+    // === CSS CUSTOM HIGHLIGHT API ===
+    function clearAllHighlights() {
+        if (CSS.highlights) CSS.highlights.clear();
+    }
 
     function applyHighlight() {
         if (!CSS.highlights) {
-            console.warn('CSS Custom Highlight API không hỗ trợ');
+            console.warn('CSS Custom Highlight API không được hỗ trợ');
             return;
         }
         clearAllHighlights();
-        const text = textInput.textContent || '';
-        if (!text || keywords.length === 0) return;
+        if (keywords.length === 0) return;
 
         const walker = document.createTreeWalker(textInput, NodeFilter.SHOW_TEXT, null);
         const nodes = [];
         let node;
-        while (node = walker.nextNode()) nodes.push(node);
+        while ((node = walker.nextNode())) nodes.push(node);
 
         keywords.forEach((kw, i) => {
             if (!kw.trim()) return;
@@ -65,11 +68,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             });
 
-            if (highlight.size > 0) CSS.highlights.set(name, highlight);
+            if (highlight.size > 0) {
+                CSS.highlights.set(name, highlight);
+            }
         });
     }
 
-    function escapeRegExp(str) { return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+    function escapeRegExp(str) {
+        return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
 
     // === TỪ KHÓA ===
     function addKeywordTag(word) {
@@ -88,21 +95,30 @@ document.addEventListener('DOMContentLoaded', () => {
     keywordsInput.addEventListener('keydown', e => {
         if (e.key === 'Enter') {
             const vals = keywordsInput.value.split(',').map(s => s.trim()).filter(s => s);
-            vals.forEach(v => { if (v && !keywords.includes(v)) { keywords.push(v); addKeywordTag(v); } });
+            vals.forEach(v => {
+                if (v && !keywords.includes(v)) {
+                    keywords.push(v);
+                    addKeywordTag(v);
+                }
+            });
             keywordsInput.value = '';
             applyHighlight();
         }
     });
 
     searchBtn.onclick = applyHighlight;
-    clearBtn.onclick = () => { keywords = []; keywordsTags.innerHTML = ''; clearAllHighlights(); };
+    clearBtn.onclick = () => {
+        keywords = [];
+        keywordsTags.innerHTML = '';
+        clearAllHighlights();
+    };
 
     fontFamily.onchange = () => textInput.style.fontFamily = fontFamily.value;
     fontSize.onchange = () => textInput.style.fontSize = fontSize.value;
 
     textInput.addEventListener('input', () => setTimeout(applyHighlight, 50));
 
-    // === FIND & REPLACE ===
+    // === FIND & REPLACE PANEL ===
     function loadModes() {
         const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || { modes: { default: { pairs: [], matchCase: false } } };
         modeSelect.innerHTML = '';
@@ -127,12 +143,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const item = document.createElement('div');
         item.className = 'punctuation-item';
         item.innerHTML = `
-            <input type="text" class="find" placeholder="Tìm..." value="${find}">
-            <input type="text" class="replace" placeholder="Thay bằng..." value="${replace}">
+            <input type="text" class="find" placeholder="Tìm" value="${find}">
+            <input type="text" class="replace" placeholder="Thay" value="${replace}">
             <button class="remove">×</button>
         `;
-        item.querySelector('.remove').onclick = () => item.remove();
-        punctuationList.insertBefore(item, punctuationList.firstChild); // THÊM VÀO ĐẦU
+        item.querySelector('.remove').onclick = () => {
+            item.remove();
+            if (punctuationList.children.length === 0) addPair();
+        };
+        punctuationList.insertBefore(item, punctuationList.firstChild); // Thêm vào đầu
     }
 
     function saveSettings() {
@@ -147,6 +166,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showNotification('Đã lưu cài đặt!', 'success');
     }
 
+    // === THAY THẾ GIỮ NGUYÊN DÒNG + HIGHLIGHT LẠI ===
     replaceAllBtn.onclick = () => {
         const pairs = Array.from(punctuationList.querySelectorAll('.punctuation-item')).map(el => ({
             find: el.querySelector('.find').value.trim(),
@@ -155,20 +175,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (pairs.length === 0) return showNotification('Chưa có cặp nào!', 'error');
 
-        let newText = textInput.textContent;
-        pairs.forEach(p => {
-            const flags = matchCaseEnabled ? 'g' : 'gi';
-            const regex = new RegExp(escapeRegExp(p.find), flags);
-            newText = newText.replace(regex, p.replace);
+        // Lấy nội dung, giữ nguyên xuống dòng
+        const lines = textInput.textContent.split('\n');
+        const newLines = lines.map(line => {
+            let newLine = line;
+            pairs.forEach(p => {
+                const flags = matchCaseEnabled ? 'g' : 'gi';
+                const regex = new RegExp(escapeRegExp(p.find), flags);
+                newLine = newLine.replace(regex, p.replace);
+            });
+            return newLine;
         });
 
-        textInput.textContent = newText;
-        applyHighlight();
+        textInput.textContent = newLines.join('\n');
+        applyHighlight(); // Highlight lại sau khi thay
         showNotification('Đã thay thế tất cả!', 'success');
     };
 
     // === SỰ KIỆN ===
-    modeSelect.onchange = () => { currentMode = modeSelect.value; loadPairs(); };
+    modeSelect.onchange = () => {
+        currentMode = modeSelect.value;
+        loadPairs();
+    };
+
     addModeBtn.onclick = () => {
         const name = prompt('Tên chế độ mới:');
         if (!name || name === 'default') return showNotification('Tên không hợp lệ!', 'error');
@@ -179,6 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
         currentMode = name;
         loadModes();
     };
+
     copyModeBtn.onclick = () => {
         const name = prompt('Sao chép thành:');
         if (!name) return;
@@ -188,26 +218,31 @@ document.addEventListener('DOMContentLoaded', () => {
         currentMode = name;
         loadModes();
     };
+
     matchCaseBtn.onclick = () => {
         matchCaseEnabled = !matchCaseEnabled;
         matchCaseBtn.textContent = matchCaseEnabled ? 'Case: Bật' : 'Case: Tắt';
         matchCaseBtn.classList.toggle('bg-green-500', matchCaseEnabled);
     };
+
     addPairBtn.onclick = () => addPair();
     saveSettingsBtn.onclick = saveSettings;
 
+    // === EXPORT / IMPORT ===
     exportBtn.onclick = () => {
         const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || { modes: {} };
         let csv = '\uFEFFfind,replace,mode\n';
         Object.keys(settings.modes).forEach(m => {
             settings.modes[m].pairs.forEach(p => {
-                csv += `"${p.find.replace(/"/g, '""')}","${(p.replace||'').replace(/"/g, '""')}","${m}"\n`;
+                csv += `"${p.find.replace(/"/g, '""')}","${(p.replace || '').replace(/"/g, '""')}","${m}"\n`;
             });
         });
-        const blob = new Blob([csv], { type: 'text/csv' });
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url; a.download = 'replace_settings.csv'; a.click();
+        a.href = url;
+        a.download = 'replace_settings.csv';
+        a.click();
         URL.revokeObjectURL(url);
     };
 
@@ -231,9 +266,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     localStorage.setItem(SETTINGS_KEY, JSON.stringify(newSettings));
                     loadModes();
                     showNotification('Nhập thành công!', 'success');
-                } catch { showNotification('Lỗi file!', 'error'); }
+                } catch (err) {
+                    console.error(err);
+                    showNotification('Lỗi file CSV!', 'error');
+                }
             };
-            reader.readAsText(file);
+            reader.readAsText(file, 'UTF-8');
         };
         input.click();
     };
@@ -249,7 +287,7 @@ document.addEventListener('DOMContentLoaded', () => {
         n.className = `notification ${type}`;
         n.textContent = msg;
         document.getElementById('notification-container').appendChild(n);
-        setTimeout(() => n.remove(), 3000);
+        setTimeout(() => n.remove(), 2800);
     }
 
     // === KHỞI TẠO ===
