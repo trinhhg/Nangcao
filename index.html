@@ -6,6 +6,7 @@
     <title>Tìm Kiếm & Thay Thế Chương</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="index.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500&display=swap" rel="stylesheet">
     <style>
         /* CSS Custom Highlight API - Nhiều màu */
         ::highlight(hl-yellow) { background: #ffff99; color: black; }
@@ -18,17 +19,17 @@
 </head>
 <body class="bg-gray-100 flex h-screen">
 
-    <!-- Left Panel: Cài đặt tìm kiếm -->
-    <div id="main-panel" class="w-1/4 p-4 bg-white shadow-md overflow-y-auto">
+    <!-- Left Panel: 22% -->
+    <div id="main-panel" class="w-[22%] p-4 bg-white shadow-md overflow-y-auto">
         <h2 class="text-xl font-bold mb-4">Cài Đặt Tìm Kiếm</h2>
         <div class="mb-4">
             <label class="block mb-2">
                 Font Chữ:
                 <select id="fontFamily" class="w-full p-2 border rounded-full text-sm">
                     <option value="Arial">Arial</option>
+                    <option value="Calibri">Calibri</option>
+                    <option value="Montserrat">Montserrat</option>
                     <option value="Times New Roman">Times New Roman</option>
-                    <option value="Courier New">Courier New</option>
-                    <option value="Verdana">Verdana</option>
                 </select>
             </label>
             <label class="block mb-2">
@@ -57,8 +58,8 @@
         </div>
     </div>
 
-    <!-- Center: Văn bản (dùng contenteditable thay textarea) -->
-    <div id="text-panel" class="flex-1 p-4 bg-white shadow-md relative flex flex-col">
+    <!-- Center: Văn bản (contenteditable) -->
+    <div id="text-panel" class="flex-1 p-4 bg-white shadow-md relative flex flex-col mx-2">
         <h2 class="text-xl font-bold mb-2">Nội Dung Chương</h2>
         <div id="message" class="mb-2 p-2 rounded text-sm"></div>
         <div id="textInput"
@@ -68,24 +69,28 @@
         </div>
     </div>
 
-    <!-- Right Panel: Settings (Find & Replace) -->
-    <div id="settings-panel" class="w-1/4 p-4 bg-white shadow-md overflow-y-auto">
+    <!-- Right Panel: 28% -->
+    <div id="settings-panel" class="w-[28%] p-4 bg-white shadow-md overflow-y-auto">
         <h2 class="text-xl font-bold mb-4">Cài Đặt Tìm & Thay Thế</h2>
-        <div class="mode-controls mb-3">
-            <select id="mode-select" class="p-1 text-xs border rounded"></select>
-            <button id="add-mode" class="px-2 py-1 bg-blue-500 text-white rounded text-xs">Thêm</button>
-            <button id="copy-mode" class="px-2 py-1 bg-blue-500 text-white rounded text-xs">Sao</button>
-            <button id="match-case" class="px-2 py-1 bg-gray-500 text-white rounded text-xs">Case: Tắt</button>
-            <button id="export-settings" class="px-2 py-1 bg-blue-500 text-white rounded text-xs">Xuất</button>
-            <button id="import-settings" class="px-2 py-1 bg-blue-500 text-white rounded text-xs">Nhập</button>
-            <button id="rename-mode" class="px-2 py-1 bg-gray-500 text-white rounded text-xs hidden">Đổi</button>
-            <button id="delete-mode" class="px-2 py-1 bg-red-500 text-white rounded text-xs hidden">Xóa</button>
+
+        <div class="mode-controls mb-3 flex flex-wrap gap-1">
+            <select id="mode-select" class="p-1 text-xs border rounded flex-1 min-w-0"></select>
+            <button id="add-mode" class="px-2 py-1 bg-blue-500 text-white rounded text-xs whitespace-nowrap">Thêm chế độ</button>
+            <button id="copy-mode" class="px-2 py-1 bg-blue-500 text-white rounded text-xs whitespace-nowrap">Sao chép</button>
+            <button id="match-case" class="px-2 py-1 bg-gray-500 text-white rounded text-xs whitespace-nowrap">Case: Tắt</button>
+            <button id="export-settings" class="px-2 py-1 bg-blue-500 text-white rounded text-xs whitespace-nowrap">Xuất CSV</button>
+            <button id="import-settings" class="px-2 py-1 bg-blue-500 text-white rounded text-xs whitespace-nowrap">Nhập CSV</button>
+            <button id="rename-mode" class="px-2 py-1 bg-gray-500 text-white rounded text-xs hidden whitespace-nowrap">Đổi tên</button>
+            <button id="delete-mode" class="px-2 py-1 bg-red-500 text-white rounded text-xs hidden whitespace-nowrap">Xóa chế độ</button>
         </div>
-        <div class="action-buttons mb-3">
-            <button id="add-pair" class="px-3 py-1 bg-blue-500 text-white rounded text-xs">+ Thêm</button>
-            <button id="save-settings" class="px-3 py-1 bg-blue-500 text-white rounded text-xs">Lưu</button>
+
+        <div class="action-buttons mb-3 flex gap-2">
+            <button id="add-pair" class="px-3 py-1 bg-blue-500 text-white rounded text-xs whitespace-nowrap">Thêm cặp</button>
+            <button id="save-settings" class="px-3 py-1 bg-green-600 text-white rounded text-xs whitespace-nowrap">Lưu cài đặt</button>
+            <button id="replace-all" class="px-3 py-1 bg-purple-600 text-white rounded text-xs whitespace-nowrap">Thay thế tất cả</button>
         </div>
-        <div id="punctuation-list" class="space-y-2 text-xs"></div>
+
+        <div id="punctuation-list" class="space-y-2 text-xs max-w-full"></div>
     </div>
 
     <div id="notification-container"></div>
