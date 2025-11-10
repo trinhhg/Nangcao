@@ -8,12 +8,12 @@
     <link rel="stylesheet" href="index.css">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500&display=swap" rel="stylesheet">
     <style>
-        ::highlight(hl-yellow) { background: #ffff99; color: black; }
-        ::highlight(hl-pink)   { background: #ffcccc; color: black; }
-        ::highlight(hl-blue)   { background: #99ccff; color: black; }
-        ::highlight(hl-green)  { background: #ccffcc; color: black; }
-        ::highlight(hl-orange) { background: #ffcc99; color: black; }
-        ::highlight(hl-purple) { background: #e6ccff; color: black; }
+        .hl-yellow { background: #ffff99; color: black; }
+        .hl-pink   { background: #ffcccc; color: black; }
+        .hl-blue   { background: #99ccff; color: black; }
+        .hl-green  { background: #ccffcc; color: black; }
+        .hl-orange { background: #ffcc99; color: black; }
+        .hl-purple { background: #e6ccff; color: black; }
     </style>
 </head>
 <body class="bg-gray-100 h-screen flex">
@@ -54,7 +54,7 @@
         </div>
     </div>
 
-    <!-- Center: Văn bản – 60% + DONATE 2 DÒNG, LINK CLICK -->
+    <!-- Center: Văn bản – 60% + DONATE 2 DÒNG -->
     <div id="text-panel" class="w-3/5 p-6 bg-white shadow-md mx-4 flex flex-col">
         <div class="flex justify-between items-start mb-2">
             <h2 class="text-xl font-bold">Nội Dung Chương</h2>
@@ -70,14 +70,14 @@
         </div>
     </div>
 
-    <!-- Right Panel: 20% – NÚT NHỎ GỌN, TÊN ĐẦY ĐỦ -->
+    <!-- Right Panel: 20% – NÚT NHỎ, TÊN ĐẦY ĐỦ -->
     <div id="settings-panel" class="w-1/5 p-4 bg-white shadow-md overflow-y-auto text-xs">
         <h2 class="text-xl font-bold mb-4">Thay Thế</h2>
 
         <div class="mode-controls mb-3 space-y-1">
             <div class="flex gap-1">
                 <select id="mode-select" class="flex-1 p-1 border rounded text-xs"></select>
-                <button id="add-mode" class="px-1 py-0.5 bg-blue-500 text-white rounded text-xs whitespace-nowrap">Thêm</button>
+                <button id="add-mode" class="px-1 py-0.5 bg-blue-500 text-white rounded text-xs">Thêm</button>
             </div>
             <div class="flex gap-1">
                 <button id="copy-mode" class="flex-1 px-1 py-0.5 bg-blue-500 text-white rounded text-xs">Sao</button>
