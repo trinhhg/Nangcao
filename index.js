@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const exportBtn = document.getElementById('export-settings');
     const importBtn = document.getElementById('import-settings');
     const renameModeBtn = document.getElementById('rename-mode');
-    const deleteModeBtn = document.getElementBy  ('delete-mode');
+    const deleteModeBtn = document.getElementById('delete-mode'); // ĐÃ SỬA
     const addPairBtn = document.getElementById('add-pair');
     const saveSettingsBtn = document.getElementById('save-settings');
     const punctuationList = document.getElementById('punctuation-list');
@@ -200,8 +200,47 @@ document.addEventListener('DOMContentLoaded', () => {
     addPairBtn.onclick = () => addPair();
     saveSettingsBtn.onclick = saveSettings;
 
-    exportBtn.onclick = () => { /* giống cũ */ };
-    importBtn.onclick = () => { /* giống cũ */ };
+    exportBtn.onclick = () => {
+        const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || { modes: {} };
+        let csv = '\uFEFFfind,replace,mode\n';
+        Object.keys(settings.modes).forEach(m => {
+            settings.modes[m].pairs.forEach(p => {
+                csv += `"${p.find.replace(/"/g, '""')}","${(p.replace||'').replace(/"/g, '""')}","${m}"\n`;
+            });
+        });
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'replace_settings.csv'; a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    importBtn.onclick = () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.csv';
+        input.onchange = e => {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = ev => {
+                try {
+                    const lines = ev.target.result.trim().split('\n');
+                    const newSettings = { modes: {} };
+                    for (let i = 1; i < lines.length; i++) {
+                        const [find, replace, mode] = lines[i].split(',').map(s => s.replace(/^"|"$/g, '').replace(/""/g, '"'));
+                        if (!find) continue;
+                        if (!newSettings.modes[mode]) newSettings.modes[mode] = { pairs: [], matchCase: false };
+                        newSettings.modes[mode].pairs.push({ find, replace });
+                    }
+                    localStorage.setItem(SETTINGS_KEY, JSON.stringify(newSettings));
+                    loadModes();
+                    showNotification('Nhập thành công!', 'success');
+                } catch { showNotification('Lỗi file!', 'error'); }
+            };
+            reader.readAsText(file);
+        };
+        input.click();
+    };
 
     function updateModeButtons() {
         const isDefault = currentMode === 'default';
