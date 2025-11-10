@@ -51,6 +51,6 @@
 .notification.error { background: #dc3545; }
 
 @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-@keyframes RyeOut { from { opacity: 1; } to { opacity: 0; } }
+@keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
 
 body { font-family: 'Montserrat', Arial, sans-serif; }
