@@ -1,70 +1,58 @@
-/* Giao diện chung */
+/* Tags từ khóa */
 #keywords-tags .tag {
     background: #e0e0e0;
-    padding: 4px 8px;
-    border-radius: 20px;
-    font-size: 12px;
+    padding: 2px 6px;
+    border-radius: 12px;
+    font-size: 10px;
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 3px;
 }
-#keywords-tags .tag .remove-tag { 
-    cursor: pointer; 
-    font-weight: bold; 
-    font-size: 14px;
-}
+#keywords-tags .tag .remove-tag { cursor: pointer; font-weight: bold; font-size: 12px; }
 
-/* Find & Replace - Thu gọn, không cuộn ngang */
+/* Ô find/replace – RÚT NGẮN 50% */
 #punctuation-list .punctuation-item {
     display: flex;
-    gap: 4px;
-    margin-bottom: 6px;
+    gap: 3px;
     align-items: center;
-    flex-wrap: nowrap;
 }
 #punctuation-list .punctuation-item input {
     flex: 1;
-    padding: 6px 8px;
-    font-size: 12px;
+    padding: 4px 6px;
+    font-size: 11px;
     border: 1px solid #ccc;
-    border-radius: 4px;
+    border-radius: 3px;
     min-width: 0;
+    width: 50px; /* Rút ngắn */
 }
 #punctuation-list .punctuation-item button {
-    padding: 4px 8px;
+    padding: 3px 6px;
     background: #dc3545;
     color: white;
     border: none;
-    border-radius: 4px;
-    font-size: 11px;
+    border-radius: 3px;
+    font-size: 10px;
     cursor: pointer;
-    white-space: nowrap;
-}
-
-/* Nút không bị tràn */
-.mode-controls button,
-.action-buttons button {
-    min-width: fit-content;
 }
 
 /* Notification */
 #notification-container {
     position: fixed;
-    top: 20px;
-    right: 20px;
+    top: 16px;
+    right: 16px;
     z-index: 1000;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
 }
 .notification {
-    padding: 8px 16px;
-    border-radius: 6px;
+    padding: 6px 12px;
+    border-radius: 4px;
     color: white;
-    font-size: 13px;
-    min-width: 180px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    animation: slideIn 0.3s ease, fadeOut 0.3s ease 2.7s forwards;
+    font-size: 12px;
+    min-width: 140px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    animation: slideIn 0.3s ease, fadeOut 0.3s ease 2.5s forwards;
 }
 .notification.success { background: #28a745; }
 .notification.error { background: #dc3545; }
@@ -72,7 +60,5 @@
 @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
 
-/* Font Montserrat */
-body, select, input, button {
-    font-family: 'Montserrat', Arial, sans-serif;
-}
+/* Font */
+body { font-family: 'Montserrat', Arial, sans-serif; }
