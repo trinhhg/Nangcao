@@ -1,4 +1,3 @@
-/* Tags từ khóa */
 #keywords-tags .tag {
     background: #e0e0e0;
     padding: 4px 8px;
@@ -8,13 +7,8 @@
     align-items: center;
     gap: 4px;
 }
-#keywords-tags .tag .remove-tag {
-    cursor: pointer;
-    font-weight: bold;
-    font-size: 14px;
-}
+#keywords-tags .tag .remove-tag { cursor: pointer; font-weight: bold; font-size: 14px; }
 
-/* Ô find/replace – RÚT NGẮN, KHÔNG CUỘN */
 #punctuation-list .punctuation-item {
     display: flex;
     gap: 4px;
@@ -39,15 +33,11 @@
     cursor: pointer;
 }
 
-/* Notification */
 #notification-container {
     position: fixed;
     top: 20px;
     right: 20px;
     z-index: 1000;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
 }
 .notification {
     padding: 10px 16px;
@@ -64,5 +54,4 @@
 @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
 
-/* Font */
 body { font-family: 'Montserrat', Arial, sans-serif; }
