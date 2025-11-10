@@ -8,7 +8,6 @@
     <link rel="stylesheet" href="index.css">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500&display=swap" rel="stylesheet">
     <style>
-        /* CSS Highlight API - Nhiều màu */
         ::highlight(hl-yellow) { background: #ffff99; color: black; }
         ::highlight(hl-pink)   { background: #ffcccc; color: black; }
         ::highlight(hl-blue)   { background: #99ccff; color: black; }
@@ -50,20 +49,18 @@
             <div id="keywords-tags" class="flex flex-wrap gap-1 mt-2"></div>
         </div>
         <div class="flex gap-2">
-            <button id="search" class="flex-1 bg-green-500 text-white py-2 rounded hover:bg-green-600 text-sm font-medium">Tìm Kiếm</button>
-            <button id="clear" class="flex-1 bg-red-500 text-white py-2 rounded hover:bg-red-600 text-sm font-medium">Xóa Tất Cả</button>
+            <button id="search" class="flex-1 bg-green-500 text-white py-2 rounded hover:bg-green-600 text-xs font-medium">Tìm Kiếm</button>
+            <button id="clear" class="flex-1 bg-red-500 text-white py-2 rounded hover:bg-red-600 text-xs font-medium">Xóa Tất Cả</button>
         </div>
     </div>
 
-    <!-- Center: Văn bản – 60% + DONATE -->
+    <!-- Center: Văn bản – 60% + DONATE 2 DÒNG, LINK CLICK -->
     <div id="text-panel" class="w-3/5 p-6 bg-white shadow-md mx-4 flex flex-col">
-        <div class="flex justify-between items-center mb-2">
+        <div class="flex justify-between items-start mb-2">
             <h2 class="text-xl font-bold">Nội Dung Chương</h2>
             <div class="text-right text-xs text-red-600 font-semibold leading-tight">
-                <div>Donate cho ad [crying face]</div>
-                <div>TRINH THI XUAN HUONG</div>
-                <div>STK: 0917678211 - MB BANK</div>
-                <div class="text-blue-600 underline">https://www.facebook.com/trinh.hg.57</div>
+                <div>Don@te cho ad: MB BANK - TRINH THI XUAN HUONG - STK: 0917678211</div>
+                <div>Góp ý: <a href="https://www.facebook.com/trinh.hg.57" target="_blank" class="text-blue-600 underline hover:text-blue-800">https://www.facebook.com/trinh.hg.57</a></div>
             </div>
         </div>
         <div id="textInput"
@@ -73,33 +70,33 @@
         </div>
     </div>
 
-    <!-- Right Panel: 20% – Ô FIND/REPLACE KÉO DÀI HẾT CỠ -->
-    <div id="settings-panel" class="w-1/5 p-4 bg-white shadow-md overflow-y-auto text-sm">
+    <!-- Right Panel: 20% – NÚT NHỎ GỌN, TÊN ĐẦY ĐỦ -->
+    <div id="settings-panel" class="w-1/5 p-4 bg-white shadow-md overflow-y-auto text-xs">
         <h2 class="text-xl font-bold mb-4">Thay Thế</h2>
 
-        <div class="mode-controls mb-3 space-y-2">
+        <div class="mode-controls mb-3 space-y-1">
             <div class="flex gap-1">
-                <select id="mode-select" class="flex-1 p-1.5 border rounded text-xs"></select>
-                <button id="add-mode" class="px-2 py-1 bg-blue-500 text-white rounded text-xs whitespace-nowrap">Thêm Chế Độ</button>
+                <select id="mode-select" class="flex-1 p-1 border rounded text-xs"></select>
+                <button id="add-mode" class="px-1 py-0.5 bg-blue-500 text-white rounded text-xs whitespace-nowrap">Thêm</button>
             </div>
             <div class="flex gap-1">
-                <button id="copy-mode" class="flex-1 px-1 py-1 bg-blue-500 text-white rounded text-xs">Sao Chép</button>
-                <button id="match-case" class="flex-1 px-1 py-1 bg-gray-500 text-white rounded text-xs">Case</button>
+                <button id="copy-mode" class="flex-1 px-1 py-0.5 bg-blue-500 text-white rounded text-xs">Sao</button>
+                <button id="match-case" class="flex-1 px-1 py-0.5 bg-gray-500 text-white rounded text-xs">Case</button>
             </div>
             <div class="flex gap-1">
-                <button id="export-settings" class="flex-1 px-1 py-1 bg-blue-500 text-white rounded text-xs">Xuất CSV</button>
-                <button id="import-settings" class="flex-1 px-1 py-1 bg-blue-500 text-white rounded text-xs">Nhập CSV</button>
+                <button id="export-settings" class="flex-1 px-1 py-0.5 bg-blue-500 text-white rounded text-xs">Xuất</button>
+                <button id="import-settings" class="flex-1 px-1 py-0.5 bg-blue-500 text-white rounded text-xs">Nhập</button>
             </div>
             <div class="flex gap-1">
-                <button id="rename-mode" class="flex-1 px-1 py-1 bg-gray-500 text-white rounded text-xs hidden">Đổi Tên</button>
-                <button id="delete-mode" class="flex-1 px-1 py-1 bg-red-500 text-white rounded text-xs hidden">Xóa Chế Độ</button>
+                <button id="rename-mode" class="flex-1 px-1 py-0.5 bg-gray-500 text-white rounded text-xs hidden">Đổi tên</button>
+                <button id="delete-mode" class="flex-1 px-1 py-0.5 bg-red-500 text-white rounded text-xs hidden">Xóa</button>
             </div>
         </div>
 
         <div class="action-buttons mb-3 flex gap-1">
-            <button id="add-pair" class="flex-1 px-3 py-1.5 bg-blue-500 text-white rounded text-xs">Thêm Cặp</button>
-            <button id="save-settings" class="flex-1 px-3 py-1.5 bg-green-600 text-white rounded text-xs">Lưu Cài Đặt</button>
-            <button id="replace-all" class="flex-1 px-3 py-1.5 bg-purple-600 text-white rounded text-xs">Thay Tất Cả</button>
+            <button id="add-pair" class="flex-1 px-2 py-1 bg-blue-500 text-white rounded text-xs">Cặp</button>
+            <button id="save-settings" class="flex-1 px-2 py-1 bg-green-600 text-white rounded text-xs">Lưu</button>
+            <button id="replace-all" class="flex-1 px-2 py-1 bg-purple-600 text-white rounded text-xs">Thay</button>
         </div>
 
         <div id="punctuation-list" class="space-y-2 text-xs"></div>
