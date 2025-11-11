@@ -14,19 +14,44 @@
         .hl-green  { background: #ccffcc; color: black; }
         .hl-orange { background: #ffcc99; color: black; }
         .hl-purple { background: #e6ccff; color: black; }
+        /* Overlay login */
+        #login-overlay {
+            position: fixed;
+            top:0; left:0;
+            width: 100%; height:100%;
+            background: rgba(0,0,0,0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        #login-box {
+            background: white;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            width: 300px;
+            text-align: center;
+        }
+        #login-box input { margin-bottom: 0.5rem; width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 0.25rem;}
+        #login-box button { width: 100%; padding: 0.5rem; background: #4f46e5; color:white; border:none; border-radius:0.25rem; cursor:pointer;}
+        #login-box button:hover { background: #4338ca; }
     </style>
 </head>
 <body class="bg-gray-100 h-screen flex">
 
-    <!-- Nhost Auth UI -->
-    <div id="nhost-auth" class="w-full flex justify-center items-center">
-        <div id="nhost-auth-container" class="p-6 bg-white rounded shadow-md">
-            <!-- Nhost Auth UI sẽ mount vào đây -->
+    <!-- Login Overlay -->
+    <div id="login-overlay">
+        <div id="login-box">
+            <h2 class="text-xl font-bold mb-4">Đăng Nhập</h2>
+            <input type="email" id="email" placeholder="Email" />
+            <input type="password" id="password" placeholder="Mật khẩu" />
+            <button id="login-btn">Đăng Nhập</button>
+            <div id="login-error" class="text-red-600 text-sm mt-2"></div>
         </div>
     </div>
 
     <!-- Left Panel: 20% -->
-    <div id="main-panel" style="display:none;" class="w-1/5 p-4 bg-white shadow-md overflow-y-auto text-sm">
+    <div id="main-panel" class="w-1/5 p-4 bg-white shadow-md overflow-y-auto text-sm">
         <h2 class="text-xl font-bold mb-4">Tìm Kiếm</h2>
         <div class="mb-4">
             <label class="block mb-2">Font:</label>
@@ -62,7 +87,7 @@
     </div>
 
     <!-- Center: Văn bản -->
-    <div id="text-panel" style="display:none;" class="w-3/5 p-6 bg-white shadow-md mx-4 flex flex-col">
+    <div id="text-panel" class="w-3/5 p-6 bg-white shadow-md mx-4 flex flex-col">
         <div class="flex justify-between items-start mb-2">
             <h2 class="text-xl font-bold">Nội Dung Chương</h2>
             <div class="text-right text-xs text-red-600 font-semibold leading-tight">
@@ -78,7 +103,7 @@
     </div>
 
     <!-- Right Panel: 20% -->
-    <div id="settings-panel" style="display:none;" class="w-1/5 p-4 bg-white shadow-md overflow-y-auto text-xs">
+    <div id="settings-panel" class="w-1/5 p-4 bg-white shadow-md overflow-y-auto text-xs">
         <h2 class="text-xl font-bold mb-4">Thay Thế</h2>
         <div class="mode-controls mb-3 space-y-1">
             <div class="flex gap-1">
@@ -98,41 +123,49 @@
                 <button id="delete-mode" class="flex-1 px-1 py-0.5 bg-red-500 text-white rounded text-xs hidden">Xóa</button>
             </div>
         </div>
+
         <div class="action-buttons mb-3 flex gap-1">
             <button id="add-pair" class="flex-1 px-2 py-1 bg-blue-500 text-white rounded text-xs">Cặp</button>
             <button id="save-settings" class="flex-1 px-2 py-1 bg-green-600 text-white rounded text-xs">Lưu</button>
             <button id="replace-all" class="flex-1 px-2 py-1 bg-purple-600 text-white rounded text-xs">Thay</button>
         </div>
+
         <div id="punctuation-list" class="space-y-2 text-xs"></div>
     </div>
 
     <div id="notification-container"></div>
 
-    <!-- Nhost SDK -->
-    <script src="https://cdn.jsdelivr.net/npm/@nhost/nhost-js@2.0.4/dist/nhost.min.js"></script>
+    <!-- Nhost UMD bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/@nhost/nhost-js@2.0.4/dist/nhost.umd.js"></script>
+    <script src="index.js"></script>
     <script>
-        const nhost = new NhostClient({
+        // Khởi tạo Nhost Client
+        const nhost = new window.NhostClient({
             subdomain: 'ogltettlkspwxyqphmth',
             region: 'eu-central-1'
         });
 
-        // Mount Nhost Auth UI
-        const authContainer = document.getElementById('nhost-auth-container');
-        nhost.auth.ui.mount(authContainer, {
-            // bạn có thể cấu hình theme, redirect URL,...
-        });
+        const loginOverlay = document.getElementById('login-overlay');
+        const loginBtn = document.getElementById('login-btn');
+        const loginError = document.getElementById('login-error');
 
-        // Ẩn/Hiện panel dựa vào trạng thái login
-        nhost.auth.onAuthStateChanged((session) => {
-            const loggedIn = !!session;
-            document.getElementById('nhost-auth').style.display = loggedIn ? 'none' : 'flex';
-            document.getElementById('main-panel').style.display = loggedIn ? 'block' : 'none';
-            document.getElementById('text-panel').style.display = loggedIn ? 'block' : 'none';
-            document.getElementById('settings-panel').style.display = loggedIn ? 'block' : 'none';
-        });
+        loginBtn.onclick = async () => {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const { session, error } = await nhost.auth.signIn({ email, password });
+                if (error) {
+                    loginError.textContent = error.message;
+                    return;
+                }
+                loginOverlay.style.display = 'none';
+                console.log('Đăng nhập thành công:', session);
+            } catch (err) {
+                loginError.textContent = 'Đăng nhập lỗi!';
+                console.error(err);
+            }
+        };
     </script>
-
-    <!-- File JS của bạn -->
-    <script src="index.js"></script>
 </body>
 </html>
