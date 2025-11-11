@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tìm Kiếm & Thay Thế Chương</title>
+    <!-- Fix lỗi 404 favicon -->
+    <link rel="icon" href="data:,">
+
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="index.css">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500&display=swap" rel="stylesheet">
@@ -151,27 +154,33 @@
         const validateEmail = e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.trim());
         const validatePassword = p => p && p.length >= 6;
 
-        // Kiểm tra session – SỬA LỖI DESTRUCTURE
+        // SỬA LỖI getSession() → result có thể là null
         const checkSession = async () => {
-            const result = await nhost.auth.getSession();
-            const session = result?.session || null; // <-- SỬA TẠI ĐÂY
+            try {
+                const result = await nhost.auth.getSession();
+                const session = result?.session || null;
 
-            if (session) {
-                authOverlay.classList.add('hidden');
-                appContainer.classList.remove('hidden');
-                console.log('Đã đăng nhập:', session.user.email);
-            } else {
+                if (session) {
+                    authOverlay.classList.add('hidden');
+                    appContainer.classList.remove('hidden');
+                    console.log('Đã đăng nhập:', session.user.email);
+                } else {
+                    authOverlay.classList.remove('hidden');
+                    appContainer.classList.add('hidden');
+                }
+            } catch (err) {
+                console.error('Lỗi kiểm tra session:', err);
                 authOverlay.classList.remove('hidden');
                 appContainer.classList.add('hidden');
             }
         };
 
         // Load lần đầu
-        checkSession().catch(console.error);
+        checkSession();
 
         // Lắng nghe auth
         nhost.auth.onAuthStateChanged(() => {
-            checkSession().catch(console.error);
+            checkSession();
         });
 
         // Đăng nhập
