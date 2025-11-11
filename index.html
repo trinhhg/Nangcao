@@ -18,7 +18,7 @@
 </head>
 <body class="bg-gray-100 h-screen flex flex-col">
 
-    <!-- Auth Form (TỰ TẠO – ĐẸP + TAILWIND) -->
+    <!-- Auth Form -->
     <div id="auth-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
             <h2 class="text-2xl font-bold text-center mb-6 text-gray-800">Đăng Nhập / Đăng Ký</h2>
@@ -43,7 +43,7 @@
     <!-- GIAO DIỆN CHÍNH -->
     <div id="app-container" class="hidden flex flex-col h-full">
         <div class="flex flex-1">
-            <!-- Left Panel: 20% -->
+            <!-- Left Panel -->
             <div id="main-panel" class="w-1/5 p-4 bg-white shadow-md overflow-y-auto text-sm">
                 <h2 class="text-xl font-bold mb-4">Tìm Kiếm</h2>
                 <div class="mb-4">
@@ -79,7 +79,7 @@
                 </div>
             </div>
 
-            <!-- Center: Văn bản -->
+            <!-- Center -->
             <div id="text-panel" class="w-3/5 p-6 bg-white shadow-md mx-4 flex flex-col">
                 <div class="flex justify-between items-start mb-2">
                     <h2 class="text-xl font-bold">Nội Dung Chương</h2>
@@ -95,7 +95,7 @@
                 </div>
             </div>
 
-            <!-- Right Panel: 20% -->
+            <!-- Right Panel -->
             <div id="settings-panel" class="w-1/5 p-4 bg-white shadow-md overflow-y-auto text-xs">
                 <h2 class="text-xl font-bold mb-4">Thay Thế</h2>
                 <div class="mode-controls mb-3 space-y-1">
@@ -130,7 +130,7 @@
 
     <div id="notification-container"></div>
 
-    <!-- Nhost SDK (MỚI NHẤT – KHÔNG CÓ UI) -->
+    <!-- Nhost SDK -->
     <script type="module">
         import { NhostClient } from 'https://esm.sh/@nhost/nhost-js@3.3.1';
 
@@ -151,9 +151,11 @@
         const validateEmail = e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.trim());
         const validatePassword = p => p && p.length >= 6;
 
-        // Kiểm tra session
+        // Kiểm tra session – SỬA LỖI DESTRUCTURE
         const checkSession = async () => {
-            const { session } = await nhost.auth.getSession();
+            const result = await nhost.auth.getSession();
+            const session = result?.session || null; // <-- SỬA TẠI ĐÂY
+
             if (session) {
                 authOverlay.classList.add('hidden');
                 appContainer.classList.remove('hidden');
@@ -165,10 +167,12 @@
         };
 
         // Load lần đầu
-        await checkSession();
+        checkSession().catch(console.error);
 
         // Lắng nghe auth
-        nhost.auth.onAuthStateChanged(checkSession);
+        nhost.auth.onAuthStateChanged(() => {
+            checkSession().catch(console.error);
+        });
 
         // Đăng nhập
         loginBtn.onclick = async (e) => {
