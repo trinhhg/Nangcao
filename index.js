@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const keywordsInput = document.getElementById('keywords-input');
     const keywordsTags = document.getElementById('keywords-tags');
     const searchBtn = document.getElementById('search');
-    const clearBtn = document.getElementById('clear'); // ĐÃ SỬA: getElementById
+    const clearBtn = document.getElementById('clear');
     const fontFamily = document.getElementById('fontFamily');
     const fontSize = document.getElementById('fontSize');
     const matchCaseCb = document.getElementById('matchCase');
@@ -23,23 +23,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const punctuationList = document.getElementById('punctuation-list');
 
     let keywords = [];
-    let replacementHistory = []; // Lưu lịch sử từ đã replace
+    let lastReplacedPairs = []; // Chỉ lưu khi nhấn "Thay"
     let currentMode = 'default';
     const SETTINGS_KEY = 'replace_settings';
     const highlightClasses = ['hl-yellow', 'hl-pink', 'hl-blue', 'hl-green', 'hl-orange', 'hl-purple'];
 
-    // === HÀM KIỂM TRA WORD CHARACTER ===
-    function isWordChar(ch) {
-        if (!ch) return false;
-        try {
-            return /\p{L}|\p{N}/u.test(ch);
-        } catch (e) {
-            return /[A-Za-z0-9_]/.test(ch);
-        }
-    }
-
-    // === HIGHLIGHT THEO ƯU TIÊN: keywords mới → replace mới → keywords cũ ===
-    function applyAllHighlights() {
+    // === HIGHLIGHT CHỈ KEYWORDS HOẶC REPLACE (TÙY LÚC) ===
+    function applyAllHighlights(highlightReplace = false) {
         const selection = window.getSelection();
         const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
         let cursorOffset = 0;
@@ -57,10 +47,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let html = '';
         let lastIndex = 0;
+        const matches = [];
 
-        const allItems = [];
-
-        // 1. Keywords mới nhất (ưu tiên cao nhất)
+        // === 1. HIGHLIGHT KEYWORDS (luôn luôn) ===
         keywords.forEach((kw, i) => {
             if (!kw) return;
             const flags = matchCaseCb.checked ? 'g' : 'gi';
@@ -73,61 +62,56 @@ document.addEventListener('DOMContentLoaded', () => {
                 const after = fullText[end];
                 const isWhole = !wholeWordsCb.checked || (!isWordChar(before) && !isWordChar(after));
                 if (isWhole) {
-                    allItems.push({
+                    matches.push({
                         start, end, kw: m[0],
                         className: highlightClasses[i % highlightClasses.length],
-                        priority: 1000 + i // Ưu tiên cao
+                        priority: 1000
                     });
                 }
             }
         });
 
-        // 2. Từ đã replace (ưu tiên theo thứ tự gần nhất)
-        replacementHistory.forEach((pair, i) => {
-            if (!pair.replace) return;
-            const flags = matchCaseCb.checked ? 'g' : 'gi';
-            const regex = new RegExp(escapeRegExp(pair.replace), flags);
-            let m;
-            while ((m = regex.exec(fullText)) !== null) {
-                const start = m.index;
-                const end = start + m[0].length;
-                const before = fullText[start - 1];
-                const after = fullText[end];
-                const isWhole = !wholeWordsCb.checked || (!isWordChar(before) && !isWordChar(after));
-                if (isWhole) {
-                    allItems.push({
-                        start, end, kw: m[0],
-                        className: highlightClasses[(keywords.length + i) % highlightClasses.length],
-                        priority: 500 + i // Ưu tiên trung
-                    });
+        // === 2. HIGHLIGHT REPLACE (chỉ khi nhấn "Thay") ===
+        if (highlightReplace && lastReplacedPairs.length > 0) {
+            lastReplacedPairs.forEach((p, i) => {
+                if (!p.replace) return;
+                const flags = matchCaseCb.checked ? 'g' : 'gi';
+                const regex = new RegExp(escapeRegExp(p.replace), flags);
+                let m;
+                while ((m = regex.exec(fullText)) !== null) {
+                    const start = m.index;
+                    const end = start + m[0].length;
+                    const before = fullText[start - 1];
+                    const after = fullText[end];
+                    const isWhole = !wholeWordsCb.checked || (!isWordChar(before) && !isWordChar(after));
+                    if (isWhole) {
+                        matches.push({
+                            start, end, kw: m[0],
+                            className: highlightClasses[(keywords.length + i) % highlightClasses.length],
+                            priority: 500
+                        });
+                    }
                 }
-            }
-        });
+            });
+        }
 
-        // Sắp xếp: priority cao → index thấp
-        allItems.sort((a, b) => b.priority - a.priority || a.start - b.start);
-
-        // Lọc overlap
+        // Sắp xếp + lọc overlap
+        matches.sort((a, b) => b.priority - a.priority || a.start - b.start);
         const filtered = [];
         let lastEnd = 0;
-        for (const item of allItems) {
-            if (item.start >= lastEnd) {
-                filtered.push(item);
-                lastEnd = item.end;
+        for (const m of matches) {
+            if (m.start >= lastEnd) {
+                filtered.push(m);
+                lastEnd = m.end;
             }
         }
 
-        // Build HTML
         filtered.forEach(m => {
-            if (m.start > lastIndex) {
-                html += escapeHtml(fullText.slice(lastIndex, m.start));
-            }
+            if (m.start > lastIndex) html += escapeHtml(fullText.slice(lastIndex, m.start));
             html += `<span class="${m.className}">${escapeHtml(m.kw)}</span>`;
             lastIndex = m.end;
         });
-        if (lastIndex < fullText.length) {
-            html += escapeHtml(fullText.slice(lastIndex));
-        }
+        if (lastIndex < fullText.length) html += escapeHtml(fullText.slice(lastIndex));
 
         textInput.innerHTML = html.replace(/\n/g, '<br>');
 
@@ -147,13 +131,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         } else {
                             offset += node.textContent.length;
                         }
-                    } else if (node.tagName === 'BR') {
-                        offset++;
-                    }
+                    } else if (node.tagName === 'BR') offset++;
                 }
-                if (!found && textInput.lastChild) {
-                    newRange.setStart(textInput.lastChild, 0);
-                }
+                if (!found && textInput.lastChild) newRange.setStart(textInput.lastChild, 0);
                 newRange.collapse(true);
                 selection.removeAllRanges();
                 selection.addRange(newRange);
@@ -171,7 +151,13 @@ document.addEventListener('DOMContentLoaded', () => {
         return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     }
 
-    // === REPLACE + CẬP NHẬT LỊCH SỬ ===
+    function isWordChar(ch) {
+        if (!ch) return false;
+        try { return /\p{L}|\p{N}/u.test(ch); }
+        catch (e) { return /[A-Za-z0-9_]/.test(ch); }
+    }
+
+    // === REPLACE + HIGHLIGHT REPLACE ===
     function replaceAndHighlight() {
         const pairs = Array.from(punctuationList.querySelectorAll('.punctuation-item')).map(el => ({
             find: el.querySelector('.find').value.trim(),
@@ -182,7 +168,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let text = textInput.innerText || '';
         const oldText = text;
-
         pairs.forEach(p => {
             const flags = matchCaseCb.checked ? 'g' : 'gi';
             const regex = new RegExp(escapeRegExp(p.find), flags);
@@ -192,13 +177,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (text === oldText) return showNotification('Không tìm thấy!', 'info');
 
         textInput.innerText = text;
-
-        // CẬP NHẬT LỊCH SỬ REPLACE (ưu tiên mới nhất lên đầu)
-        replacementHistory = pairs.filter(p => p.replace).map(p => ({ replace: p.replace }));
-        replacementHistory = replacementHistory.concat(replacementHistory.splice(0, replacementHistory.length - 10)); // Giới hạn 10
-
-        applyAllHighlights();
-        showNotification('Đã thay thế & highlight!', 'success');
+        lastReplacedPairs = pairs.filter(p => p.replace);
+        applyAllHighlights(true); // HIGHLIGHT REPLACE
+        showNotification('Đã thay thế!', 'success');
     }
 
     // === TỪ KHÓA ===
@@ -210,7 +191,7 @@ document.addEventListener('DOMContentLoaded', () => {
             e.stopPropagation();
             keywords = keywords.filter(k => k !== word);
             tag.remove();
-            applyAllHighlights();
+            applyAllHighlights(false); // ẨN REPLACE
         };
         keywordsTags.appendChild(tag);
     }
@@ -225,36 +206,38 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
             keywordsInput.value = '';
-            applyAllHighlights();
+            applyAllHighlights(false); // ẨN REPLACE
         }
     });
 
-    searchBtn.onclick = applyAllHighlights;
+    searchBtn.onclick = () => applyAllHighlights(false);
     clearBtn.onclick = () => {
         keywords = [];
-        replacementHistory = [];
+        lastReplacedPairs = [];
         keywordsTags.innerHTML = '';
-        applyAllHighlights();
+        applyAllHighlights(false);
     };
 
     fontFamily.onchange = () => textInput.style.fontFamily = fontFamily.value;
     fontSize.onchange = () => textInput.style.fontSize = fontSize.value;
 
-    // === CHỈ THANH CUỘN TRONG Ô VĂN BẢN ===
+    // === Ô VĂN BẢN: 100% CHIỀU RỘNG + CUỘN TRONG ===
     textInput.style.cssText = `
-        min-height: 70vh;
-        max-height: 70vh;
+        width: 100%;
+        min-height: calc(100vh - 12rem);
+        max-height: calc(100vh - 12rem);
         overflow-y: auto;
         resize: none;
         padding: 1.5rem;
         line-height: 1.8;
+        box-sizing: border-box;
     `;
 
     // === INPUT + HIGHLIGHT MƯỢT ===
     let highlightTimeout;
     textInput.addEventListener('input', () => {
         clearTimeout(highlightTimeout);
-        highlightTimeout = setTimeout(applyAllHighlights, 300);
+        highlightTimeout = setTimeout(() => applyAllHighlights(false), 300);
     });
 
     replaceAllBtn.onclick = replaceAndHighlight;
@@ -379,7 +362,7 @@ document.addEventListener('DOMContentLoaded', () => {
         matchCaseCb.checked = !matchCaseCb.checked;
         matchCaseBtn.textContent = matchCaseCb.checked ? 'Case: Bật' : 'Case: Tắt';
         matchCaseBtn.classList.toggle('bg-green-500', matchCaseCb.checked);
-        applyAllHighlights();
+        applyAllHighlights(false);
     };
 
     addPairBtn.onclick = () => addPair();
@@ -400,5 +383,5 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     loadModes();
-    setTimeout(applyAllHighlights, 100);
+    setTimeout(() => applyAllHighlights(false), 100);
 });
