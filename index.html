@@ -15,7 +15,6 @@
         .hl-orange { background: #ffcc99; color: black; }
         .hl-purple { background: #e6ccff; color: black; }
 
-        /* Ẩn Auth UI mặc định */
         #nhost-auth { display: none; }
         .auth-visible #nhost-auth { display: block; }
     </style>
@@ -30,7 +29,7 @@
         </div>
     </div>
 
-    <!-- GIAO DIỆN CHÍNH (chỉ hiện sau khi đăng nhập) -->
+    <!-- GIAO DIỆN CHÍNH -->
     <div id="app-container" class="hidden flex flex-col h-full">
         <div class="flex flex-1">
             <!-- Left Panel: 20% -->
@@ -69,7 +68,7 @@
                 </div>
             </div>
 
-            <!-- Center: Văn bản – 60% + DONATE -->
+            <!-- Center: Văn bản -->
             <div id="text-panel" class="w-3/5 p-6 bg-white shadow-md mx-4 flex flex-col">
                 <div class="flex justify-between items-start mb-2">
                     <h2 class="text-xl font-bold">Nội Dung Chương</h2>
@@ -120,26 +119,24 @@
 
     <div id="notification-container"></div>
 
-    <!-- Nhost JS SDK -->
-    <script src="https://cdn.jsdelivr.net/npm/@nhost/nhost-js@2.4.1/dist/nhost.min.js"></script>
-    <script src="index.js"></script>
-
+    <!-- Nhost SDK (PHIÊN BẢN MỚI NHẤT – DÙNG NhostClient) -->
     <script type="module">
-        // Khởi tạo Nhost
-        const nhost = new Nhost({
+        import { NhostClient } from 'https://esm.sh/@nhost/nhost-js@3.3.1';
+
+        const nhost = new NhostClient({
             subdomain: "ogltettlkspwxyqphmth",
             region: "eu-central-1"
         });
 
         const authContainer = document.getElementById('nhost-auth');
         const appContainer = document.getElementById('app-container');
-        const nhostAuthUI = document.getElementById('nhost-auth-container');
+        const authUI = document.getElementById('nhost-auth-container');
 
-        // Mount Auth UI
-        nhost.auth.ui.mount(nhostAuthUI);
+        // Mount UI Auth
+        nhost.auth.ui.mount(authUI);
 
-        // Kiểm tra session khi load
-        const checkAuth = async () => {
+        // Kiểm tra session
+        const checkSession = async () => {
             const session = await nhost.auth.getSession();
             if (session) {
                 authContainer.classList.add('hidden');
@@ -151,16 +148,19 @@
             }
         };
 
-        // Gọi ngay khi load
-        checkAuth();
+        // Load lần đầu
+        await checkSession();
 
-        // Lắng nghe thay đổi trạng thái
+        // Lắng nghe thay đổi
         nhost.auth.onAuthStateChanged(async () => {
-            await checkAuth();
+            await checkSession();
         });
 
-        // Tự động F5 nếu cần (không cần)
-        // Chỉ cần check session là đủ
+        // Gắn nhost vào window để index.js dùng (nếu cần)
+        window.nhost = nhost;
     </script>
+
+    <!-- index.js (logic tìm/thay) -->
+    <script src="index.js"></script>
 </body>
 </html>
