@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const clearBtn = document.getElementById('clear');
     const fontFamily = document.getElementById('fontFamily');
     const fontSize = document.getElementById('fontSize');
-    const matchCaseCb = document.getElementById('matchCase'); // ĐÃ SỬA: getTextById → getElementById
+    const matchCaseCb = document.getElementById('matchCase'); // CHỈ DÙNG CÁI NÀY
     const wholeWordsCb = document.getElementById('wholeWords');
 
     const modeSelect = document.getElementById('mode-select');
@@ -23,13 +23,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const punctuationList = document.getElementById('punctuation-list');
 
     let keywords = [];
-    let replacementKeywords = []; // Từ trong ô "Thay bằng..." → highlight như keyword mới
+    let replacementKeywords = [];
     let currentMode = 'default';
-    let matchCaseEnabled = false;
     const SETTINGS_KEY = 'replace_settings';
     const highlightClasses = ['hl-yellow', 'hl-pink', 'hl-blue', 'hl-green', 'hl-orange', 'hl-purple'];
 
-    // === HIGHLIGHT TẤT CẢ KEYWORDS (CŨ + MỚI) – CHỈ DUYỆT 1 LẦN ===
+    // === HIGHLIGHT TẤT CẢ – CHỈ DUYỆT 1 LẦN ===
     function applyAllHighlights() {
         clearAllHighlights();
 
@@ -40,7 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         textNodes.forEach(textNode => {
             const parent = textNode.parentNode;
-            if (!parent || parent.closest('[contenteditable]') !== textInput) return;
+            if (!parent || !textInput.contains(parent)) return; // CHỈ TRONG textInput
 
             const text = textNode.textContent;
             const allKeywords = [...keywords, ...replacementKeywords].filter(k => k.trim());
@@ -89,20 +88,20 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // === XÓA HIGHLIGHT – SỬA ĐÚNG: span.replaceWith(...) ===
     function clearAllHighlights() {
         const spans = textInput.querySelectorAll('.' + highlightClasses.join(', .'));
         spans.forEach(span => {
-            const parent = span.parentNode;
-            parent.replaceWith(...span.childNodes);
-            parent.normalize();
+            span.replaceWith(...Array.from(span.childNodes));
         });
+        textInput.normalize(); // GỌP TEXT NODES
     }
 
     function escapeRegExp(str) {
         return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     }
 
-    // === REPLACE + LẤY TỪ "THAY BẰNG" LÀM KEYWORD MỚI ===
+    // === REPLACE + HIGHLIGHT TỪ MỚI ===
     function replaceAndHighlight() {
         const pairs = Array.from(punctuationList.querySelectorAll('.punctuation-item')).map(el => ({
             find: el.querySelector('.find').value.trim(),
@@ -111,7 +110,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (pairs.length === 0) return showNotification('Chưa có cặp!', 'error');
 
-        // 1. Replace
         const walker = document.createTreeWalker(textInput, NodeFilter.SHOW_TEXT);
         const textNodes = [];
         let node;
@@ -120,17 +118,14 @@ document.addEventListener('DOMContentLoaded', () => {
         textNodes.forEach(textNode => {
             let text = textNode.textContent;
             pairs.forEach(p => {
-                const flags = matchCaseEnabled ? 'g' : 'gi';
+                const flags = matchCaseCb.checked ? 'g' : 'gi'; // DÙNG CHỈ matchCaseCb
                 const regex = new RegExp(escapeRegExp(p.find), flags);
                 text = text.replace(regex, p.replace);
             });
             textNode.textContent = text;
         });
 
-        // 2. Cập nhật replacementKeywords từ ô "Thay bằng..."
         replacementKeywords = pairs.map(p => p.replace).filter(r => r.trim());
-
-        // 3. Highlight lại tất cả
         applyAllHighlights();
         showNotification('Đã thay thế & highlight từ mới!', 'success');
     }
@@ -197,10 +192,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // === XUẤT / NHẬP CSV ===
     exportBtn.onclick = () => {
         const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || { modes: {} };
-        let csv = '\uFEFFfind,replace,mode\n';
+        let csv = '\uFEFFfind,replace,mode,matchCase\n';
         Object.keys(settings.modes).forEach(m => {
-            settings.modes[m].pairs.forEach(p => {
-                csv += `"${p.find.replace(/"/g, '""')}","${(p.replace || '').replace(/"/g, '""')}","${m}"\n`;
+            const mode = settings.modes[m];
+            mode.pairs.forEach(p => {
+                csv += `"${p.find.replace(/"/g, '""')}","${(p.replace || '').replace(/"/g, '""')}","${m}","${mode.matchCase}"\n`;
             });
         });
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
@@ -221,15 +217,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     const lines = ev.target.result.trim().split('\n');
                     const newSettings = { modes: {} };
                     for (let i = 1; i < lines.length; i++) {
-                        const [find, replace, mode] = lines[i].split(',').map(s => s.replace(/^"|"$/g, '').replace(/""/g, '"'));
+                        const [find, replace, mode, matchCaseStr] = lines[i].split(',').map(s => s.replace(/^"|"$/g, '').replace(/""/g, '"'));
                         if (!find) continue;
+                        const matchCase = matchCaseStr === 'true';
                         if (!newSettings.modes[mode]) newSettings.modes[mode] = { pairs: [], matchCase: false };
                         newSettings.modes[mode].pairs.push({ find, replace });
+                        newSettings.modes[mode].matchCase = matchCase;
                     }
                     localStorage.setItem(SETTINGS_KEY, JSON.stringify(newSettings));
                     loadModes();
                     showNotification('Nhập thành công!', 'success');
-                } catch { showNotification('Lỗi file CSV!', 'error'); }
+                } catch (err) {
+                    console.error(err);
+                    showNotification('Lỗi file CSV!', 'error');
+                }
             };
             reader.readAsText(file, 'UTF-8');
         };
@@ -252,9 +253,11 @@ document.addEventListener('DOMContentLoaded', () => {
         punctuationList.innerHTML = '';
         data.pairs.forEach(p => addPair(p.find, p.replace));
         if (!data.pairs.length) addPair();
-        matchCaseEnabled = data.matchCase;
-        matchCaseBtn.textContent = matchCaseEnabled ? 'Case: Bật' : 'Case: Tắt';
-        matchCaseBtn.classList.toggle('bg-green-500', matchCaseEnabled);
+
+        // ĐỒNG BỘ CHECKBOX
+        matchCaseCb.checked = data.matchCase;
+        matchCaseBtn.textContent = data.matchCase ? 'Case: Bật' : 'Case: Tắt';
+        matchCaseBtn.classList.toggle('bg-green-500', data.matchCase);
     }
 
     function addPair(find = '', replace = '') {
@@ -279,7 +282,7 @@ document.addEventListener('DOMContentLoaded', () => {
         })).filter(p => p.find);
 
         const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || { modes: {} };
-        settings.modes[currentMode] = { pairs, matchCase: matchCaseEnabled };
+        settings.modes[currentMode] = { pairs, matchCase: matchCaseCb.checked }; // LƯU CHECKBOX
         localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
         showNotification('Đã lưu!', 'success');
     }
@@ -304,11 +307,15 @@ document.addEventListener('DOMContentLoaded', () => {
         currentMode = name;
         loadModes();
     };
+
+    // === TOGGLE MATCH CASE – ĐỒNG BỘ CHECKBOX ===
     matchCaseBtn.onclick = () => {
-        matchCaseEnabled = !matchCaseEnabled;
-        matchCaseBtn.textContent = matchCaseEnabled ? 'Case: Bật' : 'Case: Tắt';
-        matchCaseBtn.classList.toggle('bg-green-500', matchCaseEnabled);
+        matchCaseCb.checked = !matchCaseCb.checked;
+        matchCaseBtn.textContent = matchCaseCb.checked ? 'Case: Bật' : 'Case: Tắt';
+        matchCaseBtn.classList.toggle('bg-green-500', matchCaseCb.checked);
+        applyAllHighlights(); // Tái highlight ngay
     };
+
     addPairBtn.onclick = () => addPair();
     saveSettingsBtn.onclick = saveSettings;
 
