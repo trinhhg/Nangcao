@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tìm Kiếm & Thay Thế Chương</title>
-    <!-- Fix lỗi 404 favicon -->
+    <!-- Fix 404 favicon -->
     <link rel="icon" href="data:,">
 
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
@@ -133,7 +133,7 @@
 
     <div id="notification-container"></div>
 
-    <!-- Nhost SDK -->
+    <!-- Nhost SDK + FIX HOÀN TOÀN -->
     <script type="module">
         import { NhostClient } from 'https://esm.sh/@nhost/nhost-js@3.3.1';
 
@@ -154,34 +154,38 @@
         const validateEmail = e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.trim());
         const validatePassword = p => p && p.length >= 6;
 
-        // SỬA LỖI getSession() → result có thể là null
+        // CHECK SESSION – BẮT BUỘC GỌI LẠI KHI CÓ SESSION CŨ
         const checkSession = async () => {
             try {
                 const result = await nhost.auth.getSession();
-                const session = result?.session || null;
+                const session = result?.session;
 
                 if (session) {
+                    console.log('Đã có session → vào app:', session.user.email);
                     authOverlay.classList.add('hidden');
                     appContainer.classList.remove('hidden');
-                    console.log('Đã đăng nhập:', session.user.email);
                 } else {
                     authOverlay.classList.remove('hidden');
                     appContainer.classList.add('hidden');
                 }
             } catch (err) {
-                console.error('Lỗi kiểm tra session:', err);
+                console.error('Lỗi check session:', err);
                 authOverlay.classList.remove('hidden');
                 appContainer.classList.add('hidden');
             }
         };
 
-        // Load lần đầu
+        // 1. GỌI NGAY KHI LOAD
         checkSession();
 
-        // Lắng nghe auth
+        // 2. LẮNG NGHE THAY ĐỔI (F5, signIn, signOut)
         nhost.auth.onAuthStateChanged(() => {
+            console.log('Auth state changed → check lại');
             checkSession();
         });
+
+        // 3. ĐẶT INTERVAL KIỂM TRA (bảo vệ 100% khi F5)
+        setInterval(checkSession, 2000);
 
         // Đăng nhập
         loginBtn.onclick = async (e) => {
@@ -195,6 +199,12 @@
             authError.textContent = 'Đang đăng nhập...';
             try {
                 const { error } = await nhost.auth.signIn({ email, password });
+                if (error?.message.includes('already signed in')) {
+                    // ĐÃ ĐĂNG NHẬP → TỰ ĐỘNG VÀO APP
+                    checkSession();
+                    authError.textContent = 'Đã đăng nhập! Đang tải...';
+                    return;
+                }
                 if (error) throw error;
             } catch (err) {
                 authError.textContent = err.message || 'Lỗi đăng nhập';
