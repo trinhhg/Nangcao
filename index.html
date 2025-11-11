@@ -5,78 +5,109 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tìm Kiếm & Thay Thế Chương</title>
   <style>
+    :root {
+      --primary: #007bff;
+      --success: #28a745;
+      --danger: #dc3545;
+      --warning: #ffc107;
+      --light: #f8f9fa;
+      --dark: #343a40;
+      --border: #dee2e6;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: Arial, sans-serif;
-      background: #f4f7fa;
-      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: var(--light);
+      color: #333;
+      line-height: 1.6;
       padding: 20px;
     }
     #auth-overlay {
-      max-width: 360px;
-      margin: 50px auto;
-      padding: 30px;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.7);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 1000;
+    }
+    .auth-box {
       background: white;
+      padding: 30px;
       border-radius: 12px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      width: 90%; max-width: 400px;
       text-align: center;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+    .auth-box h2 {
+      margin-bottom: 20px;
+      color: var(--dark);
     }
     input, button {
       width: 100%;
       padding: 12px;
-      margin: 10px 0;
-      border: 1px solid #ddd;
+      margin: 8px 0;
+      border: 1px solid var(--border);
       border-radius: 8px;
       font-size: 16px;
     }
+    input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(0,123,255,.25);
+    }
     button {
-      background: #007bff;
+      background: var(--primary);
       color: white;
       font-weight: bold;
       cursor: pointer;
       transition: 0.2s;
     }
-    button:hover {
-      background: #0056b3;
+    button:hover { background: #0056b3; }
+    button:disabled {
+      background: #6c757d;
+      cursor: not-allowed;
     }
     #auth-error {
-      color: #e74c3c;
-      margin-top: 10px;
+      color: var(--danger);
       min-height: 24px;
+      margin-top: 10px;
+      font-size: 14px;
     }
     #main-panel {
-      max-width: 800px;
+      max-width: 900px;
       margin: 40px auto;
-      padding: 20px;
+      padding: 30px;
       background: white;
       border-radius: 12px;
       box-shadow: 0 4px 20px rgba(0,0,0,0.1);
     }
+    .hidden { display: none !important; }
   </style>
 </head>
 <body>
 
   <!-- Auth Overlay -->
   <div id="auth-overlay">
-    <h2>Đăng Nhập / Đăng Ký</h2>
-    <input type="email" id="auth-email" placeholder="Email" required />
-    <input type="password" id="auth-password" placeholder="Mật khẩu" required />
-    <button id="login-btn">Đăng Nhập</button>
-    <button id="signup-btn">Đăng Ký</button>
-    <div id="auth-error"></div>
+    <div class="auth-box">
+      <h2>Đăng Nhập / Đăng Ký</h2>
+      <input type="email" id="auth-email" placeholder="Email (ví dụ: abc@example.com)" />
+      <input type="password" id="auth-password" placeholder="Mật khẩu (tối thiểu 6 ký tự)" />
+      <button id="login-btn">Đăng Nhập</button>
+      <button id="signup-btn">Đăng Ký</button>
+      <div id="auth-error"></div>
+    </div>
   </div>
 
-  <!-- Main Panel (ẩn lúc đầu) -->
-  <div id="main-panel" style="display:none;">
+  <!-- Main Panel -->
+  <div id="main-panel" class="hidden">
     <h1>Tìm Kiếm & Thay Thế Chương</h1>
-    <p>Giao diện chính sẽ hiện sau khi đăng nhập thành công.</p>
-    <!-- Thêm nội dung tìm/thay ở đây -->
+    <p>Đăng nhập thành công! Giao diện chính sẽ được tích hợp tại đây.</p>
+    <!-- Nội dung chính sẽ thêm vào đây -->
   </div>
 
-  <!-- Script với type="module" và DOMContentLoaded -->
+  <!-- Script -->
   <script type="module">
-    // Đảm bảo DOM đã tải xong trước khi truy cập phần tử
     document.addEventListener('DOMContentLoaded', async () => {
-      // Import Nhost SDK từ esm.sh (đã kiểm tra tồn tại)
+      // Import Nhost SDK
       const { NhostClient } = await import('https://esm.sh/@nhost/nhost-js@3.3.1');
 
       const nhost = new NhostClient({
@@ -84,60 +115,111 @@
         region: 'eu-central-1'
       });
 
-      // Lấy các phần tử DOM (đã có trong HTML)
-      const loginBtn = document.getElementById('login-btn');
-      const signupBtn = document.getElementById('signup-btn');
-      const authError = document.getElementById('auth-error');
+      // DOM Elements
       const authOverlay = document.getElementById('auth-overlay');
       const mainPanel = document.getElementById('main-panel');
+      const authError = document.getElementById('auth-error');
+      const loginBtn = document.getElementById('login-btn');
+      const signupBtn = document.getElementById('signup-btn');
+      const emailInput = document.getElementById('auth-email');
+      const passwordInput = document.getElementById('auth-password');
 
-      // Xử lý Đăng Nhập
+      // === VALIDATION HELPER ===
+      const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+      const validatePassword = (pw) => pw && pw.length >= 6;
+
+      // === XỬ LÝ ĐĂNG NHẬP ===
       loginBtn.onclick = async () => {
-        const email = document.getElementById('auth-email').value.trim();
-        const password = document.getElementById('auth-password').value;
+        authError.textContent = '';
+        loginBtn.disabled = true;
+        loginBtn.textContent = 'Đang đăng nhập...';
 
+        const email = emailInput.value.trim();
+        const password = passwordInput.value;
+
+        // Validate
         if (!email || !password) {
-          authError.textContent = 'Vui lòng nhập đầy đủ email và mật khẩu.';
+          authError.textContent = 'Email và mật khẩu không được để trống.';
+          resetButton(loginBtn, 'Đăng Nhập');
+          return;
+        }
+        if (!validateEmail(email)) {
+          authError.textContent = 'Email không hợp lệ. Vui lòng nhập đúng định dạng.';
+          resetButton(loginBtn, 'Đăng Nhập');
+          return;
+        }
+        if (!validatePassword(password)) {
+          authError.textContent = 'Mật khẩu phải có ít nhất 6 ký tự.';
+          resetButton(loginBtn, 'Đăng Nhập');
           return;
         }
 
-        authError.textContent = 'Đang đăng nhập...';
-
         try {
-          const { error } = await nhost.auth.signIn({ email, password });
+          const { session, error } = await nhost.auth.signIn({ email, password });
           if (error) throw error;
 
-          authOverlay.style.display = 'none';
-          mainPanel.style.display = 'block';
+          // Thành công
+          authOverlay.classList.add('hidden');
+          mainPanel.classList.remove('hidden');
           authError.textContent = '';
+          console.log('Đăng nhập thành công:', session);
         } catch (err) {
-          authError.textContent = err.message || 'Đăng nhập thất bại.';
+          authError.textContent = err.message || 'Đăng nhập thất bại. Vui lòng thử lại.';
+          console.error('Lỗi đăng nhập:', err);
+        } finally {
+          resetButton(loginBtn, 'Đăng Nhập');
         }
       };
 
-      // Xử lý Đăng Ký
+      // === XỬ LÝ ĐĂNG KÝ ===
       signupBtn.onclick = async () => {
-        const email = document.getElementById('auth-email').value.trim();
-        const password = document.getElementById('auth-password').value;
+        authError.textContent = '';
+        signupBtn.disabled = true;
+        signupBtn.textContent = 'Đang đăng ký...';
 
+        const email = emailInput.value.trim();
+        const password = passwordInput.value;
+
+        // Validate
         if (!email || !password) {
-          authError.textContent = 'Vui lòng nhập đầy đủ email và mật khẩu.';
+          authError.textContent = 'Email và mật khẩu không được để trống.';
+          resetButton(signupBtn, 'Đăng Ký');
+          return;
+        }
+        if (!validateEmail(email)) {
+          authError.textContent = 'Email không hợp lệ.';
+          resetButton(signupBtn, 'Đăng Ký');
+          return;
+        }
+        if (!validatePassword(password)) {
+          authError.textContent = 'Mật khẩu phải có ít nhất 6 ký tự.';
+          resetButton(signupBtn, 'Đăng Ký');
           return;
         }
 
-        authError.textContent = 'Đang đăng ký...';
-
         try {
-          const { error } = await nhost.auth.signUp({ email, password });
+          const { user, error } = await nhost.auth.signUp({ email, password });
           if (error) throw error;
 
-          authError.textContent = 'Đăng ký thành công! Vui lòng đăng nhập.';
+          authError.textContent = 'Đăng ký thành công! Vui lòng kiểm tra email để xác minh (nếu bật), rồi đăng nhập.';
+          authError.style.color = 'green';
+          console.log('Đăng ký thành công:', user);
         } catch (err) {
-          authError.textContent = err.message || 'Đăng ký thất bại.';
+          authError.textContent = err.message || 'Đăng ký thất bại. Email có thể đã tồn tại.';
+          console.error('Lỗi đăng ký:', err);
+        } finally {
+          resetButton(signupBtn, 'Đăng Ký');
         }
       };
+
+      // === HELPER: Reset button ===
+      function resetButton(btn, text) {
+        setTimeout(() => {
+          btn.disabled = false;
+          btn.textContent = text;
+        }, 500);
+      }
     });
   </script>
-
 </body>
 </html>
