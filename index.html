@@ -1,155 +1,166 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tìm Kiếm & Thay Thế Chương</title>
-  <style>
-    :root{--primary:#007bff;--danger:#dc3545;--light:#f8f9fa;--border:#dee2e6}
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:Segoe UI,Tahoma,sans-serif;background:var(--light);color:#333;line-height:1.6;padding:20px}
-    #auth-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:1000}
-    .auth-box{background:#fff;padding:30px;border-radius:12px;width:90%;max-width:400px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.2)}
-    .auth-box h2{margin-bottom:20px}
-    input,button{width:100%;padding:12px;margin:8px 0;border:1px solid var(--border);border-radius:8px;font-size:16px}
-    input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(0,123,255,.25)}
-    button{background:var(--primary);color:#fff;font-weight:bold;cursor:pointer;transition:.2s}
-    button:hover{background:#0056b3}
-    button:disabled{background:#6c757d;cursor:not-allowed}
-    #auth-error{color:var(--danger);min-height:24px;margin-top:10px;font-size:14px}
-    #main-panel{max-width:900px;margin:40px auto;padding:30px;background:#fff;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.1)}
-    .hidden{display:none!important}
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tìm Kiếm & Thay Thế Chương</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="index.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        .hl-yellow { background: #ffff99; color: black; }
+        .hl-pink   { background: #ffcccc; color: black; }
+        .hl-blue   { background: #99ccff; color: black; }
+        .hl-green  { background: #ccffcc; color: black; }
+        .hl-orange { background: #ffcc99; color: black; }
+        .hl-purple { background: #e6ccff; color: black; }
+
+        /* Ẩn Auth UI mặc định */
+        #nhost-auth { display: none; }
+        .auth-visible #nhost-auth { display: block; }
+    </style>
 </head>
-<body>
+<body class="bg-gray-100 h-screen flex flex-col">
 
-  <!-- Auth Overlay -->
-  <div id="auth-overlay">
-    <div class="auth-box">
-      <h2>Đăng Nhập / Đăng Ký</h2>
-      <input type="email" id="auth-email" placeholder="Email">
-      <input type="password" id="auth-password" placeholder="Mật khẩu (≥6 ký tự)">
-      <button id="login-btn">Đăng Nhập</button>
-      <button id="signup-btn">Đăng Ký</button>
-      <div id="auth-error"></div>
+    <!-- Nhost Auth UI (ẩn lúc đầu) -->
+    <div id="nhost-auth" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+            <h2 class="text-2xl font-bold text-center mb-6">Đăng Nhập / Đăng Ký</h2>
+            <div id="nhost-auth-container"></div>
+        </div>
     </div>
-  </div>
 
-  <!-- Main Panel -->
-  <div id="main-panel" class="hidden">
-    <h1>Tìm Kiếm & Thay Thế Chương</h1>
-    <p>Chào mừng! Bạn đã đăng nhập thành công.</p>
-    <!-- Nội dung chính của bạn sẽ nằm ở đây -->
-  </div>
+    <!-- GIAO DIỆN CHÍNH (chỉ hiện sau khi đăng nhập) -->
+    <div id="app-container" class="hidden flex flex-col h-full">
+        <div class="flex flex-1">
+            <!-- Left Panel: 20% -->
+            <div id="main-panel" class="w-1/5 p-4 bg-white shadow-md overflow-y-auto text-sm">
+                <h2 class="text-xl font-bold mb-4">Tìm Kiếm</h2>
+                <div class="mb-4">
+                    <label class="block mb-2">Font:</label>
+                    <select id="fontFamily" class="w-full p-2 border rounded text-sm">
+                        <option value="Arial">Arial</option>
+                        <option value="Calibri">Calibri</option>
+                        <option value="Montserrat">Montserrat</option>
+                        <option value="Times New Roman">Times New Roman</option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="block mb-2">Cỡ chữ:</label>
+                    <select id="fontSize" class="w-full p-2 border rounded text-sm">
+                        <option value="14px">14px</option>
+                        <option value="16px">16px</option>
+                        <option value="18px">18px</option>
+                        <option value="20px">20px</option>
+                    </select>
+                </div>
+                <div class="mb-4 space-y-2">
+                    <label><input type="checkbox" id="matchCase" class="mr-2"> Phân biệt hoa/thường</label>
+                    <label><input type="checkbox" id="wholeWords" class="mr-2"> Từ hoàn chỉnh</label>
+                </div>
+                <div class="mb-4">
+                    <label class="block mb-2">Từ khóa:</label>
+                    <input type="text" id="keywords-input" placeholder="Nhập, Enter..." class="w-full p-2 border rounded bg-gray-50 text-sm">
+                    <div id="keywords-tags" class="flex flex-wrap gap-1 mt-2"></div>
+                </div>
+                <div class="flex gap-2">
+                    <button id="search" class="flex-1 bg-green-500 text-white py-2 rounded hover:bg-green-600 text-xs font-medium">Tìm Kiếm</button>
+                    <button id="clear" class="flex-1 bg-red-500 text-white py-2 rounded hover:bg-red-600 text-xs font-medium">Xóa Tất Cả</button>
+                </div>
+            </div>
 
-  <script type="module">
-    document.addEventListener('DOMContentLoaded', async () => {
-      // ---------- Nhost SDK ----------
-      const { NhostClient } = await import('https://esm.sh/@nhost/nhost-js@3.3.1');
-      const nhost = new NhostClient({
-        subdomain: 'ogltettlkspwxyqphmth',
-        region: 'eu-central-1'
-      });
+            <!-- Center: Văn bản – 60% + DONATE -->
+            <div id="text-panel" class="w-3/5 p-6 bg-white shadow-md mx-4 flex flex-col">
+                <div class="flex justify-between items-start mb-2">
+                    <h2 class="text-xl font-bold">Nội Dung Chương</h2>
+                    <div class="text-right text-xs text-red-600 font-semibold leading-tight">
+                        <div>Don@te cho ad: MB BANK - TRINH THI XUAN HUONG - STK: 0917678211</div>
+                        <div>Góp ý: <a href="https://www.facebook.com/trinh.hg.57" target="_blank" class="text-blue-600 underline hover:text-blue-800">https://www.facebook.com/trinh.hg.57</a></div>
+                    </div>
+                </div>
+                <div id="textInput"
+                     contenteditable="true"
+                     class="flex-1 p-6 border-2 border-gray-300 rounded-lg focus:outline-none whitespace-pre-wrap overflow-y-auto"
+                     style="min-height: 70vh; font-family: Arial; font-size: 16px; line-height: 1.8;">
+                </div>
+            </div>
 
-      // ---------- DOM ----------
-      const authOverlay = document.getElementById('auth-overlay');
-      const mainPanel   = document.getElementById('main-panel');
-      const authError   = document.getElementById('auth-error');
-      const loginBtn    = document.getElementById('login-btn');
-      const signupBtn   = document.getElementById('signup-btn');
-      const emailInput  = document.getElementById('auth-email');
-      const pwInput     = document.getElementById('auth-password');
+            <!-- Right Panel: 20% -->
+            <div id="settings-panel" class="w-1/5 p-4 bg-white shadow-md overflow-y-auto text-xs">
+                <h2 class="text-xl font-bold mb-4">Thay Thế</h2>
+                <div class="mode-controls mb-3 space-y-1">
+                    <div class="flex gap-1">
+                        <select id="mode-select" class="flex-1 p-1 border rounded text-xs"></select>
+                        <button id="add-mode" class="px-1 py-0.5 bg-blue-500 text-white rounded text-xs">Thêm</button>
+                    </div>
+                    <div class="flex gap-1">
+                        <button id="copy-mode" class="flex-1 px-1 py-0.5 bg-blue-500 text-white rounded text-xs">Sao</button>
+                        <button id="match-case" class="flex-1 px-1 py-0.5 bg-gray-500 text-white rounded text-xs">Case</button>
+                    </div>
+                    <div class="flex gap-1">
+                        <button id="export-settings" class="flex-1 px-1 py-0.5 bg-blue-500 text-white rounded text-xs">Xuất</button>
+                        <button id="import-settings" class="flex-1 px-1 py-0.5 bg-blue-500 text-white rounded text-xs">Nhập</button>
+                    </div>
+                    <div class="flex gap-1">
+                        <button id="rename-mode" class="flex-1 px-1 py-0.5 bg-gray-500 text-white rounded text-xs hidden">Đổi tên</button>
+                        <button id="delete-mode" class="flex-1 px-1 py-0.5 bg-red-500 text-white rounded text-xs hidden">Xóa</button>
+                    </div>
+                </div>
 
-      // ---------- Helper ----------
-      const validateEmail = e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.trim());
-      const validatePw    = p => p && p.length >= 6;
-      const resetBtn = (b,t) => { b.disabled = false; b.textContent = t; };
-      const showMain = () => { authOverlay.classList.add('hidden'); mainPanel.classList.remove('hidden'); };
-      const hideMain = () => { authOverlay.classList.remove('hidden'); mainPanel.classList.add('hidden'); };
+                <div class="action-buttons mb-3 flex gap-1">
+                    <button id="add-pair" class="flex-1 px-2 py-1 bg-blue-500 text-white rounded text-xs">Cặp</button>
+                    <button id="save-settings" class="flex-1 px-2 py-1 bg-green-600 text-white rounded text-xs">Lưu</button>
+                    <button id="replace-all" class="flex-1 px-2 py-1 bg-purple-600 text-white rounded text-xs">Thay</button>
+                </div>
 
-      // ---------- Kiểm tra session ngay khi load ----------
-      const checkSession = async () => {
-        const { session } = await nhost.auth.getSession();   // không reject, luôn trả về session hoặc null
-        if (session) {
-          console.log('Đã có session → tự động vào app', session);
-          showMain();
-        } else {
-          hideMain();
-        }
-      };
-      await checkSession();
+                <div id="punctuation-list" class="space-y-2 text-xs"></div>
+            </div>
+        </div>
+    </div>
 
-      // ---------- Auth state listener (đồng bộ realtime) ----------
-      nhost.auth.onAuthStateChanged(async (event, session) => {
-        console.log('Auth state:', event, session?.user?.email);
-        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') showMain();
-        else hideMain();
-      });
+    <div id="notification-container"></div>
 
-      // ---------- ĐĂNG NHẬP ----------
-      loginBtn.onclick = async () => {
-        authError.textContent = '';
-        loginBtn.disabled = true;
-        loginBtn.textContent = 'Đang đăng nhập...';
+    <!-- Nhost JS SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@nhost/nhost-js@2.4.1/dist/nhost.min.js"></script>
+    <script src="index.js"></script>
 
-        const email = emailInput.value.trim();
-        const pw    = pwInput.value;
+    <script type="module">
+        // Khởi tạo Nhost
+        const nhost = new Nhost({
+            subdomain: "ogltettlkspwxyqphmth",
+            region: "eu-central-1"
+        });
 
-        if (!email || !pw) { authError.textContent='Nhập email & mật khẩu'; resetBtn(loginBtn,'Đăng Nhập'); return; }
-        if (!validateEmail(email)) { authError.textContent='Email không hợp lệ'; resetBtn(loginBtn,'Đăng Nhập'); return; }
-        if (!validatePw(pw)) { authError.textContent='Mật khẩu ≥6 ký tự'; resetBtn(loginBtn,'Đăng Nhập'); return; }
+        const authContainer = document.getElementById('nhost-auth');
+        const appContainer = document.getElementById('app-container');
+        const nhostAuthUI = document.getElementById('nhost-auth-container');
 
-        try {
-          const { error } = await nhost.auth.signIn({ email, password: pw });
-          if (error) {
-            // Lỗi 20 = already‑signed‑in → không cần báo lỗi, chỉ refresh UI
-            if (error.status === 20 && error.error === 'already-signed-in') {
-              console.warn('User already signed in → UI sẽ tự cập nhật');
-              return;
+        // Mount Auth UI
+        nhost.auth.ui.mount(nhostAuthUI);
+
+        // Kiểm tra session khi load
+        const checkAuth = async () => {
+            const session = await nhost.auth.getSession();
+            if (session) {
+                authContainer.classList.add('hidden');
+                appContainer.classList.remove('hidden');
+                console.log('Đã đăng nhập:', session.user.email);
+            } else {
+                authContainer.classList.remove('hidden');
+                appContainer.classList.add('hidden');
             }
-            throw error;
-          }
-        } catch (e) {
-          authError.textContent = e.message || 'Đăng nhập thất bại';
-          console.error('Lỗi đăng nhập:', e);
-        } finally {
-          resetBtn(loginBtn,'Đăng Nhập');
-        }
-      };
+        };
 
-      // ---------- ĐĂNG KÝ ----------
-      signupBtn.onclick = async () => {
-        authError.textContent = '';
-        signupBtn.disabled = true;
-        signupBtn.textContent = 'Đang đăng ký...';
+        // Gọi ngay khi load
+        checkAuth();
 
-        const email = emailInput.value.trim();
-        const pw    = pwInput.value;
+        // Lắng nghe thay đổi trạng thái
+        nhost.auth.onAuthStateChanged(async () => {
+            await checkAuth();
+        });
 
-        if (!email || !pw) { authError.textContent='Nhập email & mật khẩu'; resetBtn(signupBtn,'Đăng Ký'); return; }
-        if (!validateEmail(email)) { authError.textContent='Email không hợp lệ'; resetBtn(signupBtn,'Đăng Ký'); return; }
-        if (!validatePw(pw)) { authError.textContent='Mật khẩu ≥6 ký tự'; resetBtn(signupBtn,'Đăng Ký'); return; }
-
-        try {
-          const { error } = await nhost.auth.signUp({ email, password: pw });
-          if (error) {
-            if (error.status === 20 && error.error === 'already-signed-in') {
-              authError.textContent = 'Bạn đã đăng nhập rồi. F5 để vào app.';
-              authError.style.color = 'orange';
-              return;
-            }
-            throw error;
-          }
-          authError.textContent = 'Đăng ký OK! Kiểm tra email (nếu bật verify) rồi đăng nhập.';
-          authError.style.color = 'green';
-        } catch (e) {
-          authError.textContent = e.message || 'Đăng ký thất bại';
-          console.error('Lỗi đăng ký:', e);
-        } finally {
-          resetBtn(signupBtn,'Đăng Ký');
-        }
-      };
-    });
-  </script>
+        // Tự động F5 nếu cần (không cần)
+        // Chỉ cần check session là đủ
+    </script>
 </body>
 </html>
