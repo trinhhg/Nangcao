@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tìm Kiếm & Thay Thế Chương</title>
-    <!-- Fix 404 favicon -->
     <link rel="icon" href="data:,">
-
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="index.css">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500&display=swap" rel="stylesheet">
@@ -45,6 +43,10 @@
 
     <!-- GIAO DIỆN CHÍNH -->
     <div id="app-container" class="hidden flex flex-col h-full">
+        <!-- NÚT ĐĂNG XUẤT -->
+        <div class="p-2 bg-gray-800 text-white text-right">
+            <button id="logout-btn" class="px-3 py-1 bg-red-600 rounded text-xs hover:bg-red-700">Đăng xuất</button>
+        </div>
         <div class="flex flex-1">
             <!-- Left Panel -->
             <div id="main-panel" class="w-1/5 p-4 bg-white shadow-md overflow-y-auto text-sm">
@@ -133,7 +135,7 @@
 
     <div id="notification-container"></div>
 
-    <!-- Nhost SDK + FIX HOÀN TOÀN -->
+    <!-- Nhost SDK + FIX CUỐI -->
     <script type="module">
         import { NhostClient } from 'https://esm.sh/@nhost/nhost-js@3.3.1';
 
@@ -147,6 +149,7 @@
         const authError = document.getElementById('auth-error');
         const loginBtn = document.getElementById('login-btn');
         const signupBtn = document.getElementById('signup-btn');
+        const logoutBtn = document.getElementById('logout-btn');
         const emailInput = document.getElementById('auth-email');
         const passwordInput = document.getElementById('auth-password');
 
@@ -154,40 +157,44 @@
         const validateEmail = e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.trim());
         const validatePassword = p => p && p.length >= 6;
 
-        // CHECK SESSION – BẮT BUỘC GỌI LẠI KHI CÓ SESSION CŨ
+        // SHOW APP
+        const showApp = () => {
+            authOverlay.classList.add('hidden');
+            appContainer.classList.remove('hidden');
+            console.log('Màn hình chính đã hiện');
+        };
+
+        // CHECK SESSION
         const checkSession = async () => {
             try {
                 const result = await nhost.auth.getSession();
                 const session = result?.session;
 
                 if (session) {
-                    console.log('Đã có session → vào app:', session.user.email);
-                    authOverlay.classList.add('hidden');
-                    appContainer.classList.remove('hidden');
-                } else {
-                    authOverlay.classList.remove('hidden');
-                    appContainer.classList.add('hidden');
+                    console.log('Đã đăng nhập:', session.user.email);
+                    showApp();
                 }
             } catch (err) {
-                console.error('Lỗi check session:', err);
-                authOverlay.classList.remove('hidden');
-                appContainer.classList.add('hidden');
+                console.error('Lỗi session:', err);
             }
         };
 
-        // 1. GỌI NGAY KHI LOAD
+        // 1. GỌI NGAY
         checkSession();
 
-        // 2. LẮNG NGHE THAY ĐỔI (F5, signIn, signOut)
+        // 2. LẮNG NGHE
         nhost.auth.onAuthStateChanged(() => {
-            console.log('Auth state changed → check lại');
-            checkSession();
+            console.log('Auth state thay đổi → kiểm tra lại');
+            setTimeout(checkSession, 100); // Đảm bảo DOM cập nhật
         });
 
-        // 3. ĐẶT INTERVAL KIỂM TRA (bảo vệ 100% khi F5)
-        setInterval(checkSession, 2000);
+        // 3. DỰ PHÒNG: requestAnimationFrame
+        const tick = () => {
+            checkSession().finally(() => requestAnimationFrame(tick));
+        };
+        requestAnimationFrame(tick);
 
-        // Đăng nhập
+        // ĐĂNG NHẬP
         loginBtn.onclick = async (e) => {
             e.preventDefault();
             const email = emailInput.value.trim();
@@ -200,18 +207,18 @@
             try {
                 const { error } = await nhost.auth.signIn({ email, password });
                 if (error?.message.includes('already signed in')) {
-                    // ĐÃ ĐĂNG NHẬP → TỰ ĐỘNG VÀO APP
-                    checkSession();
                     authError.textContent = 'Đã đăng nhập! Đang tải...';
+                    setTimeout(showApp, 300); // ĐẢM BẢO HIỆN APP
                     return;
                 }
                 if (error) throw error;
+                setTimeout(showApp, 300);
             } catch (err) {
                 authError.textContent = err.message || 'Lỗi đăng nhập';
             }
         };
 
-        // Đăng ký
+        // ĐĂNG KÝ
         signupBtn.onclick = async () => {
             const email = emailInput.value.trim();
             const password = passwordInput.value;
@@ -230,11 +237,16 @@
             }
         };
 
-        // Gắn nhost vào window
+        // ĐĂNG XUẤT
+        logoutBtn.onclick = async () => {
+            await nhost.auth.signOut();
+            authOverlay.classList.remove('hidden');
+            appContainer.classList.add('hidden');
+        };
+
         window.nhost = nhost;
     </script>
 
-    <!-- index.js -->
     <script src="index.js"></script>
 </body>
 </html>
