@@ -4,183 +4,140 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tìm Kiếm & Thay Thế Chương</title>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="index.css">
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500&display=swap" rel="stylesheet">
   <style>
-    .hl-yellow { background: #ffff99; color: black; }
-    .hl-pink   { background: #ffcccc; color: black; }
-    .hl-blue   { background: #99ccff; color: black; }
-    .hl-green  { background: #ccffcc; color: black; }
-    .hl-orange { background: #ffcc99; color: black; }
-    .hl-purple { background: #e6ccff; color: black; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f7fa;
+      margin: 0;
+      padding: 20px;
+    }
     #auth-overlay {
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,0.5);
-      display: flex; justify-content:center; align-items:center;
-      z-index: 1000;
+      max-width: 360px;
+      margin: 50px auto;
+      padding: 30px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      text-align: center;
     }
-    #auth-box {
-      background: white; padding:2rem; border-radius:0.5rem; width:300px; max-width:90%;
+    input, button {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 16px;
     }
-    #auth-box input {
-      width:100%; padding:0.5rem; margin-bottom:0.5rem; border:1px solid #ccc; border-radius:0.25rem;
+    button {
+      background: #007bff;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.2s;
     }
-    #auth-box button {
-      width:100%; padding:0.5rem; margin-top:0.5rem; border:none; border-radius:0.25rem; cursor:pointer;
+    button:hover {
+      background: #0056b3;
     }
-    #auth-error { color:red; font-size:0.875rem; margin-top:0.5rem; }
+    #auth-error {
+      color: #e74c3c;
+      margin-top: 10px;
+      min-height: 24px;
+    }
+    #main-panel {
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 20px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
   </style>
 </head>
-<body class="bg-gray-100 h-screen flex">
-
-  <!-- Panels as before -->
-  <div id="main-panel" class="w-1/5 p-4 bg-white shadow-md overflow-y-auto text-sm" style="display:none;">
-    <h2 class="text-xl font-bold mb-4">Tìm Kiếm</h2>
-    <div class="mb-4">
-      <label class="block mb-2">Font:</label>
-      <select id="fontFamily" class="w-full p-2 border rounded text-sm">
-        <option value="Arial">Arial</option>
-        <option value="Calibri">Calibri</option>
-        <option value="Montserrat">Montserrat</option>
-        <option value="Times New Roman">Times New Roman</option>
-      </select>
-    </div>
-    <div class="mb-4">
-      <label class="block mb-2">Cỡ chữ:</label>
-      <select id="fontSize" class="w-full p-2 border rounded text-sm">
-        <option value="14px">14px</option>
-        <option value="16px">16px</option>
-        <option value="18px">18px</option>
-        <option value="20px">20px</option>
-      </select>
-    </div>
-    <div class="mb-4 space-y-2">
-      <label><input type="checkbox" id="matchCase" class="mr-2"> Phân biệt hoa/thường</label>
-      <label><input type="checkbox" id="wholeWords" class="mr-2"> Từ hoàn chỉnh</label>
-    </div>
-    <div class="mb-4">
-      <label class="block mb-2">Từ khóa:</label>
-      <input type="text" id="keywords-input" placeholder="Nhập, Enter..." class="w-full p-2 border rounded bg-gray-50 text-sm">
-      <div id="keywords-tags" class="flex flex-wrap gap-1 mt-2"></div>
-    </div>
-    <div class="flex gap-2">
-      <button id="search" class="flex-1 bg-green-500 text-white py-2 rounded hover:bg-green-600 text-xs font-medium">Tìm Kiếm</button>
-      <button id="clear" class="flex-1 bg-red-500 text-white py-2 rounded hover:bg-red-600 text-xs font-medium">Xóa Tất Cả</button>
-    </div>
-  </div>
-
-  <div id="text-panel" class="w-3/5 p-6 bg-white shadow-md mx-4 flex flex-col" style="display:none;">
-    <div class="flex justify-between items-start mb-2">
-      <h2 class="text-xl font-bold">Nội Dung Chương</h2>
-      <div class="text-right text-xs text-red-600 font-semibold leading-tight">
-        <div>Don@te cho ad: MB BANK – TRINH THI XUAN HUONG – STK: 0917678211</div>
-        <div>Góp ý: <a href="https://www.facebook.com/trinh.hg.57" target="_blank" class="text-blue-600 underline hover:text-blue-800">facebook.com/trinh.hg.57</a></div>
-      </div>
-    </div>
-    <div id="textInput"
-         contenteditable="true"
-         class="flex-1 p-6 border-2 border-gray-300 rounded-lg focus:outline-none whitespace-pre-wrap overflow-y-auto"
-         style="min-height:70vh; font-family:Arial; font-size:16px; line-height:1.8;">
-    </div>
-  </div>
-
-  <div id="settings-panel" class="w-1/5 p-4 bg-white shadow-md overflow-y-auto text-xs" style="display:none;">
-    <h2 class="text-xl font-bold mb-4">Thay Thế</h2>
-    <div class="mode-controls mb-3 space-y-1">
-      <div class="flex gap-1">
-        <select id="mode-select" class="flex-1 p-1 border rounded text-xs"></select>
-        <button id="add-mode" class="px-1 py-0.5 bg-blue-500 text-white rounded text-xs">Thêm</button>
-      </div>
-      <div class="flex gap‑1">
-        <button id="copy-mode" class="flex‑1 px‑1 py‑0.5 bg‑blue‑500 text‑white rounded text‑xs">Sao</button>
-        <button id="match‑case" class="flex‑1 px‑1 py‑0.5 bg‑gray‑500 text‑white rounded text‑xs">Case</button>
-      </div>
-      <div class="flex gap‑1">
-        <button id="export‑settings" class="flex‑1 px‑1 py‑0.5 bg‑blue‑500 text‑white rounded text‑xs">Xuất</button>
-        <button id="import‑settings" class="flex‑1 px‑1 py‑0.5 bg‑blue‑500 text‑white rounded text‑xs">Nhập</button>
-      </div>
-      <div class="flex gap‑1">
-        <button id="rename‑mode" class="flex‑1 px‑1 py‑0.5 bg‑gray‑500 text‑white rounded text‑xs hidden">Đổi tên</button>
-        <button id="delete‑mode" class="flex‑1 px‑1 py‑0.5 bg‑red‑500 text‑white rounded text‑xs hidden">Xóa</button>
-      </div>
-    </div>
-    <div class="action-buttons mb‑3 flex gap‑1">
-      <button id="add‑pair" class="flex‑1 px‑2 py‑1 bg-blue‑500 text‑white rounded text‑xs">Cặp</button>
-      <button id="save‑settings" class="flex‑1 px‑2 py‑1 bg‑green‑600 text‑white rounded text‑xs">Lưu</button>
-      <button id="replace‑all" class="flex‑1 px‑2 py‑1 bg‑purple‑600 text‑white rounded text‑xs">Thay</button>
-    </div>
-    <div id="punctuation‑list" class="space‑y‑2 text‑xs"></div>
-  </div>
-
-  <div id="notification-container"></div>
+<body>
 
   <!-- Auth Overlay -->
-  <div id="auth-overlay" style="display:flex;">
-    <div id="auth-box">
-      <h2 class="text-lg font-bold mb-2">Đăng Nhập / Đăng Ký</h2>
-      <div id="auth-error"></div>
-      <input type="email" id="auth-email" placeholder="Email">
-      <input type="password" id="auth-password" placeholder="Mật khẩu">
-      <button id="login-btn" class="bg-blue-500 text-white">Đăng Nhập</button>
-      <button id="signup-btn" class="bg-green-500 text-white mt-2">Đăng Ký</button>
-    </div>
+  <div id="auth-overlay">
+    <h2>Đăng Nhập / Đăng Ký</h2>
+    <input type="email" id="auth-email" placeholder="Email" required />
+    <input type="password" id="auth-password" placeholder="Mật khẩu" required />
+    <button id="login-btn">Đăng Nhập</button>
+    <button id="signup-btn">Đăng Ký</button>
+    <div id="auth-error"></div>
   </div>
 
-  <!-- Nhost SDK as module -->
+  <!-- Main Panel (ẩn lúc đầu) -->
+  <div id="main-panel" style="display:none;">
+    <h1>Tìm Kiếm & Thay Thế Chương</h1>
+    <p>Giao diện chính sẽ hiện sau khi đăng nhập thành công.</p>
+    <!-- Thêm nội dung tìm/thay ở đây -->
+  </div>
+
+  <!-- Script với type="module" và DOMContentLoaded -->
   <script type="module">
-    import { createClient } from 'https://cdn.jsdelivr.net/npm/@nhost/nhost-js@3.5.0/dist/nhost-js.esm.js';
+    // Đảm bảo DOM đã tải xong trước khi truy cập phần tử
+    document.addEventListener('DOMContentLoaded', async () => {
+      // Import Nhost SDK từ esm.sh (đã kiểm tra tồn tại)
+      const { NhostClient } = await import('https://esm.sh/@nhost/nhost-js@3.3.1');
 
-    const nhost = createClient({
-      subdomain: 'ogltettlkspwxyqphmth',
-      region: 'eu-central-1'
-    });
+      const nhost = new NhostClient({
+        subdomain: 'ogltettlkspwxyqphmth',
+        region: 'eu-central-1'
+      });
 
-    const authOverlay = document.getElementById('auth-overlay');
-    const authError = document.getElementById('auth-error');
-    const loginBtn = document.getElementById('login-btn');
-    const signupBtn = document.getElementById('signup-btn');
-    const emailInput = document.getElementById('auth-email');
-    const passwordInput = document.getElementById('auth-password');
+      // Lấy các phần tử DOM (đã có trong HTML)
+      const loginBtn = document.getElementById('login-btn');
+      const signupBtn = document.getElementById('signup-btn');
+      const authError = document.getElementById('auth-error');
+      const authOverlay = document.getElementById('auth-overlay');
+      const mainPanel = document.getElementById('main-panel');
 
-    loginBtn.onclick = async () => {
-      authError.textContent = '';
-      const email = emailInput.value;
-      const password = passwordInput.value;
-      const { session, error } = await nhost.auth.signIn({ email, password });
-      if (error) {
-        authError.textContent = error.message;
-      } else {
-        authOverlay.style.display = 'none';
-        document.getElementById('main-panel').style.display = 'block';
-        document.getElementById('text-panel').style.display = 'block';
-        document.getElementById('settings-panel').style.display = 'block';
-      }
-    };
+      // Xử lý Đăng Nhập
+      loginBtn.onclick = async () => {
+        const email = document.getElementById('auth-email').value.trim();
+        const password = document.getElementById('auth-password').value;
 
-    signupBtn.onclick = async () => {
-      authError.textContent = '';
-      const email = emailInput.value;
-      const password = passwordInput.value;
-      const { user, error } = await nhost.auth.signUp({ email, password });
-      if (error) {
-        authError.textContent = error.message;
-      } else {
-        authError.textContent = 'Đăng ký thành công! Hãy đăng nhập.';
-      }
-    };
+        if (!email || !password) {
+          authError.textContent = 'Vui lòng nhập đầy đủ email và mật khẩu.';
+          return;
+        }
 
-    nhost.auth.onAuthStateChanged((session) => {
-      if (session) {
-        authOverlay.style.display = 'none';
-        document.getElementById('main-panel').style.display = 'block';
-        document.getElementById('text-panel').style.display = 'block';
-        document.getElementById('settings-panel').style.display = 'block';
-      }
+        authError.textContent = 'Đang đăng nhập...';
+
+        try {
+          const { error } = await nhost.auth.signIn({ email, password });
+          if (error) throw error;
+
+          authOverlay.style.display = 'none';
+          mainPanel.style.display = 'block';
+          authError.textContent = '';
+        } catch (err) {
+          authError.textContent = err.message || 'Đăng nhập thất bại.';
+        }
+      };
+
+      // Xử lý Đăng Ký
+      signupBtn.onclick = async () => {
+        const email = document.getElementById('auth-email').value.trim();
+        const password = document.getElementById('auth-password').value;
+
+        if (!email || !password) {
+          authError.textContent = 'Vui lòng nhập đầy đủ email và mật khẩu.';
+          return;
+        }
+
+        authError.textContent = 'Đang đăng ký...';
+
+        try {
+          const { error } = await nhost.auth.signUp({ email, password });
+          if (error) throw error;
+
+          authError.textContent = 'Đăng ký thành công! Vui lòng đăng nhập.';
+        } catch (err) {
+          authError.textContent = err.message || 'Đăng ký thất bại.';
+        }
+      };
     });
   </script>
 
-  <!-- Your search/replace JS -->
-  <script src="index.js"></script>
 </body>
 </html>
