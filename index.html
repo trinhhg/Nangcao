@@ -70,9 +70,9 @@
                         <option value="20px">20px</option>
                     </select>
                 </div>
-                <div class="mb-4 space-y-2">
-                    <label><input type="checkbox" id="matchCase" class="mr-2"> Phân biệt hoa/thường</label>
-                    <label><input type="checkbox" id="wholeWords" class="mr-2"> Từ hoàn chỉnh</label>
+                <div class="mb-4">
+                    <label class="block mb-2"><input type="checkbox" id="matchCase" class="mr-2"> Phân biệt hoa/thường</label>
+                    <label class="block mb-2"><input type="checkbox" id="wholeWords" class="mr-2"> Từ hoàn chỉnh</label>
                 </div>
                 <div class="mb-4">
                     <label class="block mb-2">Từ khóa:</label>
@@ -166,7 +166,8 @@
 
         const checkSession = async () => {
             try {
-                const { session } = await nhost.auth.getSession();
+                const result = await nhost.auth.getSession();
+                const session = result?.session;
                 if (session?.accessToken) {
                     console.log('Đã đăng nhập:', session.user.email);
                     showApp();
