@@ -25,29 +25,36 @@ document.addEventListener('DOMContentLoaded', () => {
     const SETTINGS_KEY = 'replace_settings';
     const highlightClasses = ['hl-yellow', 'hl-pink', 'hl-blue', 'hl-green', 'hl-orange', 'hl-purple'];
 
-    // === PASTE GIỮ FORMAT ===
+    // === PASTE GIỮ FORMAT 100% ===
     textInput.addEventListener('paste', (e) => {
         e.preventDefault();
-        const text = (e.clipboardData || window.clipboardData).getData('text/plain');
-        const html = (e.clipboardData || window.clipboardData).getData('text/html') || text;
+        const clipboardData = e.clipboardData || window.clipboardData;
+        const text = clipboardData.getData('text/plain');
+        const html = clipboardData.getData('text/html');
 
-        const temp = document.createElement('div');
-        temp.innerHTML = html;
-        const cleanHTML = temp.innerHTML.replace(/<meta[^>]*>|<style[^>]*>.*?<\/style>|<script[^>]*>.*?<\/script>/gi, '');
-        document.execCommand('insertHTML', false, cleanHTML);
+        if (html && html.includes('<')) {
+            const temp = document.createElement('div');
+            temp.innerHTML = html;
+            // Lọc chỉ giữ cấu trúc cơ bản
+            const clean = temp.innerHTML.replace(/<style[\s\S]*?<\/style>|<script[\s\S]*?<\/script>|<[^>]*>/gi, match => {
+                return match.match(/^<(p|div|br|b|i|u|span)[ >]/i) ? match : '';
+            });
+            const range = window.getSelection().getRangeAt(0);
+            range.deleteContents();
+            const fragment = range.createContextualFragment(clean);
+            range.insertNode(fragment);
+        } else {
+            document.execCommand('insertText', false, text);
+        }
         setTimeout(() => applyAllHighlights(false), 100);
     });
 
-    // === HIGHLIGHT ===
+    // === HIGHLIGHT CHỈ KEYWORDS (khi thêm keyword) HOẶC REPLACE (khi nhấn Thay) ===
     function applyAllHighlights(highlightReplace = false) {
-        const sel = window.getSelection();
-        const range = sel.rangeCount > 0 ? sel.getRangeAt(0) : null;
-        let cursorOffset = 0;
-        let cursorNode = null;
-        if (range && textInput.contains(range.startContainer)) {
-            cursorNode = range.startContainer;
-            cursorOffset = range.startOffset;
-        }
+        // Xóa toàn bộ highlight cũ
+        textInput.querySelectorAll('span.hl-yellow, span.hl-pink, span.hl-blue, span.hl-green, span.hl-orange, span.hl-purple').forEach(span => {
+            span.outerHTML = span.innerHTML;
+        });
 
         const walker = document.createTreeWalker(textInput, NodeFilter.SHOW_TEXT);
         const textNodes = [];
@@ -59,7 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const fullText = textNodes.map(n => n.textContent).join('');
         const matches = [];
 
-        // Keywords
+        // === 1. KEYWORDS (luôn highlight) ===
         keywords.forEach((kw, i) => {
             if (!kw) return;
             const flags = matchCaseCb.checked ? 'g' : 'gi';
@@ -77,7 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Replace
+        // === 2. REPLACE (chỉ khi nhấn Thay) ===
         if (highlightReplace && lastReplacedPairs.length > 0) {
             lastReplacedPairs.forEach((p, i) => {
                 if (!p.replace) return;
@@ -109,40 +116,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let globalOffset = 0;
         textNodes.forEach(textNode => {
-            let text = textNode.textContent;
-            const localMatches = filtered.filter(m => m.start >= globalOffset && m.start < globalOffset + text.length);
+            const localMatches = filtered.filter(m => m.start >= globalOffset && m.start < globalOffset + textNode.textContent.length);
             if (localMatches.length === 0) {
-                globalOffset += text.length;
+                globalOffset += textNode.textContent.length;
                 return;
             }
 
-            let frag = document.createDocumentFragment();
+            const frag = document.createDocumentFragment();
             let lastIdx = 0;
             localMatches.forEach(m => {
                 const localStart = m.start - globalOffset;
                 const localEnd = m.end - globalOffset;
-                if (localStart > lastIdx) frag.appendChild(document.createTextNode(text.slice(lastIdx, localStart)));
+                if (localStart > lastIdx) {
+                    frag.appendChild(document.createTextNode(textNode.textContent.slice(lastIdx, localStart)));
+                }
                 const span = document.createElement('span');
                 span.className = m.className;
-                span.textContent = text.slice(localStart, localEnd);
+                span.textContent = textNode.textContent.slice(localStart, localEnd);
                 frag.appendChild(span);
                 lastIdx = localEnd;
             });
-            if (lastIdx < text.length) frag.appendChild(document.createTextNode(text.slice(lastIdx)));
+            if (lastIdx < textNode.textContent.length) {
+                frag.appendChild(document.createTextNode(textNode.textContent.slice(lastIdx)));
+            }
             textNode.parentNode.replaceChild(frag, textNode);
-            globalOffset += text.length;
+            globalOffset += textNode.textContent.length;
         });
-
-        // Khôi phục con trỏ
-        if (range && cursorNode) {
-            try {
-                const newRange = document.createRange();
-                newRange.setStart(textInput, 0);
-                newRange.collapse(true);
-                sel.removeAllRanges();
-                sel.addRange(newRange);
-            } catch (e) {}
-        }
     }
 
     function escapeRegExp(str) { return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
@@ -183,7 +182,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showNotification('Đã thay thế!', 'success');
     }
 
-    // === TỪ KHÓA ===
+    // === TỪ KHÓA: KHI THÊM → XÓA HIGHLIGHT REPLACE ===
     function addKeywordTag(word) {
         const tag = document.createElement('div');
         tag.className = 'tag inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs mr-1 mb-1';
@@ -207,6 +206,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
             keywordsInput.value = '';
+            lastReplacedPairs = []; // XÓA REPLACE KHI CÓ KEYWORD MỚI
             applyAllHighlights(false);
         }
     });
@@ -230,7 +230,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     replaceAllBtn.onclick = replaceAndHighlight;
 
-    // === CÁC HÀM KHÁC (giữ nguyên) ===
+    // === CÁC HÀM KHÁC ===
     function loadModes() {
         const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || { modes: { default: { pairs: [], matchCase: false } } };
         modeSelect.innerHTML = '';
