@@ -14,18 +14,29 @@
         .hl-green  { background: #ccffcc; color: black; }
         .hl-orange { background: #ffcc99; color: black; }
         .hl-purple { background: #e6ccff; color: black; }
-
-        #nhost-auth { display: none; }
-        .auth-visible #nhost-auth { display: block; }
     </style>
 </head>
 <body class="bg-gray-100 h-screen flex flex-col">
 
-    <!-- Nhost Auth UI (ẩn lúc đầu) -->
-    <div id="nhost-auth" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <!-- Auth Form (TỰ TẠO – ĐẸP + TAILWIND) -->
+    <div id="auth-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
-            <h2 class="text-2xl font-bold text-center mb-6">Đăng Nhập / Đăng Ký</h2>
-            <div id="nhost-auth-container"></div>
+            <h2 class="text-2xl font-bold text-center mb-6 text-gray-800">Đăng Nhập / Đăng Ký</h2>
+            <form id="auth-form" class="space-y-4">
+                <input type="email" id="auth-email" placeholder="Email" required
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <input type="password" id="auth-password" placeholder="Mật khẩu (≥6 ký tự)" required
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <div class="flex gap-2">
+                    <button type="submit" id="login-btn" class="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition">
+                        Đăng Nhập
+                    </button>
+                    <button type="button" id="signup-btn" class="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition">
+                        Đăng Ký
+                    </button>
+                </div>
+                <div id="auth-error" class="text-red-600 text-sm text-center min-h-6"></div>
+            </form>
         </div>
     </div>
 
@@ -119,7 +130,7 @@
 
     <div id="notification-container"></div>
 
-    <!-- Nhost SDK (PHIÊN BẢN MỚI NHẤT – DÙNG NhostClient) -->
+    <!-- Nhost SDK (MỚI NHẤT – KHÔNG CÓ UI) -->
     <script type="module">
         import { NhostClient } from 'https://esm.sh/@nhost/nhost-js@3.3.1';
 
@@ -128,22 +139,27 @@
             region: "eu-central-1"
         });
 
-        const authContainer = document.getElementById('nhost-auth');
+        const authOverlay = document.getElementById('auth-overlay');
         const appContainer = document.getElementById('app-container');
-        const authUI = document.getElementById('nhost-auth-container');
+        const authError = document.getElementById('auth-error');
+        const loginBtn = document.getElementById('login-btn');
+        const signupBtn = document.getElementById('signup-btn');
+        const emailInput = document.getElementById('auth-email');
+        const passwordInput = document.getElementById('auth-password');
 
-        // Mount UI Auth
-        nhost.auth.ui.mount(authUI);
+        // Validate
+        const validateEmail = e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.trim());
+        const validatePassword = p => p && p.length >= 6;
 
         // Kiểm tra session
         const checkSession = async () => {
-            const session = await nhost.auth.getSession();
+            const { session } = await nhost.auth.getSession();
             if (session) {
-                authContainer.classList.add('hidden');
+                authOverlay.classList.add('hidden');
                 appContainer.classList.remove('hidden');
                 console.log('Đã đăng nhập:', session.user.email);
             } else {
-                authContainer.classList.remove('hidden');
+                authOverlay.classList.remove('hidden');
                 appContainer.classList.add('hidden');
             }
         };
@@ -151,16 +167,51 @@
         // Load lần đầu
         await checkSession();
 
-        // Lắng nghe thay đổi
-        nhost.auth.onAuthStateChanged(async () => {
-            await checkSession();
-        });
+        // Lắng nghe auth
+        nhost.auth.onAuthStateChanged(checkSession);
 
-        // Gắn nhost vào window để index.js dùng (nếu cần)
+        // Đăng nhập
+        loginBtn.onclick = async (e) => {
+            e.preventDefault();
+            const email = emailInput.value.trim();
+            const password = passwordInput.value;
+
+            if (!validateEmail(email)) return authError.textContent = 'Email không hợp lệ';
+            if (!validatePassword(password)) return authError.textContent = 'Mật khẩu ≥6 ký tự';
+
+            authError.textContent = 'Đang đăng nhập...';
+            try {
+                const { error } = await nhost.auth.signIn({ email, password });
+                if (error) throw error;
+            } catch (err) {
+                authError.textContent = err.message || 'Lỗi đăng nhập';
+            }
+        };
+
+        // Đăng ký
+        signupBtn.onclick = async () => {
+            const email = emailInput.value.trim();
+            const password = passwordInput.value;
+
+            if (!validateEmail(email)) return authError.textContent = 'Email không hợp lệ';
+            if (!validatePassword(password)) return authError.textContent = 'Mật khẩu ≥6 ký tự';
+
+            authError.textContent = 'Đang đăng ký...';
+            try {
+                const { error } = await nhost.auth.signUp({ email, password });
+                if (error) throw error;
+                authError.textContent = 'Đăng ký thành công! Đăng nhập ngay.';
+                authError.style.color = 'green';
+            } catch (err) {
+                authError.textContent = err.message || 'Lỗi đăng ký';
+            }
+        };
+
+        // Gắn nhost vào window
         window.nhost = nhost;
     </script>
 
-    <!-- index.js (logic tìm/thay) -->
+    <!-- index.js -->
     <script src="index.js"></script>
 </body>
 </html>
