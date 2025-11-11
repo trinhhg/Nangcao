@@ -15,6 +15,7 @@
         .hl-green  { background: #ccffcc; color: black; }
         .hl-orange { background: #ffcc99; color: black; }
         .hl-purple { background: #e6ccff; color: black; }
+        [contenteditable]:empty:before { content: attr(placeholder); color: #aaa; }
     </style>
 </head>
 <body class="bg-gray-100 h-screen flex flex-col">
@@ -42,12 +43,12 @@
     </div>
 
     <!-- GIAO DIỆN CHÍNH -->
-    <div id="app-container" class="hidden flex flex-col h-full">
+    <div id="app-container" class="hidden flex flex-col h-screen">
         <!-- NÚT ĐĂNG XUẤT -->
         <div class="p-2 bg-gray-800 text-white text-right">
             <button id="logout-btn" class="px-3 py-1 bg-red-600 rounded text-xs hover:bg-red-700">Đăng xuất</button>
         </div>
-        <div class="flex flex-1">
+        <div class="flex flex-1 overflow-hidden">
             <!-- Left Panel -->
             <div id="main-panel" class="w-1/5 p-4 bg-white shadow-md overflow-y-auto text-sm">
                 <h2 class="text-xl font-bold mb-4">Tìm Kiếm</h2>
@@ -84,8 +85,8 @@
                 </div>
             </div>
 
-            <!-- Center -->
-            <div id="text-panel" class="w-3/5 p-6 bg-white shadow-md mx-4 flex flex-col">
+            <!-- Center: FULL HEIGHT -->
+            <div id="text-panel" class="flex-1 p-6 bg-white shadow-md mx-4 flex flex-col">
                 <div class="flex justify-between items-start mb-2">
                     <h2 class="text-xl font-bold">Nội Dung Chương</h2>
                     <div class="text-right text-xs text-red-600 font-semibold leading-tight">
@@ -95,8 +96,9 @@
                 </div>
                 <div id="textInput"
                      contenteditable="true"
+                     placeholder="Dán văn bản vào đây..."
                      class="flex-1 p-6 border-2 border-gray-300 rounded-lg focus:outline-none whitespace-pre-wrap overflow-y-auto"
-                     style="min-height: 70vh; font-family: Arial; font-size: 16px; line-height: 1.8;">
+                     style="font-family: Arial; font-size: 16px; line-height: 1.8; min-height: 0;">
                 </div>
             </div>
 
@@ -135,7 +137,7 @@
 
     <div id="notification-container"></div>
 
-    <!-- Nhost SDK + FIX CUỐI -->
+    <!-- Nhost SDK + FIX ĐĂNG NHẬP -->
     <script type="module">
         import { NhostClient } from 'https://esm.sh/@nhost/nhost-js@3.3.1';
 
@@ -153,24 +155,19 @@
         const emailInput = document.getElementById('auth-email');
         const passwordInput = document.getElementById('auth-password');
 
-        // Validate
         const validateEmail = e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.trim());
         const validatePassword = p => p && p.length >= 6;
 
-        // SHOW APP
         const showApp = () => {
             authOverlay.classList.add('hidden');
             appContainer.classList.remove('hidden');
             console.log('Màn hình chính đã hiện');
         };
 
-        // CHECK SESSION
         const checkSession = async () => {
             try {
-                const result = await nhost.auth.getSession();
-                const session = result?.session;
-
-                if (session) {
+                const { session } = await nhost.auth.getSession();
+                if (session?.accessToken) {
                     console.log('Đã đăng nhập:', session.user.email);
                     showApp();
                 }
@@ -179,27 +176,19 @@
             }
         };
 
-        // 1. GỌI NGAY
+        // GỌI NGAY + LẮNG NGHE + DỰ PHÒNG
         checkSession();
-
-        // 2. LẮNG NGHE
         nhost.auth.onAuthStateChanged(() => {
-            console.log('Auth state thay đổi → kiểm tra lại');
-            setTimeout(checkSession, 100); // Đảm bảo DOM cập nhật
+            console.log('Auth thay đổi → kiểm tra lại');
+            setTimeout(checkSession, 100);
         });
-
-        // 3. DỰ PHÒNG: requestAnimationFrame
-        const tick = () => {
-            checkSession().finally(() => requestAnimationFrame(tick));
-        };
+        const tick = () => { checkSession().finally(() => requestAnimationFrame(tick)); };
         requestAnimationFrame(tick);
 
-        // ĐĂNG NHẬP
         loginBtn.onclick = async (e) => {
             e.preventDefault();
             const email = emailInput.value.trim();
             const password = passwordInput.value;
-
             if (!validateEmail(email)) return authError.textContent = 'Email không hợp lệ';
             if (!validatePassword(password)) return authError.textContent = 'Mật khẩu ≥6 ký tự';
 
@@ -207,8 +196,7 @@
             try {
                 const { error } = await nhost.auth.signIn({ email, password });
                 if (error?.message.includes('already signed in')) {
-                    authError.textContent = 'Đã đăng nhập! Đang tải...';
-                    setTimeout(showApp, 300); // ĐẢM BẢO HIỆN APP
+                    setTimeout(showApp, 300);
                     return;
                 }
                 if (error) throw error;
@@ -218,11 +206,9 @@
             }
         };
 
-        // ĐĂNG KÝ
         signupBtn.onclick = async () => {
             const email = emailInput.value.trim();
             const password = passwordInput.value;
-
             if (!validateEmail(email)) return authError.textContent = 'Email không hợp lệ';
             if (!validatePassword(password)) return authError.textContent = 'Mật khẩu ≥6 ký tự';
 
@@ -237,7 +223,6 @@
             }
         };
 
-        // ĐĂNG XUẤT
         logoutBtn.onclick = async () => {
             await nhost.auth.signOut();
             authOverlay.classList.remove('hidden');
