@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const modeSelect = document.getElementById('mode-select');
     const addModeBtn = document.getElementById('add-mode');
     const copyModeBtn = document.getElementById('copy-mode');
+    const deleteModeBtn = document.getElementById('delete-mode');
     const matchCaseBtn = document.getElementById('match-case');
     const addPairBtn = document.getElementById('add-pair');
     const saveSettingsBtn = document.getElementById('save-settings');
@@ -50,9 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     textInput.addEventListener('focus', () => {
-        if (!textInput.textContent.trim()) {
-            textInput.innerHTML = '';
-        }
+        if (!textInput.textContent.trim()) textInput.innerHTML = '';
         setTimeout(setCursorToStart, 0);
     });
 
@@ -65,18 +64,6 @@ document.addEventListener('DOMContentLoaded', () => {
             scheduleHighlight(false);
             setCursorToStart();
         }, 0);
-    });
-
-    // === NHẬP TAY KHÔNG LOẠN ===
-    textInput.addEventListener('beforeinput', (e) => {
-        if (e.inputType === 'insertText' || e.inputType === 'insertParagraph') {
-            const sel = window.getSelection();
-            if (sel.rangeCount === 0) return;
-            const range = sel.getRangeAt(0);
-            if (!range.collapsed) {
-                range.deleteContents();
-            }
-        }
     });
 
     // === DEBOUNCE HIGHLIGHT ===
@@ -372,12 +359,43 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     modeSelect.onchange = () => { currentMode = modeSelect.value; loadPairs(); };
-    addModeBtn.onclick = () => { /* giữ nguyên */ };
-    copyModeBtn.onclick = () => { /* giữ nguyên */ };
+
+    addModeBtn.onclick = () => {
+        const name = prompt('Tên chế độ mới:');
+        if (!name || name === 'default') return showNotification('Tên không hợp lệ!', 'error');
+        const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || { modes: {} };
+        if (settings.modes[name]) return showNotification('Đã tồn tại!', 'error');
+        settings.modes[name] = { pairs: [], matchCase: false, keywords: [] };
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+        currentMode = name;
+        loadModes();
+    };
+
+    copyModeBtn.onclick = () => {
+        const name = prompt('Sao chép thành:');
+        if (!name) return;
+        const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || { modes: {} };
+        settings.modes[name] = JSON.parse(JSON.stringify(settings.modes[currentMode]));
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+        currentMode = name;
+        loadModes();
+    };
+
+    deleteModeBtn.onclick = () => {
+        if (currentMode === 'default') return showNotification('Không xóa default!', 'error');
+        if (!confirm(`Xóa chế độ "${currentMode}"?`)) return;
+        const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || { modes: {} };
+        delete settings.modes[currentMode];
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+        currentMode = 'default';
+        loadModes();
+        showNotification('Đã xóa!', 'success');
+    };
+
     matchCaseBtn.onclick = () => {
         matchCaseCb.checked = !matchCaseCb.checked;
         matchCaseBtn.textContent = matchCaseCb.checked ? 'Case: Bật' : 'Case: Tắt';
-        matchCaseBtn.classList.toggle('bg-green-500', data.matchCase);
+        matchCaseBtn.classList.toggle('bg-green-500', matchCaseCb.checked);
         scheduleHighlight(false);
     };
 
