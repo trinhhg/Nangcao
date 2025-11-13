@@ -6,7 +6,6 @@
     <title>Tìm Kiếm & Thay Thế Chương</title>
     <link rel="icon" href="data:,">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="index.css">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500&display=swap" rel="stylesheet">
     <style>
         .hl-yellow { background: #ffff99; color: black; }
@@ -83,14 +82,14 @@
                     <label class="block mb-1 text-xs"><input type="checkbox" id="wholeWords" class="mr-1 align-middle"> Từ hoàn chỉnh</label>
                 </div>
 
-                <!-- CHẾ ĐỘ TỪ KHÓA: 3 NÚT TRÊN 1 HÀNG -->
+                <!-- CHẾ ĐỘ TỪ KHÓA (RIÊNG BIỆT) -->
                 <div class="mb-4">
                     <label class="block mb-1 text-xs">Chế độ từ khóa:</label>
                     <div class="flex gap-1 items-center">
                         <select id="keyword-mode-select" class="flex-1 p-1.5 border rounded text-xs"></select>
-                        <button id="add-keyword-mode" class="px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600">+</button>
-                        <button id="delete-keyword-mode" class="px-2 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600">−</button>
-                        <button id="save-keywords-btn" class="px-2 py-1 bg-indigo-600 text-white rounded text-xs hover:bg-indigo-700">Lưu</button>
+                        <button id="add-keyword-mode" class="px-1.5 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600">+</button>
+                        <button id="delete-keyword-mode" class="px-1.5 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600">−</button>
+                        <button id="save-keywords-btn" class="px-1.5 py-1 bg-indigo-600 text-white rounded text-xs hover:bg-indigo-700">Lưu</button>
                     </div>
                 </div>
 
@@ -131,14 +130,14 @@
             <div id="settings-panel" class="w-1/5 p-4 bg-white shadow-md overflow-y-auto text-xs">
                 <h2 class="text-xl font-bold mb-4">Thay Thế</h2>
                 <div class="mode-controls mb-3 space-y-1">
+                    <!-- CHẾ ĐỘ THAY THẾ (RIÊNG BIỆT) -->
                     <div class="flex gap-1">
-                        <select id="mode-select" class="flex-1 p-1 border rounded text-xs"></select>
-                        <button id="add-mode" class="px-1 py-0.5 bg-blue-500 text-white rounded text-xs">Thêm</button>
+                        <select id="replace-mode-select" class="flex-1 p-1 border rounded text-xs"></select>
+                        <button id="add-replace-mode" class="px-1 py-0.5 bg-blue-500 text-white rounded text-xs">Thêm</button>
                     </div>
-                    <!-- 3 NÚT CÙNG 1 HÀNG: SAO | XÓA | CASE -->
                     <div class="flex gap-1">
-                        <button id="copy-mode" class="flex-1 px-1 py-0.5 bg-blue-500 text-white rounded text-xs">Sao</button>
-                        <button id="delete-mode" class="flex-1 px-1 py-0.5 bg-red-500 text-white rounded text-xs">Xóa</button>
+                        <button id="copy-replace-mode" class="flex-1 px-1 py-0.5 bg-blue-500 text-white rounded text-xs">Sao</button>
+                        <button id="delete-replace-mode" class="flex-1 px-1 py-0.5 bg-red-500 text-white rounded text-xs">Xóa</button>
                         <button id="match-case" class="flex-1 px-1 py-0.5 bg-gray-500 text-white rounded text-xs">Case</button>
                     </div>
                     <div class="flex gap-1">
@@ -149,7 +148,7 @@
 
                 <div class="action-buttons mb-3 flex gap-1">
                     <button id="add-pair" class="flex-1 px-2 py-1 bg-blue-500 text-white rounded text-xs">Cặp</button>
-                    <button id="save-settings" class="flex-1 px-2 py-1 bg-green-600 text-white rounded text-xs">Lưu</button>
+                    <button id="save-replace-btn" class="flex-1 px-2 py-1 bg-green-600 text-white rounded text-xs">Lưu</button>
                     <button id="replace-all" class="flex-1 px-2 py-1 bg-purple-600 text-white rounded text-xs">Thay</button>
                 </div>
 
@@ -160,14 +159,10 @@
 
     <div id="notification-container"></div>
 
-    <!-- Nhost SDK + FIX ĐĂNG NHẬP (F5 TỰ ĐỘNG) -->
+    <!-- Nhost SDK -->
     <script type="module">
         import { NhostClient } from 'https://esm.sh/@nhost/nhost-js@3.3.1';
-
-        const nhost = new NhostClient({
-            subdomain: "ogltettlkspwxyqphmth",
-            region: "eu-central-1"
-        });
+        const nhost = new NhostClient({ subdomain: "ogltettlkspwxyqphmth", region: "eu-central-1" });
 
         const authOverlay = document.getElementById('auth-overlay');
         const appContainer = document.getElementById('app-container');
@@ -184,29 +179,17 @@
         const showApp = () => {
             authOverlay.classList.add('hidden');
             appContainer.classList.remove('hidden');
-            console.log('Màn hình chính đã hiện');
         };
 
         const checkSession = async () => {
             try {
                 const user = await nhost.auth.getUser();
-                if (user) {
-                    console.log('Đã đăng nhập (F5):', user.email);
-                    showApp();
-                }
-            } catch (err) {
-                console.error('Lỗi session:', err);
-            }
+                if (user) showApp();
+            } catch (err) { console.error('Lỗi session:', err); }
         };
 
-        // GỌI NGAY + LẮNG NGHE
         checkSession();
-        nhost.auth.onAuthStateChanged((user) => {
-            if (user) {
-                console.log('Auth thay đổi → Đã đăng nhập');
-                showApp();
-            }
-        });
+        nhost.auth.onAuthStateChanged(user => { if (user) showApp(); });
 
         loginBtn.onclick = async (e) => {
             e.preventDefault();
@@ -214,19 +197,13 @@
             const password = passwordInput.value;
             if (!validateEmail(email)) return authError.textContent = 'Email không hợp lệ';
             if (!validatePassword(password)) return authError.textContent = 'Mật khẩu ≥6 ký tự';
-
             authError.textContent = 'Đang đăng nhập...';
             try {
                 const { error } = await nhost.auth.signIn({ email, password });
-                if (error?.message.includes('already signed in')) {
-                    setTimeout(showApp, 300);
-                    return;
-                }
+                if (error?.message.includes('already signed in')) { setTimeout(showApp, 300); return; }
                 if (error) throw error;
                 setTimeout(showApp, 300);
-            } catch (err) {
-                authError.textContent = err.message || 'Lỗi đăng nhập';
-            }
+            } catch (err) { authError.textContent = err.message || 'Lỗi đăng nhập'; }
         };
 
         signupBtn.onclick = async () => {
@@ -234,16 +211,13 @@
             const password = passwordInput.value;
             if (!validateEmail(email)) return authError.textContent = 'Email không hợp lệ';
             if (!validatePassword(password)) return authError.textContent = 'Mật khẩu ≥6 ký tự';
-
             authError.textContent = 'Đang đăng ký...';
             try {
                 const { error } = await nhost.auth.signUp({ email, password });
                 if (error) throw error;
                 authError.textContent = 'Đăng ký thành công! Đăng nhập ngay.';
                 authError.style.color = 'green';
-            } catch (err) {
-                authError.textContent = err.message || 'Lỗi đăng ký';
-            }
+            } catch (err) { authError.textContent = err.message || 'Lỗi đăng ký'; }
         };
 
         logoutBtn.onclick = async () => {
