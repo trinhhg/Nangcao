@@ -15,8 +15,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const deleteKeywordModeBtn = document.getElementById('delete-keyword-mode');
     const saveKeywordsBtn = document.getElementById('save-keywords-btn');
 
-    // Thay thế
-    const replaceModeSelect = document.getElementById('replace-mode-select');
+    // Thay thế - SỬA ID ĐÚNG
+    const replaceModeSelect = document.getElementById('replaceModeSelect'); // ĐÃ SỬA
     const addReplaceModeBtn = document.getElementById('add-replace-mode');
     const copyReplaceModeBtn = document.getElementById('copy-replace-mode');
     const deleteReplaceModeBtn = document.getElementById('delete-replace-mode');
@@ -25,6 +25,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveReplaceBtn = document.getElementById('save-replace-btn');
     const replaceAllBtn = document.getElementById('replace-all');
     const punctuationList = document.getElementById('punctuation-list');
+
+    // === KIỂM TRA NULL TRƯỚC KHI GÁN ===
+    if (!replaceModeSelect) {
+        console.error('Lỗi: Không tìm thấy #replaceModeSelect trong HTML');
+        return;
+    }
 
     let keywords = [];
     let lastReplacedPairs = [];
@@ -394,6 +400,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     textInput.addEventListener('input', () => scheduleHighlight(false));
 
+    // === KHỞI TẠO ===
     loadKeywordModes();
     loadReplaceModes();
     setTimeout(() => scheduleHighlight(false), 200);
