@@ -74,15 +74,30 @@
                     <label class="block mb-2"><input type="checkbox" id="matchCase" class="mr-2"> Phân biệt hoa/thường</label>
                     <label class="block mb-2"><input type="checkbox" id="wholeWords" class="mr-2"> Từ hoàn chỉnh</label>
                 </div>
+
+                <!-- THÊM: LƯU TỪ KHÓA VÀO CHẾ ĐỘ -->
+                <div class="mb-4">
+                    <label class="block mb-2">Lưu từ khóa vào chế độ:</label>
+                    <select id="save-keywords-mode" class="w-full p-2 border rounded text-sm">
+                        <option value="">-- Chọn chế độ --</option>
+                    </select>
+                    <button id="save-keywords-btn" class="mt-2 w-full bg-indigo-600 text-white py-1 rounded text-xs hover:bg-indigo-700">Lưu Từ Khóa</button>
+                </div>
+
+                <!-- TỪ KHÓA -->
                 <div class="mb-4">
                     <label class="block mb-2">Từ khóa:</label>
                     <input type="text" id="keywords-input" placeholder="Nhập, Enter..." class="w-full p-2 border rounded bg-gray-50 text-sm">
-                    <div id="keywords-tags" class="flex flex-wrap gap-1 mt-2"></div>
                 </div>
-                <div class="flex gap-2">
+
+                <!-- NÚT TÌM / XÓA -->
+                <div class="flex gap-2 mb-4">
                     <button id="search" class="flex-1 bg-green-500 text-white py-2 rounded hover:bg-green-600 text-xs font-medium">Tìm Kiếm</button>
                     <button id="clear" class="flex-1 bg-red-500 text-white py-2 rounded hover:bg-red-600 text-xs font-medium">Xóa Tất Cả</button>
                 </div>
+
+                <!-- TAGS XUỐNG DƯỚI -->
+                <div id="keywords-tags" class="flex flex-wrap gap-1 mb-4"></div>
             </div>
 
             <!-- Center: FULL HEIGHT -->
@@ -137,7 +152,7 @@
 
     <div id="notification-container"></div>
 
-    <!-- Nhost SDK + FIX ĐĂNG NHẬP -->
+    <!-- Nhost SDK + FIX ĐĂNG NHẬP (F5 TỰ ĐỘNG) -->
     <script type="module">
         import { NhostClient } from 'https://esm.sh/@nhost/nhost-js@3.3.1';
 
@@ -166,10 +181,9 @@
 
         const checkSession = async () => {
             try {
-                const result = await nhost.auth.getSession();
-                const session = result?.session;
-                if (session?.accessToken) {
-                    console.log('Đã đăng nhập:', session.user.email);
+                const user = await nhost.auth.getUser();
+                if (user) {
+                    console.log('Đã đăng nhập (F5):', user.email);
                     showApp();
                 }
             } catch (err) {
@@ -177,14 +191,14 @@
             }
         };
 
-        // GỌI NGAY + LẮNG NGHE + DỰ PHÒNG
+        // GỌI NGAY + LẮNG NGHE
         checkSession();
-        nhost.auth.onAuthStateChanged(() => {
-            console.log('Auth thay đổi → kiểm tra lại');
-            setTimeout(checkSession, 100);
+        nhost.auth.onAuthStateChanged((user) => {
+            if (user) {
+                console.log('Auth thay đổi → Đã đăng nhập');
+                showApp();
+            }
         });
-        const tick = () => { checkSession().finally(() => requestAnimationFrame(tick)); };
-        requestAnimationFrame(tick);
 
         loginBtn.onclick = async (e) => {
             e.preventDefault();
@@ -233,6 +247,7 @@
         window.nhost = nhost;
     </script>
 
+    <!-- JS CHÍNH -->
     <script src="index.js"></script>
 </body>
 </html>
