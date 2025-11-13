@@ -52,42 +52,52 @@
             <!-- Left Panel -->
             <div id="main-panel" class="w-1/5 p-4 bg-white shadow-md overflow-y-auto text-sm">
                 <h2 class="text-xl font-bold mb-4">Tìm Kiếm</h2>
+
+                <!-- FONT + CỠ CHỮ 1 HÀNG -->
                 <div class="mb-4">
-                    <label class="block mb-2">Font:</label>
-                    <select id="fontFamily" class="w-full p-2 border rounded text-sm">
-                        <option value="Arial">Arial</option>
-                        <option value="Calibri">Calibri</option>
-                        <option value="Montserrat">Montserrat</option>
-                        <option value="Times New Roman">Times New Roman</option>
-                    </select>
-                </div>
-                <div class="mb-4">
-                    <label class="block mb-2">Cỡ chữ:</label>
-                    <select id="fontSize" class="w-full p-2 border rounded text-sm">
-                        <option value="14px">14px</option>
-                        <option value="16px">16px</option>
-                        <option value="18px">18px</option>
-                        <option value="20px">20px</option>
-                    </select>
-                </div>
-                <div class="mb-4">
-                    <label class="block mb-2"><input type="checkbox" id="matchCase" class="mr-2"> Phân biệt hoa/thường</label>
-                    <label class="block mb-2"><input type="checkbox" id="wholeWords" class="mr-2"> Từ hoàn chỉnh</label>
+                    <div class="flex gap-2">
+                        <div class="flex-1">
+                            <label class="block mb-1 text-xs">Font:</label>
+                            <select id="fontFamily" class="w-full p-1.5 border rounded text-xs">
+                                <option value="Arial">Arial</option>
+                                <option value="Calibri">Calibri</option>
+                                <option value="Montserrat">Montserrat</option>
+                                <option value="Times New Roman">Times New Roman</option>
+                            </select>
+                        </div>
+                        <div class="flex-1">
+                            <label class="block mb-1 text-xs">Cỡ chữ:</label>
+                            <select id="fontSize" class="w-full p-1.5 border rounded text-xs">
+                                <option value="14px">14px</option>
+                                <option value="16px">16px</option>
+                                <option value="18px">18px</option>
+                                <option value="20px">20px</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- THÊM: LƯU TỪ KHÓA VÀO CHẾ ĐỘ -->
+                <!-- CHECKBOX -->
                 <div class="mb-4">
-                    <label class="block mb-2">Lưu từ khóa vào chế độ:</label>
-                    <select id="save-keywords-mode" class="w-full p-2 border rounded text-sm">
-                        <option value="">-- Chọn chế độ --</option>
-                    </select>
-                    <button id="save-keywords-btn" class="mt-2 w-full bg-indigo-600 text-white py-1 rounded text-xs hover:bg-indigo-700">Lưu Từ Khóa</button>
+                    <label class="block mb-1 text-xs"><input type="checkbox" id="matchCase" class="mr-1 align-middle"> Phân biệt hoa/thường</label>
+                    <label class="block mb-1 text-xs"><input type="checkbox" id="wholeWords" class="mr-1 align-middle"> Từ hoàn chỉnh</label>
+                </div>
+
+                <!-- CHẾ ĐỘ TỪ KHÓA: DROPDOWN + 3 NÚT TRÊN 1 HÀNG -->
+                <div class="mb-4">
+                    <label class="block mb-1 text-xs">Chế độ từ khóa:</label>
+                    <div class="flex gap-1 items-center">
+                        <select id="keyword-mode-select" class="flex-1 p-1.5 border rounded text-xs"></select>
+                        <button id="add-keyword-mode" class="px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600">+</button>
+                        <button id="delete-keyword-mode" class="px-2 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600">−</button>
+                        <button id="save-keywords-btn" class="px-2 py-1 bg-indigo-600 text-white rounded text-xs hover:bg-indigo-700">Lưu</button>
+                    </div>
                 </div>
 
                 <!-- TỪ KHÓA -->
                 <div class="mb-4">
-                    <label class="block mb-2">Từ khóa:</label>
-                    <input type="text" id="keywords-input" placeholder="Nhập, Enter..." class="w-full p-2 border rounded bg-gray-50 text-sm">
+                    <label class="block mb-1 text-xs">Từ khóa:</label>
+                    <input type="text" id="keywords-input" placeholder="Nhập, Enter..." class="w-full p-1.5 border rounded bg-gray-50 text-xs">
                 </div>
 
                 <!-- NÚT TÌM / XÓA -->
@@ -96,7 +106,7 @@
                     <button id="clear" class="flex-1 bg-red-500 text-white py-2 rounded hover:bg-red-600 text-xs font-medium">Xóa Tất Cả</button>
                 </div>
 
-                <!-- TAGS XUỐNG DƯỚI -->
+                <!-- TAGS -->
                 <div id="keywords-tags" class="flex flex-wrap gap-1 mb-4"></div>
             </div>
 
