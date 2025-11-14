@@ -1,238 +1,75 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tìm Kiếm & Thay Thế Chương</title>
-    <link rel="icon" href="data:,">
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="index.css">
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500&display=swap" rel="stylesheet">
-    <style>
-        .hl-yellow { background: #ffff99; color: black; }
-        .hl-pink   { background: #ffcccc; color: black; }
-        .hl-blue   { background: #99ccff; color: black; }
-        .hl-green  { background: #ccffcc; color: black; }
-        .hl-orange { background: #ffcc99; color: black; }
-        .hl-purple { background: #e6ccff; color: black; }
-        [contenteditable]:empty:before { content: attr(placeholder); color: #aaa; }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Text Highlighter & Replacer</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="index.css" />
 </head>
-<body class="bg-gray-100 h-screen flex flex-col">
+<body class="p-4 bg-gray-50 min-h-screen">
 
-    <!-- Auth Form -->
-    <div id="auth-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
-            <h2 class="text-2xl font-bold text-center mb-6 text-gray-800">Đăng Nhập / Đăng Ký</h2>
-            <form id="auth-form" class="space-y-4">
-                <input type="email" id="auth-email" placeholder="Email" required
-                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <input type="password" id="auth-password" placeholder="Mật khẩu (≥6 ký tự)" required
-                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <div class="flex gap-2">
-                    <button type="submit" id="login-btn" class="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition">
-                        Đăng Nhập
-                    </button>
-                    <button type="button" id="signup-btn" class="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition">
-                        Đăng Ký
-                    </button>
-                </div>
-                <div id="auth-error" class="text-red-600 text-sm text-center min-h-6"></div>
-            </form>
-        </div>
+  <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-6 space-y-4">
+
+    <!-- Font & Size: Cùng 1 hàng -->
+    <div class="flex gap-2 items-center text-sm flex-wrap">
+      <label class="w-20">Phông:</label>
+      <select id="fontFamily" class="flex-1 max-w-40 p-1 border rounded text-xs">
+        <option value="Montserrat, sans-serif">Montserrat</option>
+        <option value="Arial, sans-serif">Arial</option>
+        <option value="'Times New Roman', serif">Times New Roman</option>
+        <option value="Courier New, monospace">Courier New</option>
+      </select>
+
+      <label class="w-16 text-right">Cỡ:</label>
+      <select id="fontSize" class="flex-1 max-w-20 p-1 border rounded text-xs">
+        <option value="12px">12</option>
+        <option value="14px" selected>14</option>
+        <option value="16px">16</option>
+        <option value="18px">18</option>
+        <option value="20px">20</option>
+      </select>
     </div>
 
-    <!-- GIAO DIỆN CHÍNH -->
-    <div id="app-container" class="hidden flex flex-col h-screen">
-        <!-- NÚT ĐĂNG XUẤT -->
-        <div class="p-2 bg-gray-800 text-white text-right">
-            <button id="logout-btn" class="px-3 py-1 bg-red-600 rounded text-xs hover:bg-red-700">Đăng xuất</button>
-        </div>
-        <div class="flex flex-1 overflow-hidden">
-            <!-- Left Panel -->
-            <div id="main-panel" class="w-1/5 p-4 bg-white shadow-md overflow-y-auto text-sm">
-                <h2 class="text-xl font-bold mb-4">Tìm Kiếm</h2>
-                <div class="mb-4">
-                    <label class="block mb-2">Font:</label>
-                    <select id="fontFamily" class="w-full p-2 border rounded text-sm">
-                        <option value="Arial">Arial</option>
-                        <option value="Calibri">Calibri</option>
-                        <option value="Montserrat">Montserrat</option>
-                        <option value="Times New Roman">Times New Roman</option>
-                    </select>
-                </div>
-                <div class="mb-4">
-                    <label class="block mb-2">Cỡ chữ:</label>
-                    <select id="fontSize" class="w-full p-2 border rounded text-sm">
-                        <option value="14px">14px</option>
-                        <option value="16px">16px</option>
-                        <option value="18px">18px</option>
-                        <option value="20px">20px</option>
-                    </select>
-                </div>
-                <div class="mb-4">
-                    <label class="block mb-2"><input type="checkbox" id="matchCase" class="mr-2"> Phân biệt hoa/thường</label>
-                    <label class="block mb-2"><input type="checkbox" id="wholeWords" class="mr-2"> Từ hoàn chỉnh</label>
-                </div>
-                <div class="mb-4">
-                    <label class="block mb-2">Từ khóa:</label>
-                    <input type="text" id="keywords-input" placeholder="Nhập, Enter..." class="w-full p-2 border rounded bg-gray-50 text-sm">
-                    <div id="keywords-tags" class="flex flex-wrap gap-1 mt-2"></div>
-                </div>
-                <div class="flex gap-2">
-                    <button id="search" class="flex-1 bg-green-500 text-white py-2 rounded hover:bg-green-600 text-xs font-medium">Tìm Kiếm</button>
-                    <button id="clear" class="flex-1 bg-red-500 text-white py-2 rounded hover:bg-red-600 text-xs font-medium">Xóa Tất Cả</button>
-                </div>
-            </div>
+    <!-- Text Input -->
+    <div id="textInput" contenteditable="true" class="min-h-48 p-4 border rounded bg-white text-sm outline-none focus:ring-2 focus:ring-blue-300" style="font-family: Montserrat, sans-serif; font-size: 14px;"></div>
 
-            <!-- Center: FULL HEIGHT -->
-            <div id="text-panel" class="flex-1 p-6 bg-white shadow-md mx-4 flex flex-col">
-                <div class="flex justify-between items-start mb-2">
-                    <h2 class="text-xl font-bold">Nội Dung Chương</h2>
-                    <div class="text-right text-xs text-red-600 font-semibold leading-tight">
-                        <div>Don@te cho ad: MB BANK - TRINH THI XUAN HUONG - STK: 0917678211</div>
-                        <div>Góp ý: <a href="https://www.facebook.com/trinh.hg.57" target="_blank" class="text-blue-600 underline hover:text-blue-800">https://www.facebook.com/trinh.hg.57</a></div>
-                    </div>
-                </div>
-                <div id="textInput"
-                     contenteditable="true"
-                     placeholder="Dán văn bản vào đây..."
-                     class="flex-1 p-6 border-2 border-gray-300 rounded-lg focus:outline-none whitespace-pre-wrap overflow-y-auto"
-                     style="font-family: Arial; font-size: 16px; line-height: 1.8; min-height: 0;">
-                </div>
-            </div>
+    <!-- Keywords Input -->
+    <div class="flex gap-2 items-center flex-wrap">
+      <input id="keywords-input" type="text" placeholder="Nhập từ khóa, cách nhau bằng dấu phẩy..." class="flex-1 p-2 border rounded text-xs" />
+      <button id="search" class="px-3 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600">Tìm</button>
+      <button id="clear" class="px-3 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600">Xóa</button>
+    </div>
+    <div id="keywords-tags" class="min-h-8 flex flex-wrap gap-1"></div>
 
-            <!-- Right Panel -->
-            <div id="settings-panel" class="w-1/5 p-4 bg-white shadow-md overflow-y-auto text-xs">
-                <h2 class="text-xl font-bold mb-4">Thay Thế</h2>
-                <div class="mode-controls mb-3 space-y-1">
-                    <div class="flex gap-1">
-                        <select id="mode-select" class="flex-1 p-1 border rounded text-xs"></select>
-                        <button id="add-mode" class="px-1 py-0.5 bg-blue-500 text-white rounded text-xs">Thêm</button>
-                    </div>
-                    <div class="flex gap-1">
-                        <button id="copy-mode" class="flex-1 px-1 py-0.5 bg-blue-500 text-white rounded text-xs">Sao</button>
-                        <button id="match-case" class="flex-1 px-1 py-0.5 bg-gray-500 text-white rounded text-xs">Case</button>
-                    </div>
-                    <div class="flex gap-1">
-                        <button id="export-settings" class="flex-1 px-1 py-0.5 bg-blue-500 text-white rounded text-xs">Xuất</button>
-                        <button id="import-settings" class="flex-1 px-1 py-0.5 bg-blue-500 text-white rounded text-xs">Nhập</button>
-                    </div>
-                    <div class="flex gap-1">
-                        <button id="rename-mode" class="flex-1 px-1 py-0.5 bg-gray-500 text-white rounded text-xs hidden">Đổi tên</button>
-                        <button id="delete-mode" class="flex-1 px-1 py-0.5 bg-red-500 text-white rounded text-xs hidden">Xóa</button>
-                    </div>
-                </div>
-
-                <div class="action-buttons mb-3 flex gap-1">
-                    <button id="add-pair" class="flex-1 px-2 py-1 bg-blue-500 text-white rounded text-xs">Cặp</button>
-                    <button id="save-settings" class="flex-1 px-2 py-1 bg-green-600 text-white rounded text-xs">Lưu</button>
-                    <button id="replace-all" class="flex-1 px-2 py-1 bg-purple-600 text-white rounded text-xs">Thay</button>
-                </div>
-
-                <div id="punctuation-list" class="space-y-2 text-xs"></div>
-            </div>
-        </div>
+    <!-- Options -->
+    <div class="flex gap-4 text-xs items-center flex-wrap">
+      <label><input type="checkbox" id="matchCase"> Phân biệt HOA/thường</label>
+      <label><input type="checkbox" id="wholeWords"> Toàn từ</label>
+      <button id="match-case" class="px-2 py-1 bg-gray-300 rounded text-xs">Case: Tắt</button>
     </div>
 
-    <div id="notification-container"></div>
+    <!-- Replace List -->
+    <div>
+      <div class="flex justify-between items-center mb-1">
+        <h3 class="text-sm font-medium">Thay thế:</h3>
+        <button id="add-pair" class="text-xs text-blue-600 hover:underline">+ Thêm</button>
+      </div>
+      <div id="punctuation-list"></div>
+      <button id="replace-all" class="mt-2 px-4 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700">Thay tất cả</button>
+    </div>
 
-    <!-- Nhost SDK + FIX ĐĂNG NHẬP -->
-    <script type="module">
-        import { NhostClient } from 'https://esm.sh/@nhost/nhost-js@3.3.1';
+    <!-- Mode & Settings -->
+    <div class="flex gap-2 flex-wrap text-xs">
+      <select id="mode-select" class="p-1 border rounded"></select>
+      <button id="add-mode" class="px-2 py-1 bg-indigo-600 text-white rounded">+ Mới</button>
+      <button id="copy-mode" class="px-2 py-1 bg-purple-600 text-white rounded">Sao chép</button>
+      <button id="save-settings" class="px-2 py-1 bg-teal-600 text-white rounded">Lưu</button>
+    </div>
 
-        const nhost = new NhostClient({
-            subdomain: "ogltettlkspwxyqphmth",
-            region: "eu-central-1"
-        });
+  </div>
 
-        const authOverlay = document.getElementById('auth-overlay');
-        const appContainer = document.getElementById('app-container');
-        const authError = document.getElementById('auth-error');
-        const loginBtn = document.getElementById('login-btn');
-        const signupBtn = document.getElementById('signup-btn');
-        const logoutBtn = document.getElementById('logout-btn');
-        const emailInput = document.getElementById('auth-email');
-        const passwordInput = document.getElementById('auth-password');
-
-        const validateEmail = e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.trim());
-        const validatePassword = p => p && p.length >= 6;
-
-        const showApp = () => {
-            authOverlay.classList.add('hidden');
-            appContainer.classList.remove('hidden');
-            console.log('Màn hình chính đã hiện');
-        };
-
-        const checkSession = async () => {
-            try {
-                const result = await nhost.auth.getSession();
-                const session = result?.session;
-                if (session?.accessToken) {
-                    console.log('Đã đăng nhập:', session.user.email);
-                    showApp();
-                }
-            } catch (err) {
-                console.error('Lỗi session:', err);
-            }
-        };
-
-        // GỌI NGAY + LẮNG NGHE + DỰ PHÒNG
-        checkSession();
-        nhost.auth.onAuthStateChanged(() => {
-            console.log('Auth thay đổi → kiểm tra lại');
-            setTimeout(checkSession, 100);
-        });
-        const tick = () => { checkSession().finally(() => requestAnimationFrame(tick)); };
-        requestAnimationFrame(tick);
-
-        loginBtn.onclick = async (e) => {
-            e.preventDefault();
-            const email = emailInput.value.trim();
-            const password = passwordInput.value;
-            if (!validateEmail(email)) return authError.textContent = 'Email không hợp lệ';
-            if (!validatePassword(password)) return authError.textContent = 'Mật khẩu ≥6 ký tự';
-
-            authError.textContent = 'Đang đăng nhập...';
-            try {
-                const { error } = await nhost.auth.signIn({ email, password });
-                if (error?.message.includes('already signed in')) {
-                    setTimeout(showApp, 300);
-                    return;
-                }
-                if (error) throw error;
-                setTimeout(showApp, 300);
-            } catch (err) {
-                authError.textContent = err.message || 'Lỗi đăng nhập';
-            }
-        };
-
-        signupBtn.onclick = async () => {
-            const email = emailInput.value.trim();
-            const password = passwordInput.value;
-            if (!validateEmail(email)) return authError.textContent = 'Email không hợp lệ';
-            if (!validatePassword(password)) return authError.textContent = 'Mật khẩu ≥6 ký tự';
-
-            authError.textContent = 'Đang đăng ký...';
-            try {
-                const { error } = await nhost.auth.signUp({ email, password });
-                if (error) throw error;
-                authError.textContent = 'Đăng ký thành công! Đăng nhập ngay.';
-                authError.style.color = 'green';
-            } catch (err) {
-                authError.textContent = err.message || 'Lỗi đăng ký';
-            }
-        };
-
-        logoutBtn.onclick = async () => {
-            await nhost.auth.signOut();
-            authOverlay.classList.remove('hidden');
-            appContainer.classList.add('hidden');
-        };
-
-        window.nhost = nhost;
-    </script>
-
-    <script src="index.js"></script>
+  <div id="notification-container"></div>
+  <script src="index.js"></script>
 </body>
 </html>
