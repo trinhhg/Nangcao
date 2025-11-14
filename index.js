@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     const textInput = document.getElementById('textInput');
-    const keywordsInput = document.getElementById('keywords-input');
+    const keywordsInput = document.getElementById('keywordsInput'); // ĐÃ SỬA ID
     const keywordsTags = document.getElementById('keywords-tags');
     const searchBtn = document.getElementById('search');
     const clearBtn = document.getElementById('clear');
@@ -15,8 +15,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const deleteKeywordModeBtn = document.getElementById('delete-keyword-mode');
     const saveKeywordsBtn = document.getElementById('save-keywords-btn');
 
-    // Thay thế - SỬA ID ĐÚNG
-    const replaceModeSelect = document.getElementById('replaceModeSelect'); // ĐÃ SỬA
+    // Thay thế
+    const replaceModeSelect = document.getElementById('replaceModeSelect');
     const addReplaceModeBtn = document.getElementById('add-replace-mode');
     const copyReplaceModeBtn = document.getElementById('copy-replace-mode');
     const deleteReplaceModeBtn = document.getElementById('delete-replace-mode');
@@ -26,9 +26,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const replaceAllBtn = document.getElementById('replace-all');
     const punctuationList = document.getElementById('punctuation-list');
 
-    // === KIỂM TRA NULL TRƯỚC KHI GÁN ===
+    // === KIỂM TRA NULL ===
+    if (!keywordsInput) {
+        console.error('Lỗi: Không tìm thấy #keywordsInput');
+        return;
+    }
     if (!replaceModeSelect) {
-        console.error('Lỗi: Không tìm thấy #replaceModeSelect trong HTML');
+        console.error('Lỗi: Không tìm thấy #replaceModeSelect');
         return;
     }
 
@@ -215,7 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showNotification('Đã thay thế!', 'success');
     }
 
-    // === TỪ KHÓA ===
+    // === TỪ KHÓA (ĐÃ FIX ENTER) ===
     function addKeywordTag(word) {
         const tag = document.createElement('div');
         tag.className = 'tag inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs mr-1 mb-1';
@@ -229,6 +233,7 @@ document.addEventListener('DOMContentLoaded', () => {
         keywordsTags.appendChild(tag);
     }
 
+    // FIX: ENTER → THÊM TỪ KHÓA
     keywordsInput.addEventListener('keydown', e => {
         if (e.key === 'Enter') {
             e.preventDefault();
@@ -322,13 +327,14 @@ document.addEventListener('DOMContentLoaded', () => {
         matchCaseBtn.classList.toggle('bg-green-500', data.matchCase);
     }
 
+    // FIX: NÚT XÓA KHÔNG BỊ LẸM
     function addPair(find = '', replace = '') {
         const item = document.createElement('div');
         item.className = 'punctuation-item flex gap-1 mb-1 items-center text-xs';
         item.innerHTML = `
             <input type="text" class="find flex-1 p-1 border rounded" placeholder="Tìm..." value="${find}">
             <input type="text" class="replace flex-1 p-1 border rounded" placeholder="Thay bằng..." value="${replace}">
-            <button class="remove w-6 h-6 bg-red-500 text-white rounded hover:bg-red-600">×</button>
+            <button class="remove w-8 h-8 bg-red-500 text-white rounded hover:bg-red-600 flex items-center justify-center text-sm">×</button>
         `;
         item.querySelector('.remove').onclick = () => {
             item.remove();
