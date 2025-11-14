@@ -11,18 +11,18 @@
 
   <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-6 space-y-4">
 
-    <!-- Font & Size: Cùng 1 hàng -->
-    <div class="flex gap-2 items-center text-sm flex-wrap">
-      <label class="w-20">Phông:</label>
-      <select id="fontFamily" class="flex-1 max-w-40 p-1 border rounded text-xs">
+    <!-- Font + Size: Chung 1 hàng -->
+    <div class="flex items-center gap-2 text-sm">
+      <label class="w-16">Font:</label>
+      <select id="fontFamily" class="flex-1 max-w-32 p-1 border rounded text-xs">
         <option value="Montserrat, sans-serif">Montserrat</option>
         <option value="Arial, sans-serif">Arial</option>
         <option value="'Times New Roman', serif">Times New Roman</option>
         <option value="Courier New, monospace">Courier New</option>
       </select>
 
-      <label class="w-16 text-right">Cỡ:</label>
-      <select id="fontSize" class="flex-1 max-w-20 p-1 border rounded text-xs">
+      <label class="w-12 text-right">Cỡ:</label>
+      <select id="fontSize" class="flex-1 max-w-16 p-1 border rounded text-xs">
         <option value="12px">12</option>
         <option value="14px" selected>14</option>
         <option value="16px">16</option>
@@ -34,8 +34,8 @@
     <!-- Text Input -->
     <div id="textInput" contenteditable="true" class="min-h-48 p-4 border rounded bg-white text-sm outline-none focus:ring-2 focus:ring-blue-300" style="font-family: Montserrat, sans-serif; font-size: 14px;"></div>
 
-    <!-- Keywords Input -->
-    <div class="flex gap-2 items-center flex-wrap">
+    <!-- Keywords -->
+    <div class="flex gap-2 items-center">
       <input id="keywords-input" type="text" placeholder="Nhập từ khóa, cách nhau bằng dấu phẩy..." class="flex-1 p-2 border rounded text-xs" />
       <button id="search" class="px-3 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600">Tìm</button>
       <button id="clear" class="px-3 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600">Xóa</button>
