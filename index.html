@@ -7,11 +7,11 @@
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <style>
     [contenteditable]:empty:before { content: attr(placeholder); color: #aaa; }
-    .hl { background: #ffff99; }
-    .hl2 { background: #ffcccc; }
-    .hl3 { background: #99ccff; }
+    .hl { @apply bg-yellow-200; }
+    .hl2 { @apply bg-pink-200; }
+    .hl3 { @apply bg-blue-200; }
     .tag { @apply inline-block bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs mr-1 mb-1; }
-    .tag span { @apply cursor-pointer ml-1; }
+    .tag span { @apply cursor-pointer ml-1 font-bold; }
   </style>
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col p-2 text-xs">
@@ -20,57 +20,66 @@
   <div class="flex flex-1 gap-2 overflow-hidden">
 
     <!-- CỘT 1: TÌM KIẾM -->
-    <div class="w-64 bg-white p-3 rounded shadow space-y-2">
+    <div class="w-64 bg-white p-3 rounded shadow space-y-2 flex flex-col">
       <h3 class="font-bold">Tìm kiếm</h3>
       <input id="kwInput" placeholder="Nhập từ, bấm Enter..." class="w-full p-1.5 border rounded">
       <div class="flex gap-1">
         <button id="searchBtn" class="flex-1 bg-green-500 text-white py-1 rounded">Tìm</button>
         <button id="clearBtn" class="flex-1 bg-red-500 text-white py-1 rounded">Xóa</button>
       </div>
-      <div id="tags" class="flex flex-wrap"></div>
+      <div id="tags" class="flex flex-wrap flex-1 overflow-y-auto"></div>
     </div>
 
     <!-- CỘT 2: NỘI DUNG -->
     <div class="flex-1 bg-white p-4 rounded shadow flex flex-col">
       <h3 class="font-bold mb-2">Nội dung</h3>
-      <div id="content" contenteditable placeholder="Dán văn bản..." class="flex-1 p-3 border rounded overflow-y-auto" style="min-height:0"></div>
+      <div id="content" contenteditable placeholder="Dán văn bản..." 
+           class="flex-1 p-3 border rounded overflow-y-auto whitespace-pre-wrap" 
+           style="min-height:0; line-height:1.6;"></div>
     </div>
 
     <!-- CỘT 3: THAY THẾ -->
-    <div class="w-64 bg-white p-3 rounded shadow space-y-2">
+    <div class="w-64 bg-white p-3 rounded shadow space-y-2 flex flex-col">
       <h3 class="font-bold">Thay thế</h3>
-      <div id="pairs"></div>
+      <div id="pairs" class="space-y-1 flex-1 overflow-y-auto"></div>
       <div class="flex gap-1">
-        <button id="addPair" class="flex-1 bg-blue-500 text-white py-1 rounded text-xs">+ Cặp</button>
-        <button id="replaceAll" class="flex-1 bg-purple-600 text-white py-1 rounded text-xs">Thay</button>
+        <button id="addPairBtn" class="flex-1 bg-blue-500 text-white py-1 rounded text-xs">+ Cặp</button>
+        <button id="replaceAllBtn" class="flex-1 bg-purple-600 text-white py-1 rounded text-xs">Thay</button>
       </div>
     </div>
 
   </div>
 
-  <!-- JS SIÊU GỌN -->
+  <!-- JS SIÊU GỌN, ĐỒNG BỘ 100% -->
   <script>
-    const $ = id => document.getElementById(id);
-    const content = $('content'), kwInput = $('kwInput'), tags = $('tags');
-    const pairs = $('pairs'), addPairBtn = $('addPair'), replaceAllBtn = $('replaceAll');
-    const searchBtn = $('searchBtn'), clearBtn = $('clearBtn');
+    // === DOM – ĐÚNG ID TRONG HTML ===
+    const kwInput = document.getElementById('kwInput');
+    const tags = document.getElementById('tags');
+    const content = document.getElementById('content');
+    const searchBtn = document.getElementById('searchBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const pairs = document.getElementById('pairs');
+    const addPairBtn = document.getElementById('addPairBtn');
+    const replaceAllBtn = document.getElementById('replaceAllBtn');
 
-    let keywords = [], lastReplaced = [];
+    // === STATE ===
+    let keywords = [];
+    let lastReplaced = [];
     const classes = ['hl', 'hl2', 'hl3'];
 
-    // === ENTER: THÊM TỪ KHÓA NGAY, KHÔNG CẦN DẤU PHẨY ===
-    kwInput.onkeydown = e => {
+    // === ENTER: THÊM TỪ KHÓA NGAY ===
+    kwInput.addEventListener('keydown', e => {
       if (e.key === 'Enter') {
         e.preventDefault();
         const v = kwInput.value.trim();
         if (v && !keywords.includes(v)) {
           keywords.push(v);
           addTag(v);
+          highlight();
         }
         kwInput.value = '';
-        highlight();
       }
-    };
+    });
 
     // === THÊM TAG ===
     function addTag(word) {
@@ -87,33 +96,43 @@
 
     // === HIGHLIGHT SIÊU NHANH ===
     function highlight() {
+      // Xóa highlight cũ
       content.innerHTML = content.textContent;
-      const text = content.textContent;
+
+      // Tạo bản sao text để tìm
+      let text = content.textContent;
+      let html = content.innerHTML;
       let offset = 0;
 
+      // Duyệt từ khóa + từ đã thay
       [...keywords, ...lastReplaced].forEach((word, i) => {
         if (!word) return;
         const regex = new RegExp(`\\b${word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
-        text.replace(regex, match => {
-          const start = text.indexOf(match, offset);
+        text.replace(regex, (match, pos) => {
+          const start = pos;
           const end = start + match.length;
           const span = `<span class="${classes[i % 3]}">${match}</span>`;
-          content.innerHTML = content.innerHTML.slice(0, start) + span + content.innerHTML.slice(end);
-          offset = start + span.length;
+          html = html.slice(0, start + offset) + span + html.slice(end + offset);
+          offset += span.length - match.length;
         });
       });
+
+      content.innerHTML = html;
     }
 
     // === THÊM CẶP TÌM-THAY (NÚT × RÕ RÀNG) ===
     function addPairRow(find = '', replace = '') {
       const row = document.createElement('div');
-      row.className = 'flex gap-1 items-center mb-1';
+      row.className = 'flex gap-1 items-center';
       row.innerHTML = `
-        <input class="find flex-1 p-1 border rounded text-xs" value="${find}">
-        <input class="replace flex-1 p-1 border rounded text-xs" value="${replace}">
+        <input class="find flex-1 p-1 border rounded text-xs" value="${find}" placeholder="Tìm...">
+        <input class="replace flex-1 p-1 border rounded text-xs" value="${replace}" placeholder="Thay...">
         <button class="w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-sm font-bold hover:bg-red-600">×</button>
       `;
-      row.querySelector('button').onclick = () => row.remove() || (pairs.children.length === 0 && addPairRow());
+      row.querySelector('button').onclick = () => {
+        row.remove();
+        if (!pairs.children.length) addPairRow();
+      };
       pairs.appendChild(row);
     }
 
@@ -125,13 +144,20 @@
       })).filter(p => p.find);
 
       if (!list.length) return alert('Chưa có cặp!');
-      let changed = false;
+      
       let text = content.textContent;
+      let changed = false;
+
       list.forEach(p => {
         const regex = new RegExp(`\\b${p.find.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
-        if (regex.test(text)) { text = text.replace(regex, p.replace); changed = true; }
+        if (regex.test(text)) {
+          text = text.replace(regex, p.replace);
+          changed = true;
+        }
       });
+
       if (!changed) return alert('Không tìm thấy!');
+
       content.textContent = text;
       lastReplaced = list.map(p => p.replace).filter(Boolean);
       highlight();
@@ -139,16 +165,28 @@
 
     // === NÚT TÌM / XÓA ===
     searchBtn.onclick = highlight;
-    clearBtn.onclick = () => { keywords = []; tags.innerHTML = ''; highlight(); };
+    clearBtn.onclick = () => {
+      keywords = [];
+      tags.innerHTML = '';
+      highlight();
+    };
 
-    // === KHỞI TẠO ===
-    addPairRow();
-    content.oninput = highlight;
-    content.onpaste = e => {
+    // === NÚT THÊM CẶP ===
+    addPairBtn.onclick = () => addPairRow();
+
+    // === PASTE MƯỢT ===
+    content.addEventListener('paste', e => {
       e.preventDefault();
       const text = (e.clipboardData || window.clipboardData).getData('text');
       document.execCommand('insertText', false, text);
-    };
+      highlight();
+    });
+
+    // === INPUT: TỰ ĐỘNG HIGHLIGHT ===
+    content.addEventListener('input', highlight);
+
+    // === KHỞI TẠO ===
+    addPairRow(); // 1 cặp mặc định
   </script>
 </body>
 </html>
