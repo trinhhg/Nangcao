@@ -1,192 +1,238 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tìm & Thay</title>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-  <style>
-    [contenteditable]:empty:before { content: attr(placeholder); color: #aaa; }
-    .hl { @apply bg-yellow-200; }
-    .hl2 { @apply bg-pink-200; }
-    .hl3 { @apply bg-blue-200; }
-    .tag { @apply inline-block bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs mr-1 mb-1; }
-    .tag span { @apply cursor-pointer ml-1 font-bold; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tìm Kiếm & Thay Thế Chương</title>
+    <link rel="icon" href="data:,">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="index.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        .hl-yellow { background: #ffff99; color: black; }
+        .hl-pink   { background: #ffcccc; color: black; }
+        .hl-blue   { background: #99ccff; color: black; }
+        .hl-green  { background: #ccffcc; color: black; }
+        .hl-orange { background: #ffcc99; color: black; }
+        .hl-purple { background: #e6ccff; color: black; }
+        [contenteditable]:empty:before { content: attr(placeholder); color: #aaa; }
+    </style>
 </head>
-<body class="bg-gray-100 min-h-screen flex flex-col p-2 text-xs">
+<body class="bg-gray-100 h-screen flex flex-col">
 
-  <!-- 3 CỘT CHÍNH -->
-  <div class="flex flex-1 gap-2 overflow-hidden">
-
-    <!-- CỘT 1: TÌM KIẾM -->
-    <div class="w-64 bg-white p-3 rounded shadow space-y-2 flex flex-col">
-      <h3 class="font-bold">Tìm kiếm</h3>
-      <input id="kwInput" placeholder="Nhập từ, bấm Enter..." class="w-full p-1.5 border rounded">
-      <div class="flex gap-1">
-        <button id="searchBtn" class="flex-1 bg-green-500 text-white py-1 rounded">Tìm</button>
-        <button id="clearBtn" class="flex-1 bg-red-500 text-white py-1 rounded">Xóa</button>
-      </div>
-      <div id="tags" class="flex flex-wrap flex-1 overflow-y-auto"></div>
+    <!-- Auth Form -->
+    <div id="auth-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+            <h2 class="text-2xl font-bold text-center mb-6 text-gray-800">Đăng Nhập / Đăng Ký</h2>
+            <form id="auth-form" class="space-y-4">
+                <input type="email" id="auth-email" placeholder="Email" required
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <input type="password" id="auth-password" placeholder="Mật khẩu (≥6 ký tự)" required
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <div class="flex gap-2">
+                    <button type="submit" id="login-btn" class="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition">
+                        Đăng Nhập
+                    </button>
+                    <button type="button" id="signup-btn" class="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition">
+                        Đăng Ký
+                    </button>
+                </div>
+                <div id="auth-error" class="text-red-600 text-sm text-center min-h-6"></div>
+            </form>
+        </div>
     </div>
 
-    <!-- CỘT 2: NỘI DUNG -->
-    <div class="flex-1 bg-white p-4 rounded shadow flex flex-col">
-      <h3 class="font-bold mb-2">Nội dung</h3>
-      <div id="content" contenteditable placeholder="Dán văn bản..." 
-           class="flex-1 p-3 border rounded overflow-y-auto whitespace-pre-wrap" 
-           style="min-height:0; line-height:1.6;"></div>
+    <!-- GIAO DIỆN CHÍNH -->
+    <div id="app-container" class="hidden flex flex-col h-screen">
+        <!-- NÚT ĐĂNG XUẤT -->
+        <div class="p-2 bg-gray-800 text-white text-right">
+            <button id="logout-btn" class="px-3 py-1 bg-red-600 rounded text-xs hover:bg-red-700">Đăng xuất</button>
+        </div>
+        <div class="flex flex-1 overflow-hidden">
+            <!-- Left Panel -->
+            <div id="main-panel" class="w-1/5 p-4 bg-white shadow-md overflow-y-auto text-sm">
+                <h2 class="text-xl font-bold mb-4">Tìm Kiếm</h2>
+                <div class="mb-4">
+                    <label class="block mb-2">Font:</label>
+                    <select id="fontFamily" class="w-full p-2 border rounded text-sm">
+                        <option value="Arial">Arial</option>
+                        <option value="Calibri">Calibri</option>
+                        <option value="Montserrat">Montserrat</option>
+                        <option value="Times New Roman">Times New Roman</option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="block mb-2">Cỡ chữ:</label>
+                    <select id="fontSize" class="w-full p-2 border rounded text-sm">
+                        <option value="14px">14px</option>
+                        <option value="16px">16px</option>
+                        <option value="18px">18px</option>
+                        <option value="20px">20px</option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="block mb-2"><input type="checkbox" id="matchCase" class="mr-2"> Phân biệt hoa/thường</label>
+                    <label class="block mb-2"><input type="checkbox" id="wholeWords" class="mr-2"> Từ hoàn chỉnh</label>
+                </div>
+                <div class="mb-4">
+                    <label class="block mb-2">Từ khóa:</label>
+                    <input type="text" id="keywords-input" placeholder="Nhập, Enter..." class="w-full p-2 border rounded bg-gray-50 text-sm">
+                    <div id="keywords-tags" class="flex flex-wrap gap-1 mt-2"></div>
+                </div>
+                <div class="flex gap-2">
+                    <button id="search" class="flex-1 bg-green-500 text-white py-2 rounded hover:bg-green-600 text-xs font-medium">Tìm Kiếm</button>
+                    <button id="clear" class="flex-1 bg-red-500 text-white py-2 rounded hover:bg-red-600 text-xs font-medium">Xóa Tất Cả</button>
+                </div>
+            </div>
+
+            <!-- Center: FULL HEIGHT -->
+            <div id="text-panel" class="flex-1 p-6 bg-white shadow-md mx-4 flex flex-col">
+                <div class="flex justify-between items-start mb-2">
+                    <h2 class="text-xl font-bold">Nội Dung Chương</h2>
+                    <div class="text-right text-xs text-red-600 font-semibold leading-tight">
+                        <div>Don@te cho ad: MB BANK - TRINH THI XUAN HUONG - STK: 0917678211</div>
+                        <div>Góp ý: <a href="https://www.facebook.com/trinh.hg.57" target="_blank" class="text-blue-600 underline hover:text-blue-800">https://www.facebook.com/trinh.hg.57</a></div>
+                    </div>
+                </div>
+                <div id="textInput"
+                     contenteditable="true"
+                     placeholder="Dán văn bản vào đây..."
+                     class="flex-1 p-6 border-2 border-gray-300 rounded-lg focus:outline-none whitespace-pre-wrap overflow-y-auto"
+                     style="font-family: Arial; font-size: 16px; line-height: 1.8; min-height: 0;">
+                </div>
+            </div>
+
+            <!-- Right Panel -->
+            <div id="settings-panel" class="w-1/5 p-4 bg-white shadow-md overflow-y-auto text-xs">
+                <h2 class="text-xl font-bold mb-4">Thay Thế</h2>
+                <div class="mode-controls mb-3 space-y-1">
+                    <div class="flex gap-1">
+                        <select id="mode-select" class="flex-1 p-1 border rounded text-xs"></select>
+                        <button id="add-mode" class="px-1 py-0.5 bg-blue-500 text-white rounded text-xs">Thêm</button>
+                    </div>
+                    <div class="flex gap-1">
+                        <button id="copy-mode" class="flex-1 px-1 py-0.5 bg-blue-500 text-white rounded text-xs">Sao</button>
+                        <button id="match-case" class="flex-1 px-1 py-0.5 bg-gray-500 text-white rounded text-xs">Case</button>
+                    </div>
+                    <div class="flex gap-1">
+                        <button id="export-settings" class="flex-1 px-1 py-0.5 bg-blue-500 text-white rounded text-xs">Xuất</button>
+                        <button id="import-settings" class="flex-1 px-1 py-0.5 bg-blue-500 text-white rounded text-xs">Nhập</button>
+                    </div>
+                    <div class="flex gap-1">
+                        <button id="rename-mode" class="flex-1 px-1 py-0.5 bg-gray-500 text-white rounded text-xs hidden">Đổi tên</button>
+                        <button id="delete-mode" class="flex-1 px-1 py-0.5 bg-red-500 text-white rounded text-xs hidden">Xóa</button>
+                    </div>
+                </div>
+
+                <div class="action-buttons mb-3 flex gap-1">
+                    <button id="add-pair" class="flex-1 px-2 py-1 bg-blue-500 text-white rounded text-xs">Cặp</button>
+                    <button id="save-settings" class="flex-1 px-2 py-1 bg-green-600 text-white rounded text-xs">Lưu</button>
+                    <button id="replace-all" class="flex-1 px-2 py-1 bg-purple-600 text-white rounded text-xs">Thay</button>
+                </div>
+
+                <div id="punctuation-list" class="space-y-2 text-xs"></div>
+            </div>
+        </div>
     </div>
 
-    <!-- CỘT 3: THAY THẾ -->
-    <div class="w-64 bg-white p-3 rounded shadow space-y-2 flex flex-col">
-      <h3 class="font-bold">Thay thế</h3>
-      <div id="pairs" class="space-y-1 flex-1 overflow-y-auto"></div>
-      <div class="flex gap-1">
-        <button id="addPairBtn" class="flex-1 bg-blue-500 text-white py-1 rounded text-xs">+ Cặp</button>
-        <button id="replaceAllBtn" class="flex-1 bg-purple-600 text-white py-1 rounded text-xs">Thay</button>
-      </div>
-    </div>
+    <div id="notification-container"></div>
 
-  </div>
+    <!-- Nhost SDK + FIX ĐĂNG NHẬP -->
+    <script type="module">
+        import { NhostClient } from 'https://esm.sh/@nhost/nhost-js@3.3.1';
 
-  <!-- JS SIÊU GỌN, ĐỒNG BỘ 100% -->
-  <script>
-    // === DOM – ĐÚNG ID TRONG HTML ===
-    const kwInput = document.getElementById('kwInput');
-    const tags = document.getElementById('tags');
-    const content = document.getElementById('content');
-    const searchBtn = document.getElementById('searchBtn');
-    const clearBtn = document.getElementById('clearBtn');
-    const pairs = document.getElementById('pairs');
-    const addPairBtn = document.getElementById('addPairBtn');
-    const replaceAllBtn = document.getElementById('replaceAllBtn');
-
-    // === STATE ===
-    let keywords = [];
-    let lastReplaced = [];
-    const classes = ['hl', 'hl2', 'hl3'];
-
-    // === ENTER: THÊM TỪ KHÓA NGAY ===
-    kwInput.addEventListener('keydown', e => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        const v = kwInput.value.trim();
-        if (v && !keywords.includes(v)) {
-          keywords.push(v);
-          addTag(v);
-          highlight();
-        }
-        kwInput.value = '';
-      }
-    });
-
-    // === THÊM TAG ===
-    function addTag(word) {
-      const tag = document.createElement('div');
-      tag.className = 'tag';
-      tag.innerHTML = `${word} <span>x</span>`;
-      tag.querySelector('span').onclick = () => {
-        keywords = keywords.filter(k => k !== word);
-        tag.remove();
-        highlight();
-      };
-      tags.appendChild(tag);
-    }
-
-    // === HIGHLIGHT SIÊU NHANH ===
-    function highlight() {
-      // Xóa highlight cũ
-      content.innerHTML = content.textContent;
-
-      // Tạo bản sao text để tìm
-      let text = content.textContent;
-      let html = content.innerHTML;
-      let offset = 0;
-
-      // Duyệt từ khóa + từ đã thay
-      [...keywords, ...lastReplaced].forEach((word, i) => {
-        if (!word) return;
-        const regex = new RegExp(`\\b${word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
-        text.replace(regex, (match, pos) => {
-          const start = pos;
-          const end = start + match.length;
-          const span = `<span class="${classes[i % 3]}">${match}</span>`;
-          html = html.slice(0, start + offset) + span + html.slice(end + offset);
-          offset += span.length - match.length;
+        const nhost = new NhostClient({
+            subdomain: "ogltettlkspwxyqphmth",
+            region: "eu-central-1"
         });
-      });
 
-      content.innerHTML = html;
-    }
+        const authOverlay = document.getElementById('auth-overlay');
+        const appContainer = document.getElementById('app-container');
+        const authError = document.getElementById('auth-error');
+        const loginBtn = document.getElementById('login-btn');
+        const signupBtn = document.getElementById('signup-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        const emailInput = document.getElementById('auth-email');
+        const passwordInput = document.getElementById('auth-password');
 
-    // === THÊM CẶP TÌM-THAY (NÚT × RÕ RÀNG) ===
-    function addPairRow(find = '', replace = '') {
-      const row = document.createElement('div');
-      row.className = 'flex gap-1 items-center';
-      row.innerHTML = `
-        <input class="find flex-1 p-1 border rounded text-xs" value="${find}" placeholder="Tìm...">
-        <input class="replace flex-1 p-1 border rounded text-xs" value="${replace}" placeholder="Thay...">
-        <button class="w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-sm font-bold hover:bg-red-600">×</button>
-      `;
-      row.querySelector('button').onclick = () => {
-        row.remove();
-        if (!pairs.children.length) addPairRow();
-      };
-      pairs.appendChild(row);
-    }
+        const validateEmail = e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.trim());
+        const validatePassword = p => p && p.length >= 6;
 
-    // === THAY THẾ ===
-    replaceAllBtn.onclick = () => {
-      const list = Array.from(pairs.querySelectorAll('div')).map(r => ({
-        find: r.querySelector('.find').value.trim(),
-        replace: r.querySelector('.replace').value
-      })).filter(p => p.find);
+        const showApp = () => {
+            authOverlay.classList.add('hidden');
+            appContainer.classList.remove('hidden');
+            console.log('Màn hình chính đã hiện');
+        };
 
-      if (!list.length) return alert('Chưa có cặp!');
-      
-      let text = content.textContent;
-      let changed = false;
+        const checkSession = async () => {
+            try {
+                const result = await nhost.auth.getSession();
+                const session = result?.session;
+                if (session?.accessToken) {
+                    console.log('Đã đăng nhập:', session.user.email);
+                    showApp();
+                }
+            } catch (err) {
+                console.error('Lỗi session:', err);
+            }
+        };
 
-      list.forEach(p => {
-        const regex = new RegExp(`\\b${p.find.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
-        if (regex.test(text)) {
-          text = text.replace(regex, p.replace);
-          changed = true;
-        }
-      });
+        // GỌI NGAY + LẮNG NGHE + DỰ PHÒNG
+        checkSession();
+        nhost.auth.onAuthStateChanged(() => {
+            console.log('Auth thay đổi → kiểm tra lại');
+            setTimeout(checkSession, 100);
+        });
+        const tick = () => { checkSession().finally(() => requestAnimationFrame(tick)); };
+        requestAnimationFrame(tick);
 
-      if (!changed) return alert('Không tìm thấy!');
+        loginBtn.onclick = async (e) => {
+            e.preventDefault();
+            const email = emailInput.value.trim();
+            const password = passwordInput.value;
+            if (!validateEmail(email)) return authError.textContent = 'Email không hợp lệ';
+            if (!validatePassword(password)) return authError.textContent = 'Mật khẩu ≥6 ký tự';
 
-      content.textContent = text;
-      lastReplaced = list.map(p => p.replace).filter(Boolean);
-      highlight();
-    };
+            authError.textContent = 'Đang đăng nhập...';
+            try {
+                const { error } = await nhost.auth.signIn({ email, password });
+                if (error?.message.includes('already signed in')) {
+                    setTimeout(showApp, 300);
+                    return;
+                }
+                if (error) throw error;
+                setTimeout(showApp, 300);
+            } catch (err) {
+                authError.textContent = err.message || 'Lỗi đăng nhập';
+            }
+        };
 
-    // === NÚT TÌM / XÓA ===
-    searchBtn.onclick = highlight;
-    clearBtn.onclick = () => {
-      keywords = [];
-      tags.innerHTML = '';
-      highlight();
-    };
+        signupBtn.onclick = async () => {
+            const email = emailInput.value.trim();
+            const password = passwordInput.value;
+            if (!validateEmail(email)) return authError.textContent = 'Email không hợp lệ';
+            if (!validatePassword(password)) return authError.textContent = 'Mật khẩu ≥6 ký tự';
 
-    // === NÚT THÊM CẶP ===
-    addPairBtn.onclick = () => addPairRow();
+            authError.textContent = 'Đang đăng ký...';
+            try {
+                const { error } = await nhost.auth.signUp({ email, password });
+                if (error) throw error;
+                authError.textContent = 'Đăng ký thành công! Đăng nhập ngay.';
+                authError.style.color = 'green';
+            } catch (err) {
+                authError.textContent = err.message || 'Lỗi đăng ký';
+            }
+        };
 
-    // === PASTE MƯỢT ===
-    content.addEventListener('paste', e => {
-      e.preventDefault();
-      const text = (e.clipboardData || window.clipboardData).getData('text');
-      document.execCommand('insertText', false, text);
-      highlight();
-    });
+        logoutBtn.onclick = async () => {
+            await nhost.auth.signOut();
+            authOverlay.classList.remove('hidden');
+            appContainer.classList.add('hidden');
+        };
 
-    // === INPUT: TỰ ĐỘNG HIGHLIGHT ===
-    content.addEventListener('input', highlight);
+        window.nhost = nhost;
+    </script>
 
-    // === KHỞI TẠO ===
-    addPairRow(); // 1 cặp mặc định
-  </script>
+    <script src="index.js"></script>
 </body>
 </html>
