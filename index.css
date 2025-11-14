@@ -1,3 +1,16 @@
+/* === CHUNG === */
+* { box-sizing: border-box; }
+body { font-family: 'Montserrat', Arial, sans-serif; margin: 0; }
+
+/* === HIGHLIGHT COLORS === */
+.hl-yellow { background-color: #fff3cd; color: #856404; }
+.hl-pink { background-color: #f8d7da; color: #721c24; }
+.hl-blue { background-color: #d1ecf1; color: #0c5460; }
+.hl-green { background-color: #d4edda; color: #155724; }
+.hl-orange { background-color: #ffe5d0; color: #cc5500; }
+.hl-purple { background-color: #e2d9f3; color: #6a1b9a; }
+
+/* === KEYWORDS TAGS === */
 #keywords-tags .tag {
     background: #e0e0e0;
     padding: 4px 8px;
@@ -7,12 +20,18 @@
     align-items: center;
     gap: 4px;
 }
-#keywords-tags .tag .remove-tag { cursor: pointer; font-weight: bold; font-size: 14px; }
+#keywords-tags .tag .remove-tag {
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 14px;
+}
 
+/* === PUNCTUATION LIST === */
 #punctuation-list .punctuation-item {
     display: flex;
     gap: 6px;
     align-items: center;
+    margin-bottom: 4px;
 }
 #punctuation-list .punctuation-item input {
     flex: 1;
@@ -31,7 +50,11 @@
     font-size: 11px;
     cursor: pointer;
 }
+#punctuation-list .punctuation-item button:hover {
+    background: #c82333;
+}
 
+/* === NOTIFICATION === */
 #notification-container {
     position: fixed;
     top: 20px;
@@ -46,11 +69,27 @@
     min-width: 180px;
     box-shadow: 0 2px 6px rgba(0,0,0,0.2);
     animation: slideIn 0.3s ease, fadeOut 0.3s ease 2.7s forwards;
+    margin-bottom: 8px;
 }
 .notification.success { background: #28a745; }
 .notification.error { background: #dc3545; }
+.notification.info { background: #17a2b8; }
 
-@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-@keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+@keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
 
-body { font-family: 'Montserrat', Arial, sans-serif; }
+/* === INPUT FOCUS === */
+#textInput { caret-color: #333; }
+#textInput:focus { outline: 2px solid #4299e1; }
+
+/* === RESPONSIVE === */
+@media (max-width: 640px) {
+    .flex.gap-2 { flex-direction: column; }
+    #fontFamily, #fontSize { max-width: 100% !important; }
+}
