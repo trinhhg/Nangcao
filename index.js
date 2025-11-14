@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     const textInput = document.getElementById('textInput');
-    const keywordsInput = document.getElementById('keywordsInput'); // ĐÃ SỬA ID
+    const keywordsInput = document.getElementById('keywords-input');
     const keywordsTags = document.getElementById('keywords-tags');
     const searchBtn = document.getElementById('search');
     const clearBtn = document.getElementById('clear');
@@ -8,90 +8,50 @@ document.addEventListener('DOMContentLoaded', () => {
     const fontSize = document.getElementById('fontSize');
     const matchCaseCb = document.getElementById('matchCase');
     const wholeWordsCb = document.getElementById('wholeWords');
-
-    // Từ khóa
-    const keywordModeSelect = document.getElementById('keyword-mode-select');
-    const addKeywordModeBtn = document.getElementById('add-keyword-mode');
-    const deleteKeywordModeBtn = document.getElementById('delete-keyword-mode');
-    const saveKeywordsBtn = document.getElementById('save-keywords-btn');
-
-    // Thay thế
-    const replaceModeSelect = document.getElementById('replaceModeSelect');
-    const addReplaceModeBtn = document.getElementById('add-replace-mode');
-    const copyReplaceModeBtn = document.getElementById('copy-replace-mode');
-    const deleteReplaceModeBtn = document.getElementById('delete-replace-mode');
+    const modeSelect = document.getElementById('mode-select');
+    const addModeBtn = document.getElementById('add-mode');
+    const copyModeBtn = document.getElementById('copy-mode');
     const matchCaseBtn = document.getElementById('match-case');
+    const exportBtn = document.getElementById('export-settings');
+    const importBtn = document.getElementById('import-settings');
     const addPairBtn = document.getElementById('add-pair');
-    const saveReplaceBtn = document.getElementById('save-replace-btn');
+    const saveSettingsBtn = document.getElementById('save-settings');
     const replaceAllBtn = document.getElementById('replace-all');
     const punctuationList = document.getElementById('punctuation-list');
 
-    // === KIỂM TRA NULL ===
-    if (!keywordsInput) {
-        console.error('Lỗi: Không tìm thấy #keywordsInput');
-        return;
-    }
-    if (!replaceModeSelect) {
-        console.error('Lỗi: Không tìm thấy #replaceModeSelect');
-        return;
-    }
-
     let keywords = [];
     let lastReplacedPairs = [];
-    let currentKeywordMode = 'default';
-    let currentReplaceMode = 'default';
-    const KEYWORD_KEY = 'keyword_modes';
-    const REPLACE_KEY = 'replace_modes';
+    let currentMode = 'default';
+    const SETTINGS_KEY = 'replace_settings';
     const highlightClasses = ['hl-yellow', 'hl-pink', 'hl-blue', 'hl-green', 'hl-orange', 'hl-purple'];
 
-    // === NOTIFICATION ===
-    function showNotification(msg, type = 'success') {
-        const n = document.createElement('div');
-        n.className = `fixed top-4 right-4 px-4 py-2 rounded text-white text-xs z-50 ${type === 'success' ? 'bg-green-600' : type === 'info' ? 'bg-blue-600' : 'bg-red-600'}`;
-        n.textContent = msg;
-        document.body.appendChild(n);
-        setTimeout(() => n.remove(), 3000);
-    }
-
-    // === FOCUS + CON TRỎ ĐẦU ===
-    function setCursorToStart() {
-        const range = document.createRange();
-        const sel = window.getSelection();
-        range.setStart(textInput, 0);
-        range.collapse(true);
-        sel.removeAllRanges();
-        sel.addRange(range);
-    }
-
-    textInput.addEventListener('focus', () => {
-        if (!textInput.textContent.trim()) textInput.innerHTML = '';
-        setTimeout(setCursorToStart, 0);
-    });
-
-    // === PASTE + NHẬP MƯỢT ===
+    // === PASTE GIỮ FORMAT 100% ===
     textInput.addEventListener('paste', (e) => {
         e.preventDefault();
-        const text = (e.clipboardData || window.clipboardData).getData('text/plain');
-        document.execCommand('insertText', false, text);
-        setTimeout(() => {
-            scheduleHighlight(false);
-            setCursorToStart();
-        }, 0);
+        const clipboardData = e.clipboardData || window.clipboardData;
+        const text = clipboardData.getData('text/plain');
+        const html = clipboardData.getData('text/html');
+
+        if (html && html.includes('<')) {
+            const temp = document.createElement('div');
+            temp.innerHTML = html;
+            // Lọc chỉ giữ cấu trúc cơ bản
+            const clean = temp.innerHTML.replace(/<style[\s\S]*?<\/style>|<script[\s\S]*?<\/script>|<[^>]*>/gi, match => {
+                return match.match(/^<(p|div|br|b|i|u|span)[ >]/i) ? match : '';
+            });
+            const range = window.getSelection().getRangeAt(0);
+            range.deleteContents();
+            const fragment = range.createContextualFragment(clean);
+            range.insertNode(fragment);
+        } else {
+            document.execCommand('insertText', false, text);
+        }
+        setTimeout(() => applyAllHighlights(false), 100);
     });
 
-    // === DEBOUNCE HIGHLIGHT ===
-    let highlightScheduled = false;
-    function scheduleHighlight(highlightReplace = false) {
-        if (highlightScheduled) return;
-        highlightScheduled = true;
-        requestAnimationFrame(() => {
-            applyAllHighlights(highlightReplace);
-            highlightScheduled = false;
-        });
-    }
-
-    // === HIGHLIGHT ===
+    // === HIGHLIGHT CHỈ KEYWORDS (khi thêm keyword) HOẶC REPLACE (khi nhấn Thay) ===
     function applyAllHighlights(highlightReplace = false) {
+        // Xóa toàn bộ highlight cũ
         textInput.querySelectorAll('span.hl-yellow, span.hl-pink, span.hl-blue, span.hl-green, span.hl-orange, span.hl-purple').forEach(span => {
             span.outerHTML = span.innerHTML;
         });
@@ -100,11 +60,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const textNodes = [];
         let node;
         while ((node = walker.nextNode())) textNodes.push(node);
+
         if (textNodes.length === 0) return;
 
         const fullText = textNodes.map(n => n.textContent).join('');
         const matches = [];
 
+        // === 1. KEYWORDS (luôn highlight) ===
         keywords.forEach((kw, i) => {
             if (!kw) return;
             const flags = matchCaseCb.checked ? 'g' : 'gi';
@@ -122,6 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
+        // === 2. REPLACE (chỉ khi nhấn Thay) ===
         if (highlightReplace && lastReplacedPairs.length > 0) {
             lastReplacedPairs.forEach((p, i) => {
                 if (!p.replace) return;
@@ -154,7 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let globalOffset = 0;
         textNodes.forEach(textNode => {
             const localMatches = filtered.filter(m => m.start >= globalOffset && m.start < globalOffset + textNode.textContent.length);
-            if (!localMatches.length) {
+            if (localMatches.length === 0) {
                 globalOffset += textNode.textContent.length;
                 return;
             }
@@ -191,7 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
             replace: el.querySelector('.replace').value
         })).filter(p => p.find);
 
-        if (!pairs.length) return showNotification('Chưa có cặp!', 'error');
+        if (pairs.length === 0) return showNotification('Chưa có cặp!', 'error');
 
         const walker = document.createTreeWalker(textInput, NodeFilter.SHOW_TEXT);
         const nodes = [];
@@ -215,11 +178,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!changed) return showNotification('Không tìm thấy!', 'info');
 
         lastReplacedPairs = pairs.filter(p => p.replace);
-        scheduleHighlight(true);
+        applyAllHighlights(true);
         showNotification('Đã thay thế!', 'success');
     }
 
-    // === TỪ KHÓA (ĐÃ FIX ENTER) ===
+    // === TỪ KHÓA: KHI THÊM → XÓA HIGHLIGHT REPLACE ===
     function addKeywordTag(word) {
         const tag = document.createElement('div');
         tag.className = 'tag inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs mr-1 mb-1';
@@ -228,15 +191,13 @@ document.addEventListener('DOMContentLoaded', () => {
             e.stopPropagation();
             keywords = keywords.filter(k => k !== word);
             tag.remove();
-            scheduleHighlight(false);
+            applyAllHighlights(false);
         };
         keywordsTags.appendChild(tag);
     }
 
-    // FIX: ENTER → THÊM TỪ KHÓA
     keywordsInput.addEventListener('keydown', e => {
         if (e.key === 'Enter') {
-            e.preventDefault();
             const vals = keywordsInput.value.split(',').map(s => s.trim()).filter(s => s);
             vals.forEach(v => {
                 if (v && !keywords.includes(v)) {
@@ -245,80 +206,43 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
             keywordsInput.value = '';
-            scheduleHighlight(false);
+            lastReplacedPairs = []; // XÓA REPLACE KHI CÓ KEYWORD MỚI
+            applyAllHighlights(false);
         }
     });
 
-    searchBtn.onclick = () => scheduleHighlight(false);
+    searchBtn.onclick = () => applyAllHighlights(false);
     clearBtn.onclick = () => {
         keywords = [];
+        lastReplacedPairs = [];
         keywordsTags.innerHTML = '';
-        scheduleHighlight(false);
+        applyAllHighlights(false);
     };
 
-    // === CHẾ ĐỘ TỪ KHÓA ===
-    function loadKeywordModes() {
-        const modes = JSON.parse(localStorage.getItem(KEYWORD_KEY)) || { default: [] };
-        keywordModeSelect.innerHTML = '<option value="">-- Chọn --</option>';
-        Object.keys(modes).sort().forEach(m => keywordModeSelect.add(new Option(m, m)));
-        keywordModeSelect.value = currentKeywordMode;
-        loadKeywords();
+    fontFamily.onchange = () => textInput.style.fontFamily = fontFamily.value;
+    fontSize.onchange = () => textInput.style.fontSize = fontSize.value;
+
+    let highlightTimeout;
+    textInput.addEventListener('input', () => {
+        clearTimeout(highlightTimeout);
+        highlightTimeout = setTimeout(() => applyAllHighlights(false), 300);
+    });
+
+    replaceAllBtn.onclick = replaceAndHighlight;
+
+    // === CÁC HÀM KHÁC ===
+    function loadModes() {
+        const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || { modes: { default: { pairs: [], matchCase: false } } };
+        modeSelect.innerHTML = '';
+        Object.keys(settings.modes).sort().forEach(m => modeSelect.add(new Option(m, m)));
+        modeSelect.value = currentMode;
+        loadPairs();
+        updateModeButtons();
     }
 
-    function loadKeywords() {
-        const modes = JSON.parse(localStorage.getItem(KEYWORD_KEY)) || { default: [] };
-        keywords = (modes[currentKeywordMode] || []).slice();
-        keywordsTags.innerHTML = '';
-        keywords.forEach(addKeywordTag);
-        scheduleHighlight(false);
-    }
-
-    keywordModeSelect.onchange = () => {
-        currentKeywordMode = keywordModeSelect.value;
-        loadKeywords();
-    };
-
-    addKeywordModeBtn.onclick = () => {
-        const name = prompt('Tên chế độ từ khóa mới:');
-        if (!name || name === 'default') return showNotification('Tên không hợp lệ!', 'error');
-        const modes = JSON.parse(localStorage.getItem(KEYWORD_KEY)) || {};
-        if (modes[name]) return showNotification('Đã tồn tại!', 'error');
-        modes[name] = [];
-        localStorage.setItem(KEYWORD_KEY, JSON.stringify(modes));
-        currentKeywordMode = name;
-        loadKeywordModes();
-    };
-
-    deleteKeywordModeBtn.onclick = () => {
-        if (currentKeywordMode === 'default') return showNotification('Không xóa default!', 'error');
-        if (!confirm(`Xóa chế độ "${currentKeywordMode}"?`)) return;
-        const modes = JSON.parse(localStorage.getItem(KEYWORD_KEY)) || {};
-        delete modes[currentKeywordMode];
-        localStorage.setItem(KEYWORD_KEY, JSON.stringify(modes));
-        currentKeywordMode = 'default';
-        loadKeywordModes();
-    };
-
-    saveKeywordsBtn.onclick = () => {
-        if (!currentKeywordMode) return showNotification('Chọn chế độ!', 'error');
-        const modes = JSON.parse(localStorage.getItem(KEYWORD_KEY)) || {};
-        modes[currentKeywordMode] = [...new Set(keywords)];
-        localStorage.setItem(KEYWORD_KEY, JSON.stringify(modes));
-        showNotification('Đã lưu từ khóa!', 'success');
-    };
-
-    // === CHẾ ĐỘ THAY THẾ ===
-    function loadReplaceModes() {
-        const modes = JSON.parse(localStorage.getItem(REPLACE_KEY)) || { default: { pairs: [], matchCase: false } };
-        replaceModeSelect.innerHTML = '';
-        Object.keys(modes).sort().forEach(m => replaceModeSelect.add(new Option(m, m)));
-        replaceModeSelect.value = currentReplaceMode;
-        loadReplacePairs();
-    }
-
-    function loadReplacePairs() {
-        const modes = JSON.parse(localStorage.getItem(REPLACE_KEY)) || { default: { pairs: [], matchCase: false } };
-        const data = modes[currentReplaceMode] || { pairs: [], matchCase: false };
+    function loadPairs() {
+        const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || { modes: {} };
+        const data = settings.modes[currentMode] || { pairs: [], matchCase: false };
         punctuationList.innerHTML = '';
         data.pairs.forEach(p => addPair(p.find, p.replace));
         if (!data.pairs.length) addPair();
@@ -327,14 +251,13 @@ document.addEventListener('DOMContentLoaded', () => {
         matchCaseBtn.classList.toggle('bg-green-500', data.matchCase);
     }
 
-    // FIX: NÚT XÓA KHÔNG BỊ LẸM
     function addPair(find = '', replace = '') {
         const item = document.createElement('div');
         item.className = 'punctuation-item flex gap-1 mb-1 items-center text-xs';
         item.innerHTML = `
             <input type="text" class="find flex-1 p-1 border rounded" placeholder="Tìm..." value="${find}">
             <input type="text" class="replace flex-1 p-1 border rounded" placeholder="Thay bằng..." value="${replace}">
-            <button class="remove w-8 h-8 bg-red-500 text-white rounded hover:bg-red-600 flex items-center justify-center text-sm">×</button>
+            <button class="remove w-6 h-6 bg-red-500 text-white rounded hover:bg-red-600">×</button>
         `;
         item.querySelector('.remove').onclick = () => {
             item.remove();
@@ -343,71 +266,63 @@ document.addEventListener('DOMContentLoaded', () => {
         punctuationList.appendChild(item);
     }
 
-    replaceModeSelect.onchange = () => {
-        currentReplaceMode = replaceModeSelect.value;
-        loadReplacePairs();
-    };
-
-    addReplaceModeBtn.onclick = () => {
-        const name = prompt('Tên chế độ thay thế mới:');
-        if (!name || name === 'default') return showNotification('Tên không hợp lệ!', 'error');
-        const modes = JSON.parse(localStorage.getItem(REPLACE_KEY)) || {};
-        if (modes[name]) return showNotification('Đã tồn tại!', 'error');
-        modes[name] = { pairs: [], matchCase: false };
-        localStorage.setItem(REPLACE_KEY, JSON.stringify(modes));
-        currentReplaceMode = name;
-        loadReplaceModes();
-    };
-
-    copyReplaceModeBtn.onclick = () => {
-        const name = prompt('Sao chép thành:');
-        if (!name) return;
-        const modes = JSON.parse(localStorage.getItem(REPLACE_KEY)) || {};
-        modes[name] = JSON.parse(JSON.stringify(modes[currentReplaceMode]));
-        localStorage.setItem(REPLACE_KEY, JSON.stringify(modes));
-        currentReplaceMode = name;
-        loadReplaceModes();
-    };
-
-    deleteReplaceModeBtn.onclick = () => {
-        if (currentReplaceMode === 'default') return showNotification('Không xóa default!', 'error');
-        if (!confirm(`Xóa chế độ "${currentReplaceMode}"?`)) return;
-        const modes = JSON.parse(localStorage.getItem(REPLACE_KEY)) || {};
-        delete modes[currentReplaceMode];
-        localStorage.setItem(REPLACE_KEY, JSON.stringify(modes));
-        currentReplaceMode = 'default';
-        loadReplaceModes();
-    };
-
-    saveReplaceBtn.onclick = () => {
+    function saveSettings() {
         const pairs = Array.from(punctuationList.querySelectorAll('.punctuation-item')).map(el => ({
             find: el.querySelector('.find').value.trim(),
             replace: el.querySelector('.replace').value
         })).filter(p => p.find);
 
-        const modes = JSON.parse(localStorage.getItem(REPLACE_KEY)) || {};
-        modes[currentReplaceMode] = { pairs, matchCase: matchCaseCb.checked };
-        localStorage.setItem(REPLACE_KEY, JSON.stringify(modes));
-        showNotification('Đã lưu thay thế!', 'success');
+        const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || { modes: {} };
+        settings.modes[currentMode] = { pairs, matchCase: matchCaseCb.checked };
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+        showNotification('Đã lưu!', 'success');
+    }
+
+    modeSelect.onchange = () => { currentMode = modeSelect.value; loadPairs(); };
+    addModeBtn.onclick = () => {
+        const name = prompt('Tên chế độ mới:');
+        if (!name || name === 'default') return showNotification('Tên không hợp lệ!', 'error');
+        const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || { modes: {} };
+        if (settings.modes[name]) return showNotification('Đã tồn tại!', 'error');
+        settings.modes[name] = { pairs: [], matchCase: false };
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+        currentMode = name;
+        loadModes();
+    };
+    copyModeBtn.onclick = () => {
+        const name = prompt('Sao chép thành:');
+        if (!name) return;
+        const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || { modes: {} };
+        settings.modes[name] = JSON.parse(JSON.stringify(settings.modes[currentMode]));
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+        currentMode = name;
+        loadModes();
     };
 
     matchCaseBtn.onclick = () => {
         matchCaseCb.checked = !matchCaseCb.checked;
         matchCaseBtn.textContent = matchCaseCb.checked ? 'Case: Bật' : 'Case: Tắt';
         matchCaseBtn.classList.toggle('bg-green-500', matchCaseCb.checked);
-        scheduleHighlight(false);
+        applyAllHighlights(false);
     };
 
     addPairBtn.onclick = () => addPair();
-    replaceAllBtn.onclick = replaceAndHighlight;
+    saveSettingsBtn.onclick = saveSettings;
 
-    fontFamily.onchange = () => textInput.style.fontFamily = fontFamily.value;
-    fontSize.onchange = () => textInput.style.fontSize = fontSize.value;
+    function updateModeButtons() {
+        const isDefault = currentMode === 'default';
+        document.getElementById('rename-mode').classList.toggle('hidden', isDefault);
+        document.getElementById('delete-mode').classList.toggle('hidden', isDefault);
+    }
 
-    textInput.addEventListener('input', () => scheduleHighlight(false));
+    function showNotification(msg, type = 'success') {
+        const n = document.createElement('div');
+        n.className = `fixed top-4 right-4 px-4 py-2 rounded text-white text-sm z-50 ${type === 'success' ? 'bg-green-600' : type === 'info' ? 'bg-blue-600' : 'bg-red-600'}`;
+        n.textContent = msg;
+        document.body.appendChild(n);
+        setTimeout(() => n.remove(), 3000);
+    }
 
-    // === KHỞI TẠO ===
-    loadKeywordModes();
-    loadReplaceModes();
-    setTimeout(() => scheduleHighlight(false), 200);
+    loadModes();
+    setTimeout(() => applyAllHighlights(false), 200);
 });
