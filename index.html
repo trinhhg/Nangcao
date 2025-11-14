@@ -93,10 +93,10 @@
                     </div>
                 </div>
 
-                <!-- TỪ KHÓA -->
+                <!-- TỪ KHÓA (SỬA ID) -->
                 <div class="mb-4">
                     <label class="block mb-1 text-xs">Từ khóa:</label>
-                    <input type="text" id="keywords-input" placeholder="Nhập, Enter..." class="w-full p-1.5 border rounded bg-gray-50 text-xs">
+                    <input type="text" id="keywordsInput" placeholder="Nhập, Enter..." class="w-full p-1.5 border rounded bg-gray-50 text-xs">
                 </div>
 
                 <!-- NÚT TÌM / XÓA -->
@@ -159,10 +159,14 @@
 
     <div id="notification-container"></div>
 
-    <!-- Nhost SDK -->
+    <!-- Nhost SDK + FIX ĐĂNG NHẬP (F5 TỰ ĐỘNG) -->
     <script type="module">
         import { NhostClient } from 'https://esm.sh/@nhost/nhost-js@3.3.1';
-        const nhost = new NhostClient({ subdomain: "ogltettlkspwxyqphmth", region: "eu-central-1" });
+
+        const nhost = new NhostClient({
+            subdomain: "ogltettlkspwxyqphmth",
+            region: "eu-central-1"
+        });
 
         const authOverlay = document.getElementById('auth-overlay');
         const appContainer = document.getElementById('app-container');
@@ -179,17 +183,29 @@
         const showApp = () => {
             authOverlay.classList.add('hidden');
             appContainer.classList.remove('hidden');
+            console.log('Màn hình chính đã hiện');
         };
 
         const checkSession = async () => {
             try {
                 const user = await nhost.auth.getUser();
-                if (user) showApp();
-            } catch (err) { console.error('Lỗi session:', err); }
+                if (user) {
+                    console.log('Đã đăng nhập (F5):', user.email);
+                    showApp();
+                }
+            } catch (err) {
+                console.error('Lỗi session:', err);
+            }
         };
 
+        // GỌI NGAY + LẮNG NGHE
         checkSession();
-        nhost.auth.onAuthStateChanged(user => { if (user) showApp(); });
+        nhost.auth.onAuthStateChanged((user) => {
+            if (user) {
+                console.log('Auth thay đổi → Đã đăng nhập');
+                showApp();
+            }
+        });
 
         loginBtn.onclick = async (e) => {
             e.preventDefault();
@@ -197,13 +213,19 @@
             const password = passwordInput.value;
             if (!validateEmail(email)) return authError.textContent = 'Email không hợp lệ';
             if (!validatePassword(password)) return authError.textContent = 'Mật khẩu ≥6 ký tự';
+
             authError.textContent = 'Đang đăng nhập...';
             try {
                 const { error } = await nhost.auth.signIn({ email, password });
-                if (error?.message.includes('already signed in')) { setTimeout(showApp, 300); return; }
+                if (error?.message.includes('already signed in')) {
+                    setTimeout(showApp, 300);
+                    return;
+                }
                 if (error) throw error;
                 setTimeout(showApp, 300);
-            } catch (err) { authError.textContent = err.message || 'Lỗi đăng nhập'; }
+            } catch (err) {
+                authError.textContent = err.message || 'Lỗi đăng nhập';
+            }
         };
 
         signupBtn.onclick = async () => {
@@ -211,13 +233,16 @@
             const password = passwordInput.value;
             if (!validateEmail(email)) return authError.textContent = 'Email không hợp lệ';
             if (!validatePassword(password)) return authError.textContent = 'Mật khẩu ≥6 ký tự';
+
             authError.textContent = 'Đang đăng ký...';
             try {
                 const { error } = await nhost.auth.signUp({ email, password });
                 if (error) throw error;
                 authError.textContent = 'Đăng ký thành công! Đăng nhập ngay.';
                 authError.style.color = 'green';
-            } catch (err) { authError.textContent = err.message || 'Lỗi đăng ký'; }
+            } catch (err) {
+                authError.textContent = err.message || 'Lỗi đăng ký';
+            }
         };
 
         logoutBtn.onclick = async () => {
