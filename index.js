@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const SETTINGS_KEY = 'replace_settings';
     const highlightClasses = ['hl-yellow', 'hl-pink', 'hl-blue', 'hl-green', 'hl-orange', 'hl-purple'];
 
-    // === DEBOUNCE HIGHLIGHT ===
+    // === DEBOUNCE + TRIGGER ===
     let highlightTimeout;
     const triggerHighlight = (withReplace = false) => {
         clearTimeout(highlightTimeout);
@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => triggerHighlight(false), 50);
     });
 
-    // === HIGHLIGHT TOÀN BỘ ===
+    // === HIGHLIGHT (TỐI ƯU) ===
     function applyAllHighlights(highlightReplace = false) {
         textInput.querySelectorAll('span.hl-yellow, span.hl-pink, span.hl-blue, span.hl-green, span.hl-orange, span.hl-purple')
             .forEach(span => span.outerHTML = span.innerHTML);
@@ -140,7 +140,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function escapeRegExp(str) { return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
     function isWordChar(ch) { return ch && (/[\p{L}\p{N}_]/u.test(ch) || /[A-Za-z0-9_]/.test(ch)); }
 
-    // === THÊM KEYWORD KHI NHẤN ENTER ===
+    // === THÊM KEYWORD KHI ENTER ===
     keywordsInput.addEventListener('keydown', e => {
         if (e.key === 'Enter') {
             e.preventDefault();
@@ -167,8 +167,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function addKeywordTag(word) {
         const tag = document.createElement('div');
-        tag.className = 'tag';
-        tag.innerHTML = `${word} <span class="remove-tag">×</span>`;
+        tag.className = 'tag inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs mr-1 mb-1';
+        tag.innerHTML = `${word} <span class="remove-tag cursor-pointer">×</span>`;
         tag.querySelector('.remove-tag').onclick = (e) => {
             e.stopPropagation();
             keywords = keywords.filter(k => k !== word);
@@ -228,6 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
         Object.keys(settings.modes).sort().forEach(m => modeSelect.add(new Option(m, m)));
         modeSelect.value = currentMode;
         loadPairs();
+        updateModeButtons();
     }
 
     function loadPairs() {
@@ -243,11 +244,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function addPair(find = '', replace = '') {
         const item = document.createElement('div');
-        item.className = 'punctuation-item';
+        item.className = 'punctuation-item flex gap-1 mb-1 items-center text-xs';
         item.innerHTML = `
-            <input type="text" class="find" placeholder="Tìm..." value="${find}">
-            <input type="text" class="replace" placeholder="Thay bằng..." value="${replace}">
-            <button class="remove">×</button>
+            <input type="text" class="find flex-1 p-1 border rounded" placeholder="Tìm..." value="${find}">
+            <input type="text" class="replace flex-1 p-1 border rounded" placeholder="Thay bằng..." value="${replace}">
+            <button class="remove w-6 h-6 bg-red-500 text-white rounded hover:bg-red-600">×</button>
         `;
         item.querySelector('.remove').onclick = () => {
             item.remove();
@@ -299,12 +300,19 @@ document.addEventListener('DOMContentLoaded', () => {
     addPairBtn.onclick = () => addPair();
     saveSettingsBtn.onclick = saveSettings;
 
+    function updateModeButtons() {
+        const isDefault = currentMode === 'default';
+        const renameBtn = document.getElementById('rename-mode');
+        const deleteBtn = document.getElementById('delete-mode');
+        if (renameBtn) renameBtn.classList.toggle('hidden', isDefault);
+        if (deleteBtn) deleteBtn.classList.toggle('hidden', isDefault);
+    }
+
     function showNotification(msg, type = 'success') {
-        const container = document.getElementById('notification-container');
         const n = document.createElement('div');
-        n.className = `notification ${type}`;
+        n.className = `fixed top-4 right-4 px-4 py-2 rounded text-white text-sm z-50 ${type === 'success' ? 'bg-green-600' : type === 'info' ? 'bg-blue-600' : 'bg-red-600'}`;
         n.textContent = msg;
-        container.appendChild(n);
+        document.body.appendChild(n);
         setTimeout(() => n.remove(), 3000);
     }
 
