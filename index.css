@@ -54,11 +54,3 @@
 @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
 
 body { font-family: 'Montserrat', Arial, sans-serif; }
-
-/* === THÊM MÀU HIGHLIGHT === */
-.hl-yellow { background-color: #fff3cd; color: #856404; }
-.hl-pink { background-color: #f8d7da; color: #721c24; }
-.hl-blue { background-color: #d1ecf1; color: #0c5460; }
-.hl-green { background-color: #d4edda; color: #155724; }
-.hl-orange { background-color: #ffe5d0; color: #cc5500; }
-.hl-purple { background-color: #e2d9f3; color: #6a1b9a; }
