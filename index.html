@@ -147,7 +147,7 @@
                 </div>
 
                 <div class="action-buttons mb-3 flex gap-1">
-                    <button id="addPair" class="flex-1 px-2 py-1 bg-blue-500 text-white rounded text-xs">Cặp</button>
+                    <button id="addPairBtn" class="flex-1 px-2 py-1 bg-blue-500 text-white rounded text-xs">Cặp</button>
                     <button id="saveReplace" class="flex-1 px-2 py-1 bg-green-600 text-white rounded text-xs">Lưu</button>
                     <button id="replaceAll" class="flex-1 px-2 py-1 bg-purple-600 text-white rounded text-xs">Thay</button>
                 </div>
@@ -229,9 +229,10 @@
         window.nhost = nhost;
     </script>
 
-    <!-- JS CHÍNH -->
+    <!-- JS CHÍNH (ĐÃ FIX LỖI `addPair`) -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            // === DOM ELEMENTS ===
             const textInput = document.getElementById('textInput');
             const keywordsInput = document.getElementById('keywordsInput');
             const keywordsTags = document.getElementById('keywordsTags');
@@ -252,11 +253,12 @@
             const copyReplaceMode = document.getElementById('copyReplaceMode');
             const deleteReplaceMode = document.getElementById('deleteReplaceMode');
             const matchCaseBtn = document.getElementById('matchCaseBtn');
-            const addPair = document.getElementById('addPair');
+            const addPairBtn = document.getElementById('addPairBtn'); // ĐÃ SỬA ID
             const saveReplace = document.getElementById('saveReplace');
             const replaceAll = document.getElementById('replaceAll');
             const punctuationList = document.getElementById('punctuationList');
 
+            // === STATE ===
             let keywords = [];
             let lastReplacedPairs = [];
             let currentKeywordMode = 'default';
@@ -265,6 +267,7 @@
             const REPLACE_KEY = 'replace_modes';
             const highlightClasses = ['hl-yellow', 'hl-pink', 'hl-blue', 'hl-green', 'hl-orange', 'hl-purple'];
 
+            // === UTILS ===
             function showNotification(msg, type = 'success') {
                 const n = document.createElement('div');
                 n.className = `fixed top-4 right-4 px-4 py-2 rounded text-white text-xs z-50 ${type === 'success' ? 'bg-green-600' : 'bg-red-600'}`;
@@ -282,14 +285,10 @@
                 sel.addRange(range);
             }
 
-            textInput.addEventListener('focus', () => setTimeout(setCursorToStart, 0));
-            textInput.addEventListener('paste', (e) => {
-                e.preventDefault();
-                const text = (e.clipboardData || window.clipboardData).getData('text/plain');
-                document.execCommand('insertText', false, text);
-                setTimeout(setCursorToStart, 0);
-            });
+            function escapeRegExp(str) { return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+            function isWordChar(ch) { return ch && /[a-zA-Z0-9_]/.test(ch); }
 
+            // === HIGHLIGHT ===
             let highlightScheduled = false;
             function scheduleHighlight(highlightReplace = false) {
                 if (highlightScheduled) return;
@@ -369,7 +368,7 @@
                     }
 
                     const frag = document.createDocumentFragment();
-                    let lastIdx = 0;
+                    let lastIdx = 00;
                     localMatches.forEach(m => {
                         const localStart = m.start - globalOffset;
                         const localEnd = m.end - globalOffset;
@@ -390,9 +389,7 @@
                 });
             }
 
-            function escapeRegExp(str) { return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
-            function isWordChar(ch) { return ch && (/[a-zA-Z0-9_]/.test(ch)); }
-
+            // === REPLACE ===
             function replaceAndHighlight() {
                 const pairs = Array.from(punctuationList.querySelectorAll('.punctuation-item')).map(el => ({
                     find: el.querySelector('.find').value.trim(),
@@ -427,6 +424,7 @@
                 showNotification('Đã thay thế!', 'success');
             }
 
+            // === TỪ KHÓA ===
             function addKeywordTag(word) {
                 const tag = document.createElement('div');
                 tag.className = 'tag inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs mr-1 mb-1';
@@ -533,6 +531,7 @@
                 matchCaseBtn.classList.toggle('bg-green-500', data.matchCase);
             }
 
+            // FIX: CHỈ KHAI BÁO 1 LẦN
             function addPair(find = '', replace = '') {
                 const item = document.createElement('div');
                 item.className = 'punctuation-item flex gap-1 mb-1 items-center text-xs';
@@ -603,14 +602,23 @@
                 scheduleHighlight(false);
             };
 
-            addPair.onclick = () => addPair();
+            // SỬA: DÙNG addPairBtn
+            addPairBtn.onclick = () => addPair();
             replaceAll.onclick = replaceAndHighlight;
 
             fontFamily.onchange = () => textInput.style.fontFamily = fontFamily.value;
             fontSize.onchange = () => textInput.style.fontSize = fontSize.value;
 
             textInput.addEventListener('input', () => scheduleHighlight(false));
+            textInput.addEventListener('focus', () => setTimeout(setCursorToStart, 0));
+            textInput.addEventListener('paste', (e) => {
+                e.preventDefault();
+                const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+                document.execCommand('insertText', false, text);
+                setTimeout(setCursorToStart, 0);
+            });
 
+            // === KHỞI TẠO ===
             loadKeywordModes();
             loadReplaceModes();
             setTimeout(() => scheduleHighlight(false), 200);
