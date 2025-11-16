@@ -43,10 +43,16 @@
 
     <!-- GIAO DIỆN CHÍNH -->
     <div id="app-container" class="hidden flex flex-col h-screen">
-        <!-- NÚT ĐĂNG XUẤT -->
-        <div class="p-2 bg-gray-800 text-white text-right">
-            <button id="logout-btn" class="px-3 py-1 bg-red-600 rounded text-xs hover:bg-red-700">Đăng xuất</button>
+        <!-- THANH ĐĂNG XUẤT + THÔNG TIN DONATE -->
+        <div class="p-2 bg-gray-800 text-white flex justify-between items-center text-xs">
+            <div class="font-bold text-yellow-400">
+                Donate: MB BANK - TRINH THI XUAN HUONG - STK: 0917678211
+                &nbsp;|&nbsp;
+                Góp ý: <a href="https://www.facebook.com/trinh.hg.57" target="_blank" class="underline text-cyan-300 hover:text-cyan-100">fb.com/trinh.hg.57</a>
+            </div>
+            <button id="logout-btn" class="px-3 py-1 bg-red-600 rounded hover:bg-red-700">Đăng xuất</button>
         </div>
+
         <div class="flex flex-1 overflow-hidden">
             <!-- Left Panel -->
             <div id="main-panel" class="w-1/5 p-4 bg-white shadow-md overflow-y-auto text-sm">
@@ -78,28 +84,21 @@
                 <div class="mb-4">
                     <label class="block mb-2">Từ khóa:</label>
                     <input type="text" id="keywords-input" placeholder="Nhập, Enter..." class="w-full p-2 border rounded bg-gray-50 text-sm">
-                    <div id="keywords-tags" class="flex flex-wrap gap-1 mt-2"></div>
                 </div>
-                <div class="flex gap-2">
+                <div class="flex gap-2 mb-2">
                     <button id="search" class="flex-1 bg-green-500 text-white py-2 rounded hover:bg-green-600 text-xs font-medium">Tìm Kiếm</button>
                     <button id="clear" class="flex-1 bg-red-500 text-white py-2 rounded hover:bg-red-600 text-xs font-medium">Xóa Tất Cả</button>
                 </div>
+                <div id="keywords-tags" class="flex flex-wrap gap-1"></div>
             </div>
 
             <!-- Center: FULL HEIGHT -->
             <div id="text-panel" class="flex-1 p-6 bg-white shadow-md mx-4 flex flex-col">
-                <div class="flex justify-between items-start mb-2">
-                    <h2 class="text-xl font-bold">Nội Dung Chương</h2>
-                    <div class="text-right text-xs text-red-600 font-semibold leading-tight">
-                        <div>Don@te cho ad: MB BANK - TRINH THI XUAN HUONG - STK: 0917678211</div>
-                        <div>Góp ý: <a href="https://www.facebook.com/trinh.hg.57" target="_blank" class="text-blue-600 underline hover:text-blue-800">https://www.facebook.com/trinh.hg.57</a></div>
-                    </div>
-                </div>
+                <h2 class="text-xl font-bold mb-2">Nội Dung Chương</h2>
                 <div id="editor-wrapper" class="relative flex-1 border-2 border-gray-300 rounded-lg overflow-hidden">
                     <div id="highlight-layer" class="absolute inset-0 p-6 pointer-events-none whitespace-pre-wrap overflow-hidden"
                          style="font-family: Arial; font-size: 16px; line-height: 1.8; z-index: 1; color: transparent;"></div>
                     <div id="text-layer" contenteditable="true"
-                         placeholder="Dán văn bản vào đây..."
                          class="relative p-6 bg-transparent caret-black outline-none whitespace-pre-wrap overflow-y-auto"
                          style="font-family: Arial; font-size: 16px; line-height: 1.8; min-height: 100%; z-index: 2;"></div>
                 </div>
