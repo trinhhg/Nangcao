@@ -43,14 +43,14 @@
 
     <!-- GIAO DIỆN CHÍNH -->
     <div id="app-container" class="hidden flex flex-col h-screen">
-        <!-- THANH ĐĂNG XUẤT + DONATE -->
-        <div class="p-2 bg-gray-800 text-white flex justify-between items-center text-xs">
-            <div class="font-bold text-yellow-400">
-                Donate: MB BANK - TRINH THI XUAN HUONG - STK: 0917678211
-                &nbsp;|&nbsp;
-                Góp ý: <a href="https://www.facebook.com/trinh.hg.57" target="_blank" class="underline text-cyan-300 hover:text-cyan-100">fb.com/trinh.hg.57</a>
+        <!-- THANH TRẮNG + ĐỎ NỔI BẬT -->
+        <div class="p-2 bg-white border-b-4 border-gray-300 text-xs flex justify-between items-center shadow-sm">
+            <div class="text-red-600 font-bold">
+                Góp ý: <a href="https://www.facebook.com/trinh.hg.57" target="_blank" class="underline text-blue-600 hover:text-blue-800">fb.com/trinh.hg.57</a>
+                &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
+                <span class="text-red-700">DON@TE: MB BANK - TRINH THI XUAN HUONG - STK: 0917678211</span>
             </div>
-            <button id="logout-btn" class="px-3 py-1 bg-red-600 rounded hover:bg-red-700">Đăng xuất</button>
+            <button id="logout-btn" class="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700">Đăng xuất</button>
         </div>
 
         <div class="flex flex-1 overflow-hidden">
@@ -83,7 +83,7 @@
                 </div>
                 <div class="mb-4">
                     <label class="block mb-2">Từ khóa:</label>
-                    <input type="text" id="keywords-input" placeholder="Nhập, Enter..." class="w-full p-2 border rounded bg-gray-50 text-sm">
+                    <input type="text" id="keywords-input" placeholder="Nhập, Enter, dấu phẩy..." class="w-full p-2 border rounded bg-gray-50 text-sm">
                 </div>
                 <div class="flex gap-2 mb-2">
                     <button id="search" class="flex-1 bg-green-500 text-white py-2 rounded hover:bg-green-600 text-xs font-medium">Tìm Kiếm</button>
@@ -170,10 +170,7 @@
             }
         };
 
-        // Kiểm tra ngay khi load
         checkSession();
-
-        // Lắng nghe thay đổi trạng thái
         nhost.auth.onAuthStateChanged((event, session) => {
             if (session?.accessToken) showApp();
             else authOverlay.classList.remove('hidden');
