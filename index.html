@@ -15,7 +15,6 @@
         .hl-green  { background: #ccffcc; color: black; }
         .hl-orange { background: #ffcc99; color: black; }
         .hl-purple { background: #e6ccff; color: black; }
-        [contenteditable]:empty:before { content: attr(placeholder); color: #aaa; }
     </style>
 </head>
 <body class="bg-gray-100 h-screen flex flex-col">
@@ -52,23 +51,25 @@
             <!-- Left Panel -->
             <div id="main-panel" class="w-1/5 p-4 bg-white shadow-md overflow-y-auto text-sm">
                 <h2 class="text-xl font-bold mb-4">Tìm Kiếm</h2>
-                <div class="mb-4">
-                    <label class="block mb-2">Font:</label>
-                    <select id="fontFamily" class="w-full p-2 border rounded text-sm">
-                        <option value="Arial">Arial</option>
-                        <option value="Calibri">Calibri</option>
-                        <option value="Montserrat">Montserrat</option>
-                        <option value="Times New Roman">Times New Roman</option>
-                    </select>
-                </div>
-                <div class="mb-4">
-                    <label class="block mb-2">Cỡ chữ:</label>
-                    <select id="fontSize" class="w-full p-2 border rounded text-sm">
-                        <option value="14px">14px</option>
-                        <option value="16px">16px</option>
-                        <option value="18px">18px</option>
-                        <option value="20px">20px</option>
-                    </select>
+                <div class="mb-4 grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block mb-1 text-xs">Font:</label>
+                        <select id="fontFamily" class="w-full p-1.5 border rounded text-xs text-gray-700">
+                            <option value="Arial">Arial</option>
+                            <option value="Calibri">Calibri</option>
+                            <option value="Montserrat">Montserrat</option>
+                            <option value="Times New Roman">Times New Roman</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block mb-1 text-xs">Cỡ chữ:</label>
+                        <select id="fontSize" class="w-full p-1.5 border rounded text-xs text-gray-700">
+                            <option value="14px">14</option>
+                            <option value="16px">16</option>
+                            <option value="18px">18</option>
+                            <option value="20px">20</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="mb-4">
                     <label class="block mb-2"><input type="checkbox" id="matchCase" class="mr-2"> Phân biệt hoa/thường</label>
@@ -94,11 +95,13 @@
                         <div>Góp ý: <a href="https://www.facebook.com/trinh.hg.57" target="_blank" class="text-blue-600 underline hover:text-blue-800">https://www.facebook.com/trinh.hg.57</a></div>
                     </div>
                 </div>
-                <div id="textInput"
-                     contenteditable="true"
-                     placeholder="Dán văn bản vào đây..."
-                     class="flex-1 p-6 border-2 border-gray-300 rounded-lg focus:outline-none whitespace-pre-wrap overflow-y-auto"
-                     style="font-family: Arial; font-size: 16px; line-height: 1.8; min-height: 0;">
+                <div id="editor-wrapper" class="relative flex-1 border-2 border-gray-300 rounded-lg overflow-hidden">
+                    <div id="highlight-layer" class="absolute inset-0 p-6 pointer-events-none whitespace-pre-wrap overflow-hidden"
+                         style="font-family: Arial; font-size: 16px; line-height: 1.8; z-index: 1; color: transparent;"></div>
+                    <div id="text-layer" contenteditable="true"
+                         placeholder="Dán văn bản vào đây..."
+                         class="relative p-6 bg-transparent caret-black outline-none whitespace-pre-wrap overflow-y-auto"
+                         style="font-family: Arial; font-size: 16px; line-height: 1.8; min-height: 100%; z-index: 2;"></div>
                 </div>
             </div>
 
@@ -137,14 +140,10 @@
 
     <div id="notification-container"></div>
 
-    <!-- Nhost SDK + FIX ĐĂNG NHẬP -->
+    <!-- Nhost SDK -->
     <script type="module">
         import { NhostClient } from 'https://esm.sh/@nhost/nhost-js@3.3.1';
-
-        const nhost = new NhostClient({
-            subdomain: "ogltettlkspwxyqphmth",
-            region: "eu-central-1"
-        });
+        const nhost = new NhostClient({ subdomain: "ogltettlkspwxyqphmth", region: "eu-central-1" });
 
         const authOverlay = document.getElementById('auth-overlay');
         const appContainer = document.getElementById('app-container');
@@ -161,28 +160,17 @@
         const showApp = () => {
             authOverlay.classList.add('hidden');
             appContainer.classList.remove('hidden');
-            console.log('Màn hình chính đã hiện');
         };
 
         const checkSession = async () => {
             try {
-                const result = await nhost.auth.getSession();
-                const session = result?.session;
-                if (session?.accessToken) {
-                    console.log('Đã đăng nhập:', session.user.email);
-                    showApp();
-                }
-            } catch (err) {
-                console.error('Lỗi session:', err);
-            }
+                const { session } = await nhost.auth.getSession();
+                if (session?.accessToken) showApp();
+            } catch (err) { console.error(err); }
         };
 
-        // GỌI NGAY + LẮNG NGHE + DỰ PHÒNG
         checkSession();
-        nhost.auth.onAuthStateChanged(() => {
-            console.log('Auth thay đổi → kiểm tra lại');
-            setTimeout(checkSession, 100);
-        });
+        nhost.auth.onAuthStateChanged(checkSession);
         const tick = () => { checkSession().finally(() => requestAnimationFrame(tick)); };
         requestAnimationFrame(tick);
 
@@ -192,14 +180,10 @@
             const password = passwordInput.value;
             if (!validateEmail(email)) return authError.textContent = 'Email không hợp lệ';
             if (!validatePassword(password)) return authError.textContent = 'Mật khẩu ≥6 ký tự';
-
             authError.textContent = 'Đang đăng nhập...';
             try {
                 const { error } = await nhost.auth.signIn({ email, password });
-                if (error?.message.includes('already signed in')) {
-                    setTimeout(showApp, 300);
-                    return;
-                }
+                if (error?.message.includes('already signed in')) { setTimeout(showApp, 300); return; }
                 if (error) throw error;
                 setTimeout(showApp, 300);
             } catch (err) {
@@ -212,7 +196,6 @@
             const password = passwordInput.value;
             if (!validateEmail(email)) return authError.textContent = 'Email không hợp lệ';
             if (!validatePassword(password)) return authError.textContent = 'Mật khẩu ≥6 ký tự';
-
             authError.textContent = 'Đang đăng ký...';
             try {
                 const { error } = await nhost.auth.signUp({ email, password });
