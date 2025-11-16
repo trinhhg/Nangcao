@@ -29,7 +29,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let highlightTimeout;
     const triggerHighlight = (withReplace = false) => {
         clearTimeout(highlightTimeout);
-        highlightTimeout = setTimeout(() => applyAllHighlights(withReplace), 100);
+        highlightTimeout = setTimeout(() => {
+            applyAllHighlights(withReplace);
+        }, 100);
     };
 
     // === HIGHLIGHT ===
@@ -106,7 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     function isWordChar(ch) { return ch && (/[\p{L}\p{N}_]/u.test(ch) || /[A-Za-z0-9_]/.test(ch)); }
 
-    // === PASTE: CHỈ LẤY TEXT THUẦN ===
+    // === PASTE: CHỈ TEXT THUẦN ===
     function handlePaste(e) {
         e.preventDefault();
         const text = e.clipboardData.getData("text/plain");
@@ -120,7 +122,8 @@ document.addEventListener('DOMContentLoaded', () => {
         sel.removeAllRanges();
         sel.addRange(range);
 
-        setTimeout(() => triggerHighlight(false), 0);
+        lastText = ""; // Buộc highlight lại
+        triggerHighlight(false);
     }
 
     // === KEYWORDS ===
@@ -138,7 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
             addKeywordTag(val);
         }
         keywordsInput.value = '';
-        lastText = ""; // Buộc highlight chạy lại
+        lastText = ""; // Buộc highlight lại dù văn bản đã có
         triggerHighlight(false);
     }
 
@@ -157,13 +160,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // === EVENTS ===
-    textLayer.addEventListener('input', () => triggerHighlight(false));
+    textLayer.addEventListener('input', () => {
+        lastText = "";
+        triggerHighlight(false);
+    });
     textLayer.addEventListener('paste', handlePaste);
 
-    searchBtn.onclick = () => { lastText = ""; triggerHighlight(false); };
+    searchBtn.onclick = () => {
+        lastText = "";
+        triggerHighlight(false);
+    };
+
     clearBtn.onclick = () => {
-        keywords = []; lastReplacedPairs = []; keywordsTags.innerHTML = '';
-        lastText = ""; triggerHighlight(false);
+        keywords = [];
+        lastReplacedPairs = [];
+        keywordsTags.innerHTML = '';
+        lastText = "";
+        triggerHighlight(false);
     };
 
     fontFamily.onchange = () => {
@@ -302,5 +315,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     loadModes();
-    setTimeout(() => triggerHighlight(false), 200);
+    setTimeout(() => {
+        lastText = "";
+        triggerHighlight(false);
+    }, 200);
 });
