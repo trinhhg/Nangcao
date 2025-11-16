@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="vi">
+:vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -92,12 +93,13 @@
                 <div id="keywords-tags" class="flex flex-wrap gap-1"></div>
             </div>
 
-            <!-- Center: CÓ THANH CUỘN MƯỢT -->
+            <!-- Center: THANH CUỘN MƯỢT -->
             <div id="text-panel" class="flex-1 p-6 bg-white shadow-md mx-4 flex flex-col">
                 <h2 class="text-xl font-bold mb-2">Nội Dung Chương</h2>
-                <div id="editor-wrapper" class="relative flex-1 border-2 border-gray-300 rounded-lg overflow-hidden">
-                    <div id="highlight-layer" class="absolute inset-0 p-6 pointer-events-none whitespace-pre-wrap overflow-hidden"
-                         style="font-family: Arial; font-size: 16px; line-height: 1.8; z-index: 1; color: transparent;"></div>
+                <div id="editor-wrapper" class="relative flex-1 border-2 border-gray-300 rounded-lg">
+                    <!-- BỎ overflow-hidden để cho phép scroll -->
+                    <div id="highlight-layer" class="absolute inset-0 p-6 pointer-events-none whitespace-pre-wrap"
+                         style="font-family: Arial; font-size: 16px; line-height: 1.8; z-index: 1; color: transparent; overflow: hidden;"></div>
                     <div id="text-layer" contenteditable="true"
                          class="relative p-6 bg-transparent caret-black outline-none whitespace-pre-wrap overflow-y-auto flex-1"
                          style="font-family: Arial; font-size: 16px; line-height: 1.8; z-index: 2;"></div>
@@ -215,6 +217,19 @@
         };
 
         window.nhost = nhost;
+    </script>
+
+    <!-- ĐỒNG BỘ SCROLL GIỮA 2 LAYER -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const textLayer = document.getElementById('text-layer');
+            const highlightLayer = document.getElementById('highlight-layer');
+
+            textLayer.addEventListener('scroll', () => {
+                highlightLayer.scrollTop = textLayer.scrollTop;
+                highlightLayer.scrollLeft = textLayer.scrollLeft;
+            });
+        });
     </script>
 
     <script src="index.js"></script>
