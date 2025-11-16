@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
         highlightTimeout = setTimeout(() => applyAllHighlights(withReplace), 100);
     };
 
-    // === HIGHLIGHT QUA 2 LAYER ===
+    // === HIGHLIGHT ===
     function applyAllHighlights(highlightReplace = false) {
         const currentText = textLayer.innerText || '';
         if (currentText === lastText && !highlightReplace) return;
@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const matches = [];
 
-        // 1. KEYWORDS
+        // KEYWORDS
         keywords.forEach((kw, i) => {
             if (!kw) return;
             const flags = matchCaseCb.checked ? 'g' : 'gi';
@@ -59,7 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // 2. REPLACE
+        // REPLACE
         if (highlightReplace && lastReplacedPairs.length) {
             lastReplacedPairs.forEach((p, i) => {
                 if (!p.replace) return;
@@ -106,27 +106,39 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     function isWordChar(ch) { return ch && (/[\p{L}\p{N}_]/u.test(ch) || /[A-Za-z0-9_]/.test(ch)); }
 
+    // === PASTE: CHỈ LẤY TEXT THUẦN ===
+    function handlePaste(e) {
+        e.preventDefault();
+        const text = e.clipboardData.getData("text/plain");
+        const sel = window.getSelection();
+        if (!sel.rangeCount) return;
+
+        const range = sel.getRangeAt(0);
+        range.deleteContents();
+        range.insertNode(document.createTextNode(text));
+        range.collapse(false);
+        sel.removeAllRanges();
+        sel.addRange(range);
+
+        setTimeout(() => triggerHighlight(false), 0);
+    }
+
     // === KEYWORDS ===
-    keywordsInput.addEventListener('input', () => {
-        if (keywordsInput.value.includes(',')) addKeywordsFromInput();
-    });
-    keywordsInput.addEventListener('keydown', e => {
-        if (e.key === 'Enter') {
+    keywordsInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
             e.preventDefault();
             addKeywordsFromInput();
         }
     });
 
     function addKeywordsFromInput() {
-        const vals = keywordsInput.value.split(',').map(s => s.trim()).filter(s => s);
-        vals.forEach(v => {
-            if (v && !keywords.includes(v)) {
-                keywords.push(v);
-                addKeywordTag(v);
-            }
-        });
+        const val = keywordsInput.value.trim();
+        if (val && !keywords.includes(val)) {
+            keywords.push(val);
+            addKeywordTag(val);
+        }
         keywordsInput.value = '';
-        lastReplacedPairs = [];
+        lastText = ""; // Buộc highlight chạy lại
         triggerHighlight(false);
     }
 
@@ -138,44 +150,20 @@ document.addEventListener('DOMContentLoaded', () => {
             e.stopPropagation();
             keywords = keywords.filter(k => k !== word);
             tag.remove();
+            lastText = "";
             triggerHighlight(false);
         };
         keywordsTags.appendChild(tag);
     }
 
-    // === TEXT LAYER EVENTS ===
+    // === EVENTS ===
     textLayer.addEventListener('input', () => triggerHighlight(false));
     textLayer.addEventListener('paste', handlePaste);
-    textLayer.addEventListener('keydown', () => setTimeout(() => triggerHighlight(false), 0));
 
-    function handlePaste(e) {
-        e.preventDefault();
-        const cd = e.clipboardData;
-        const text = cd.getData('text/plain');
-        const html = cd.getData('text/html');
-        const sel = window.getSelection();
-        const range = sel.getRangeAt(0);
-        range.deleteContents();
-
-        if (html && /<[a-z][\s\S]*>/i.test(html)) {
-            const div = document.createElement('div');
-            div.innerHTML = html;
-            const clean = div.innerHTML.replace(/<style[\s\S]*?<\/style>|<script[\s\S]*?<\/script>|<[^>]*>/gi, m =>
-                /^<(p|div|br|span|b|i|u)[ >]/i.test(m) ? m : ''
-            );
-            const fragment = range.createContextualFragment(clean);
-            range.insertNode(fragment);
-        } else {
-            document.execCommand('insertText', false, text);
-        }
-        setTimeout(() => triggerHighlight(false), 50);
-    }
-
-    // === NÚT ===
-    searchBtn.onclick = () => triggerHighlight(false);
+    searchBtn.onclick = () => { lastText = ""; triggerHighlight(false); };
     clearBtn.onclick = () => {
         keywords = []; lastReplacedPairs = []; keywordsTags.innerHTML = '';
-        triggerHighlight(false);
+        lastText = ""; triggerHighlight(false);
     };
 
     fontFamily.onchange = () => {
@@ -212,6 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!changed) return showNotification('Không tìm thấy!', 'info');
         textLayer.innerText = text;
         lastReplacedPairs = pairs.filter(p => p.replace);
+        lastText = "";
         triggerHighlight(true);
         showNotification('Đã thay thế!', 'success');
     };
@@ -289,6 +278,7 @@ document.addEventListener('DOMContentLoaded', () => {
         matchCaseCb.checked = !matchCaseCb.checked;
         matchCaseBtn.textContent = matchCaseCb.checked ? 'Case: Bật' : 'Case: Tắt';
         matchCaseBtn.classList.toggle('bg-green-500', matchCaseCb.checked);
+        lastText = "";
         triggerHighlight(false);
     };
 
