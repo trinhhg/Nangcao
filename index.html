@@ -43,7 +43,7 @@
 
     <!-- GIAO DIỆN CHÍNH -->
     <div id="app-container" class="hidden flex flex-col h-screen">
-        <!-- THANH ĐĂNG XUẤT + THÔNG TIN DONATE -->
+        <!-- THANH ĐĂNG XUẤT + DONATE -->
         <div class="p-2 bg-gray-800 text-white flex justify-between items-center text-xs">
             <div class="font-bold text-yellow-400">
                 Donate: MB BANK - TRINH THI XUAN HUONG - STK: 0917678211
@@ -92,7 +92,7 @@
                 <div id="keywords-tags" class="flex flex-wrap gap-1"></div>
             </div>
 
-            <!-- Center: FULL HEIGHT -->
+            <!-- Center -->
             <div id="text-panel" class="flex-1 p-6 bg-white shadow-md mx-4 flex flex-col">
                 <h2 class="text-xl font-bold mb-2">Nội Dung Chương</h2>
                 <div id="editor-wrapper" class="relative flex-1 border-2 border-gray-300 rounded-lg overflow-hidden">
@@ -163,15 +163,21 @@
 
         const checkSession = async () => {
             try {
-                const { session } = await nhost.auth.getSession();
-                if (session?.accessToken) showApp();
-            } catch (err) { console.error(err); }
+                const session = await nhost.auth.getSession();
+                if (session?.session?.accessToken) showApp();
+            } catch (err) {
+                console.warn('Session check failed:', err);
+            }
         };
 
+        // Kiểm tra ngay khi load
         checkSession();
-        nhost.auth.onAuthStateChanged(checkSession);
-        const tick = () => { checkSession().finally(() => requestAnimationFrame(tick)); };
-        requestAnimationFrame(tick);
+
+        // Lắng nghe thay đổi trạng thái
+        nhost.auth.onAuthStateChanged((event, session) => {
+            if (session?.accessToken) showApp();
+            else authOverlay.classList.remove('hidden');
+        });
 
         loginBtn.onclick = async (e) => {
             e.preventDefault();
@@ -182,9 +188,8 @@
             authError.textContent = 'Đang đăng nhập...';
             try {
                 const { error } = await nhost.auth.signIn({ email, password });
-                if (error?.message.includes('already signed in')) { setTimeout(showApp, 300); return; }
                 if (error) throw error;
-                setTimeout(showApp, 300);
+                showApp();
             } catch (err) {
                 authError.textContent = err.message || 'Lỗi đăng nhập';
             }
