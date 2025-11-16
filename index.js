@@ -1,5 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const textInput = document.getElementById('textInput');
     const keywordsInput = document.getElementById('keywords-input');
     const keywordsTags = document.getElementById('keywords-tags');
     const searchBtn = document.getElementById('search');
@@ -16,57 +15,32 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveSettingsBtn = document.getElementById('save-settings');
     const replaceAllBtn = document.getElementById('replace-all');
     const punctuationList = document.getElementById('punctuation-list');
+    const textLayer = document.getElementById('text-layer');
+    const highlightLayer = document.getElementById('highlight-layer');
 
     let keywords = [];
     let lastReplacedPairs = [];
     let currentMode = 'default';
     const SETTINGS_KEY = 'replace_settings';
     const highlightClasses = ['hl-yellow', 'hl-pink', 'hl-blue', 'hl-green', 'hl-orange', 'hl-purple'];
+    let lastText = '';
 
-    // === DEBOUNCE + TRIGGER ===
+    // === DEBOUNCE ===
     let highlightTimeout;
     const triggerHighlight = (withReplace = false) => {
         clearTimeout(highlightTimeout);
-        highlightTimeout = setTimeout(() => applyAllHighlights(withReplace), 150);
+        highlightTimeout = setTimeout(() => applyAllHighlights(withReplace), 100);
     };
 
-    // === PASTE GIỮ FORMAT + HIGHLIGHT SAU ===
-    textInput.addEventListener('paste', (e) => {
-        e.preventDefault();
-        const cd = e.clipboardData;
-        const text = cd.getData('text/plain');
-        const html = cd.getData('text/html');
-
-        const range = window.getSelection().getRangeAt(0);
-        range.deleteContents();
-
-        if (html && /<[a-z][\s\S]*>/i.test(html)) {
-            const div = document.createElement('div');
-            div.innerHTML = html;
-            const clean = div.innerHTML.replace(/<style[\s\S]*?<\/style>|<script[\s\S]*?<\/script>|<[^>]*>/gi, m =>
-                /^<(p|div|br|span|b|i|u)[ >]/i.test(m) ? m : ''
-            );
-            const fragment = range.createContextualFragment(clean);
-            range.insertNode(fragment);
-        } else {
-            document.execCommand('insertText', false, text);
-        }
-
-        setTimeout(() => triggerHighlight(false), 50);
-    });
-
-    // === HIGHLIGHT (TỐI ƯU) ===
+    // === HIGHLIGHT QUA 2 LAYER ===
     function applyAllHighlights(highlightReplace = false) {
-        textInput.querySelectorAll('span.hl-yellow, span.hl-pink, span.hl-blue, span.hl-green, span.hl-orange, span.hl-purple')
-            .forEach(span => span.outerHTML = span.innerHTML);
+        const currentText = textLayer.innerText || '';
+        if (currentText === lastText && !highlightReplace) return;
+        lastText = currentText;
 
-        const walker = document.createTreeWalker(textInput, NodeFilter.SHOW_TEXT, null);
-        const textNodes = [];
-        let node;
-        while (node = walker.nextNode()) textNodes.push(node);
-        if (!textNodes.length) return;
+        highlightLayer.innerHTML = '';
+        if (!currentText.trim()) return;
 
-        const fullText = textNodes.map(n => n.textContent).join('');
         const matches = [];
 
         // 1. KEYWORDS
@@ -75,12 +49,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const flags = matchCaseCb.checked ? 'g' : 'gi';
             const regex = new RegExp(escapeRegExp(kw), flags);
             let m;
-            while ((m = regex.exec(fullText)) !== null) {
+            while ((m = regex.exec(currentText)) !== null) {
                 const start = m.index, end = start + m[0].length;
-                const before = fullText[start - 1], after = fullText[end];
+                const before = currentText[start - 1], after = currentText[end];
                 const isWhole = !wholeWordsCb.checked || (!isWordChar(before) && !isWordChar(after));
                 if (isWhole) {
-                    matches.push({ start, end, text: m[0], className: highlightClasses[i % highlightClasses.length], priority: 1000 });
+                    matches.push({ start, end, className: highlightClasses[i % highlightClasses.length], priority: 1000 });
                 }
             }
         });
@@ -92,12 +66,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 const flags = matchCaseCb.checked ? 'g' : 'gi';
                 const regex = new RegExp(escapeRegExp(p.replace), flags);
                 let m;
-                while ((m = regex.exec(fullText)) !== null) {
+                while ((m = regex.exec(currentText)) !== null) {
                     const start = m.index, end = start + m[0].length;
-                    const before = fullText[start - 1], after = fullText[end];
+                    const before = currentText[start - 1], after = currentText[end];
                     const isWhole = !wholeWordsCb.checked || (!isWordChar(before) && !isWordChar(after));
                     if (isWhole) {
-                        matches.push({ start, end, text: m[0], className: highlightClasses[(keywords.length + i) % highlightClasses.length], priority: 500 });
+                        matches.push({ start, end, className: highlightClasses[(keywords.length + i) % highlightClasses.length], priority: 500 });
                     }
                 }
             });
@@ -113,43 +87,34 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        let offset = 0;
-        textNodes.forEach(node => {
-            const local = filtered.filter(m => m.start >= offset && m.start < offset + node.textContent.length);
-            if (!local.length) { offset += node.textContent.length; return; }
-
-            const frag = document.createDocumentFragment();
-            let last = 0;
-            local.forEach(m => {
-                const s = m.start - offset, e = m.end - offset;
-                if (s > last) frag.appendChild(document.createTextNode(node.textContent.slice(last, s)));
-                const span = document.createElement('span');
-                span.className = m.className;
-                span.textContent = node.textContent.slice(s, e);
-                frag.appendChild(span);
-                last = e;
-            });
-            if (last < node.textContent.length) {
-                frag.appendChild(document.createTextNode(node.textContent.slice(last)));
-            }
-            node.parentNode.replaceChild(frag, node);
-            offset += node.textContent.length;
+        let html = '';
+        let pos = 0;
+        filtered.forEach(m => {
+            if (m.start > pos) html += escapeHtml(currentText.slice(pos, m.start));
+            html += `<span class="${m.className}">${escapeHtml(currentText.slice(m.start, m.end))}</span>`;
+            pos = m.end;
         });
+        if (pos < currentText.length) html += escapeHtml(currentText.slice(pos));
+        highlightLayer.innerHTML = html;
     }
 
     function escapeRegExp(str) { return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
     function isWordChar(ch) { return ch && (/[\p{L}\p{N}_]/u.test(ch) || /[A-Za-z0-9_]/.test(ch)); }
 
-    // === THÊM KEYWORD KHI ENTER ===
+    // === KEYWORDS ===
+    keywordsInput.addEventListener('input', () => {
+        if (keywordsInput.value.includes(',')) addKeywordsFromInput();
+    });
     keywordsInput.addEventListener('keydown', e => {
         if (e.key === 'Enter') {
             e.preventDefault();
             addKeywordsFromInput();
         }
-    });
-
-    keywordsInput.addEventListener('compositionend', () => {
-        if (keywordsInput.value.includes(',')) addKeywordsFromInput();
     });
 
     function addKeywordsFromInput() {
@@ -178,8 +143,33 @@ document.addEventListener('DOMContentLoaded', () => {
         keywordsTags.appendChild(tag);
     }
 
-    // === INPUT TRONG TEXTINPUT ===
-    textInput.addEventListener('input', () => triggerHighlight(false));
+    // === TEXT LAYER EVENTS ===
+    textLayer.addEventListener('input', () => triggerHighlight(false));
+    textLayer.addEventListener('paste', handlePaste);
+    textLayer.addEventListener('keydown', () => setTimeout(() => triggerHighlight(false), 0));
+
+    function handlePaste(e) {
+        e.preventDefault();
+        const cd = e.clipboardData;
+        const text = cd.getData('text/plain');
+        const html = cd.getData('text/html');
+        const sel = window.getSelection();
+        const range = sel.getRangeAt(0);
+        range.deleteContents();
+
+        if (html && /<[a-z][\s\S]*>/i.test(html)) {
+            const div = document.createElement('div');
+            div.innerHTML = html;
+            const clean = div.innerHTML.replace(/<style[\s\S]*?<\/style>|<script[\s\S]*?<\/script>|<[^>]*>/gi, m =>
+                /^<(p|div|br|span|b|i|u)[ >]/i.test(m) ? m : ''
+            );
+            const fragment = range.createContextualFragment(clean);
+            range.insertNode(fragment);
+        } else {
+            document.execCommand('insertText', false, text);
+        }
+        setTimeout(() => triggerHighlight(false), 50);
+    }
 
     // === NÚT ===
     searchBtn.onclick = () => triggerHighlight(false);
@@ -188,8 +178,16 @@ document.addEventListener('DOMContentLoaded', () => {
         triggerHighlight(false);
     };
 
-    fontFamily.onchange = () => textInput.style.fontFamily = fontFamily.value;
-    fontSize.onchange = () => textInput.style.fontSize = fontSize.value;
+    fontFamily.onchange = () => {
+        const font = fontFamily.value;
+        textLayer.style.fontFamily = font;
+        highlightLayer.style.fontFamily = font;
+    };
+    fontSize.onchange = () => {
+        const size = fontSize.value;
+        textLayer.style.fontSize = size;
+        highlightLayer.style.fontSize = size;
+    };
 
     // === REPLACE ===
     replaceAllBtn.onclick = () => {
@@ -200,22 +198,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!pairs.length) return showNotification('Chưa có cặp!', 'error');
 
-        const walker = document.createTreeWalker(textInput, NodeFilter.SHOW_TEXT);
-        let changed = false, node;
-        while (node = walker.nextNode()) {
-            let text = node.textContent;
-            pairs.forEach(p => {
-                const flags = matchCaseCb.checked ? 'g' : 'gi';
-                const regex = new RegExp(escapeRegExp(p.find), flags);
-                if (regex.test(text)) {
-                    text = text.replace(regex, p.replace);
-                    changed = true;
-                }
-            });
-            if (text !== node.textContent) node.textContent = text;
-        }
+        let text = textLayer.innerText;
+        let changed = false;
+        pairs.forEach(p => {
+            const flags = matchCaseCb.checked ? 'g' : 'gi';
+            const regex = new RegExp(escapeRegExp(p.find), flags);
+            if (regex.test(text)) {
+                text = text.replace(regex, p.replace);
+                changed = true;
+            }
+        });
 
         if (!changed) return showNotification('Không tìm thấy!', 'info');
+        textLayer.innerText = text;
         lastReplacedPairs = pairs.filter(p => p.replace);
         triggerHighlight(true);
         showNotification('Đã thay thế!', 'success');
@@ -310,9 +305,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function showNotification(msg, type = 'success') {
         const n = document.createElement('div');
-        n.className = `fixed top-4 right-4 px-4 py-2 rounded text-white text-sm z-50 ${type === 'success' ? 'bg-green-600' : type === 'info' ? 'bg-blue-600' : 'bg-red-600'}`;
+        n.className = `notification fixed top-4 right-4 px-4 py-2 rounded text-white text-sm z-50 ${type === 'success' ? 'bg-green-600' : type === 'info' ? 'bg-blue-600' : 'bg-red-600'}`;
         n.textContent = msg;
-        document.body.appendChild(n);
+        document.getElementById('notification-container').appendChild(n);
         setTimeout(() => n.remove(), 3000);
     }
 
