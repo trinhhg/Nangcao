@@ -54,3 +54,28 @@
 @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
 
 body { font-family: 'Montserrat', Arial, sans-serif; }
+
+/* 2-Layer Editor */
+#editor-wrapper {
+    position: relative;
+    background: white;
+}
+#highlight-layer {
+    color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
+}
+#highlight-layer span {
+    color: black !important;
+}
+#text-layer::before {
+    content: attr(placeholder);
+    color: #aaa;
+    pointer-events: none;
+    position: absolute;
+    top: 1.5rem;
+    left: 1.5rem;
+}
+#text-layer:empty::before {
+    content: attr(placeholder);
+}
