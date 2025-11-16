@@ -45,7 +45,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const matches = [];
 
-        // KEYWORDS
         keywords.forEach((kw, i) => {
             if (!kw) return;
             const flags = matchCaseCb.checked ? 'g' : 'gi';
@@ -61,7 +60,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // REPLACE
         if (highlightReplace && lastReplacedPairs.length) {
             lastReplacedPairs.forEach((p, i) => {
                 if (!p.replace) return;
@@ -122,11 +120,11 @@ document.addEventListener('DOMContentLoaded', () => {
         sel.removeAllRanges();
         sel.addRange(range);
 
-        lastText = ""; // Buộc highlight lại
+        lastText = "";
         triggerHighlight(false);
     }
 
-    // === KEYWORDS ===
+    // === KEYWORDS: ENTER + DẤU PHẨY + INPUT ===
     keywordsInput.addEventListener("keydown", (e) => {
         if (e.key === "Enter") {
             e.preventDefault();
@@ -134,14 +132,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    function addKeywordsFromInput() {
-        const val = keywordsInput.value.trim();
-        if (val && !keywords.includes(val)) {
-            keywords.push(val);
-            addKeywordTag(val);
+    keywordsInput.addEventListener("input", () => {
+        if (keywordsInput.value.includes(',')) {
+            addKeywordsFromInput();
         }
+    });
+
+    function addKeywordsFromInput() {
+        const input = keywordsInput.value;
+        const vals = input.split(',').map(s => s.trim()).filter(s => s);
+        vals.forEach(v => {
+            if (v && !keywords.includes(v)) {
+                keywords.push(v);
+                addKeywordTag(v);
+            }
+        });
         keywordsInput.value = '';
-        lastText = ""; // Buộc highlight lại dù văn bản đã có
+        lastText = "";
         triggerHighlight(false);
     }
 
@@ -159,13 +166,7 @@ document.addEventListener('DOMContentLoaded', () => {
         keywordsTags.appendChild(tag);
     }
 
-    // === EVENTS ===
-    textLayer.addEventListener('input', () => {
-        lastText = "";
-        triggerHighlight(false);
-    });
-    textLayer.addEventListener('paste', handlePaste);
-
+    // === NÚT TÌM KIẾM / XÓA ===
     searchBtn.onclick = () => {
         lastText = "";
         triggerHighlight(false);
@@ -179,6 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
         triggerHighlight(false);
     };
 
+    // === FONT ===
     fontFamily.onchange = () => {
         const font = fontFamily.value;
         textLayer.style.fontFamily = font;
@@ -313,6 +315,12 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('notification-container').appendChild(n);
         setTimeout(() => n.remove(), 3000);
     }
+
+    textLayer.addEventListener('input', () => {
+        lastText = "";
+        triggerHighlight(false);
+    });
+    textLayer.addEventListener('paste', handlePaste);
 
     loadModes();
     setTimeout(() => {
