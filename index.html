@@ -17,7 +17,7 @@
         .hl-purple { background: #e6ccff; color: black; }
 
         /* ============================= */
-        /* ✅ FIX SCROLL – CHỈ Ô VĂN BẢN */
+        /* ✅ FIX: SCROLL + KHÔNG TRÀN MÀN HÌNH */
         /* ============================= */
         #editor-wrapper {
             height: 100%;
@@ -34,11 +34,11 @@
         #text-layer {
             overflow-y: auto !important;
             overflow-x: hidden;
-            padding-right: 8px; /* Đệm cho thanh cuộn */
+            padding-right: 8px;
             scrollbar-width: thin;
         }
 
-        /* Thanh cuộn đẹp (Chrome, Edge, Safari) */
+        /* Thanh cuộn mỏng đẹp */
         #text-layer::-webkit-scrollbar {
             width: 6px;
         }
@@ -129,11 +129,11 @@
                 <div id="keywords-tags" class="flex flex-wrap gap-1"></div>
             </div>
 
-            <!-- Center: Ô VĂN BẢN CÓ THANH CUỘN RIÊNG -->
-            <div id="text-panel" class="flex-1 p-6 bg-white shadow-md mx-4 flex flex-col">
+            <!-- Center: Ô VĂN BẢN KHÔNG TRÀN MÀN HÌNH -->
+            <div id="text-panel" class="flex-1 p-6 bg-white shadow-md mx-4 flex flex-col overflow-hidden">
                 <h2 class="text-xl font-bold mb-2">Nội Dung Chương</h2>
-                <!-- ✅ ĐÃ FIX: h-full + scroll chỉ trong #text-layer -->
-                <div id="editor-wrapper" class="relative flex-1 h-full border-2 border-gray-300 rounded-lg">
+                <!-- ✅ ĐÃ FIX: min-h-0 + không tràn -->
+                <div id="editor-wrapper" class="relative flex-1 min-h-0 border-2 border-gray-300 rounded-lg">
                     <div id="highlight-layer" class="absolute inset-0 p-6 pointer-events-none whitespace-pre-wrap overflow-hidden"
                          style="font-family: Arial; font-size: 16px; line-height: 1.8; z-index: 1; color: transparent;"></div>
                     <div id="text-layer" contenteditable="true"
