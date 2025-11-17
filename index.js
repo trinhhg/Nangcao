@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // === UTILS ===
     const escapeRegex = str => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-    // Lưu/trả con trỏ AN TOÀN 100% (không bị lỗi "range not in document")
+    // Lưu & trả con trỏ AN TOÀN 100% (fix lỗi setStartAfter)
     let savedRange = null;
     function saveSelection() {
         const sel = window.getSelection();
@@ -42,8 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
             sel.removeAllRanges();
             sel.addRange(savedRange);
         } catch (e) {
-            // Nếu range đã bị detach (do DOM thay đổi), bỏ qua
-            savedRange = null;
+            savedRange = null; // range đã bị detach → bỏ qua
         }
     }
 
@@ -55,7 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function highlightKeywords() {
-        saveSelection();           // Lưu trước khi thay đổi DOM
+        saveSelection();
         removeHighlights();
 
         const allKeywords = [];
@@ -74,7 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
         while (walker.nextNode()) nodes.push(walker.currentNode);
 
         nodes.forEach(textNode => {
-            let text = textNode.nodeValue;
+            const text = textNode.nodeValue;
             if (!text.trim()) return;
 
             let lastIndex = 0;
@@ -106,30 +105,45 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         textLayer.normalize();
-        restoreSelection();        // Trả con trỏ an toàn
+        restoreSelection();
     }
 
-    // === PASTE GIỮ NGUYÊN ĐOẠN + KHÔNG LAG ===
+    // === PASTE GIỮ NGUYÊN ĐOẠN + KHÔNG GÂY LỖI ===
     textLayer.addEventListener('paste', e => {
         e.preventDefault();
         const text = e.clipboardData.getData('text/plain');
-
         const sel = window.getSelection();
         if (!sel.rangeCount) return;
+
         const range = sel.getRangeAt(0);
         range.deleteContents();
 
         const lines = text.split(/\r\n|\r|\n/);
         const fragment = document.createDocumentFragment();
+        let lastNode = null;
 
         lines.forEach((line, i) => {
-            if (i > 0) fragment.appendChild(document.createElement('br'));
-            if (line) fragment.appendChild(document.createTextNode(line));
+            if (i > 0) {
+                const br = document.createElement('br');
+                fragment.appendChild(br);
+                lastNode = br;
+            }
+            if (line) {
+                const textNode = document.createTextNode(line);
+                fragment.appendChild(textNode);
+                lastNode = textNode;
+            }
         });
 
         range.insertNode(fragment);
-        range.setStartAfter(fragment.lastChild || fragment);
-        range.collapse(true);
+
+        // Đặt con trỏ đúng vị trí sau nội dung vừa paste
+        if (lastNode) {
+            range.setStartAfter(lastNode);
+            range.collapse(true);
+        } else {
+            range.collapse(true);
+        }
         sel.removeAllRanges();
         sel.addRange(range);
 
@@ -147,7 +161,7 @@ document.addEventListener('DOMContentLoaded', () => {
         inputTimeout = setTimeout(highlightKeywords, 16);
     });
 
-    // === KEYWORDS – TỰ FOCUS LẠI SAU KHI THÊM ===
+    // === KEYWORDS – TỰ FOCUS LẠI ===
     const addKeywordsFromInput = () => {
         const vals = keywordsInput.value.split(',').map(s => s.trim()).filter(Boolean);
         vals.forEach(v => {
@@ -166,7 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         keywordsInput.value = '';
         highlightKeywords();
-        keywordsInput.focus();     // TỰ FOCUS LẠI
+        keywordsInput.focus(); // tự focus lại để gõ tiếp
     };
 
     keywordsInput.addEventListener('keydown', e => {
@@ -207,7 +221,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!pairs.length) return showNotification('Chưa có cặp!', 'error');
 
         let changed = false;
-        const walker = document.createTreeWalker(textLayer, NodeFilter.SHOW_TEXT);
+        const walker = document.createTreeTreeWalker(textLayer, NodeFilter.SHOW_TEXT);
         const nodes = [];
         while (walker.nextNode()) nodes.push(walker.currentNode);
 
@@ -285,8 +299,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     modeSelect.onchange = () => { currentMode = modeSelect.value; loadPairs(); };
-    addModeBtn.onclick = () => { /* giữ nguyên */ };
-    copyModeBtn.onclick = () => { /* giữ nguyên */ };
     matchCaseBtn.onclick = () => {
         matchCaseCb.checked = !matchCaseCb.checked;
         matchCaseBtn.textContent = matchCaseCb.checked ? 'Case: Bật' : 'Case: Tắt';
