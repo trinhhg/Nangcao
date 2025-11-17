@@ -16,9 +16,41 @@
         .hl-orange { background: #ffcc99; color: black; }
         .hl-purple { background: #e6ccff; color: black; }
 
-        /* ✅ FIX: Chỉ thêm dòng này – thanh cuộn cho ô nhập */
+        /* ============================= */
+        /* ✅ FIX SCROLL – CHỈ Ô VĂN BẢN */
+        /* ============================= */
+        #editor-wrapper {
+            height: 100%;
+            position: relative;
+            background: white;
+        }
+
+        #highlight-layer,
+        #text-layer {
+            height: 100% !important;
+            box-sizing: border-box;
+        }
+
         #text-layer {
             overflow-y: auto !important;
+            overflow-x: hidden;
+            padding-right: 8px; /* Đệm cho thanh cuộn */
+            scrollbar-width: thin;
+        }
+
+        /* Thanh cuộn đẹp (Chrome, Edge, Safari) */
+        #text-layer::-webkit-scrollbar {
+            width: 6px;
+        }
+        #text-layer::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        #text-layer::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 3px;
+        }
+        #text-layer::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 0, 0, 0.5);
         }
     </style>
 </head>
@@ -97,15 +129,15 @@
                 <div id="keywords-tags" class="flex flex-wrap gap-1"></div>
             </div>
 
-            <!-- Center: CÓ THANH CUỘN MƯỢT -->
+            <!-- Center: Ô VĂN BẢN CÓ THANH CUỘN RIÊNG -->
             <div id="text-panel" class="flex-1 p-6 bg-white shadow-md mx-4 flex flex-col">
                 <h2 class="text-xl font-bold mb-2">Nội Dung Chương</h2>
-                <!-- ✅ FIX: Bỏ overflow-hidden -->
-                <div id="editor-wrapper" class="relative flex-1 border-2 border-gray-300 rounded-lg">
+                <!-- ✅ ĐÃ FIX: h-full + scroll chỉ trong #text-layer -->
+                <div id="editor-wrapper" class="relative flex-1 h-full border-2 border-gray-300 rounded-lg">
                     <div id="highlight-layer" class="absolute inset-0 p-6 pointer-events-none whitespace-pre-wrap overflow-hidden"
                          style="font-family: Arial; font-size: 16px; line-height: 1.8; z-index: 1; color: transparent;"></div>
                     <div id="text-layer" contenteditable="true"
-                         class="relative p-6 bg-transparent caret-black outline-none whitespace-pre-wrap flex-1"
+                         class="relative p-6 bg-transparent caret-black outline-none whitespace-pre-wrap"
                          style="font-family: Arial; font-size: 16px; line-height: 1.8; z-index: 2;"></div>
                 </div>
             </div>
