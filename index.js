@@ -239,7 +239,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const data = settings.modes[currentMode] || { pairs: [], matchCase: false };
         punctuationList.innerHTML = '';
         data.pairs.forEach(p => addPair(p.find, p.replace));
-        if (!data.pairs.length)avatar addPair();
+        if (!data.pairs.length) addPair();
         matchCaseCb.checked = data.matchCase;
         matchCaseBtn.textContent = data.matchCase ? 'Case: Bật' : 'Case: Tắt';
         matchCaseBtn.classList.toggle('bg-green-500', data.matchCase);
