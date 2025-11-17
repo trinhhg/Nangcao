@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // === UTILS ===
     const escapeRegex = str => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-    // Lưu & trả con trỏ AN TOÀN 100% (fix lỗi setStartAfter)
+    // Lưu & trả con trỏ an toàn
     let savedRange = null;
     function saveSelection() {
         const sel = window.getSelection();
@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
             sel.removeAllRanges();
             sel.addRange(savedRange);
         } catch (e) {
-            savedRange = null; // range đã bị detach → bỏ qua
+            savedRange = null;
         }
     }
 
@@ -61,10 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
         replacedKeywords.forEach((k, i) => k && allKeywords.push({ text: k, priority: 999, class: HIGHLIGHT_CLASSES[i % HIGHLIGHT_CLASSES.length] }));
         currentKeywords.forEach((k, i) => k && allKeywords.push({ text: k, priority: 100, class: HIGHLIGHT_CLASSES[(replacedKeywords.length + i) % HIGHLIGHT_CLASSES.length] }));
 
-        if (!allKeywords.length) {
-            restoreSelection();
-            return;
-        }
+        if (!allKeywords.length) { restoreSelection(); return; }
 
         allKeywords.sort((a, b) => b.priority - a.priority || b.text.length - a.text.length);
 
@@ -85,9 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const regex = new RegExp(pattern, flags);
                 let match;
                 while ((match = regex.exec(text)) !== null) {
-                    if (match.index > lastIndex) {
-                        frag.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
-                    }
+                    if (match.index > lastIndex) frag.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
                     const mark = document.createElement('mark');
                     mark.setAttribute('data-hl', '1');
                     mark.className = kw.class;
@@ -108,7 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
         restoreSelection();
     }
 
-    // === PASTE GIỮ NGUYÊN ĐOẠN + KHÔNG GÂY LỖI ===
+    // === PASTE GIỮ NGUYÊN ĐOẠN + KHÔNG LỖI ===
     textLayer.addEventListener('paste', e => {
         e.preventDefault();
         const text = e.clipboardData.getData('text/plain');
@@ -129,29 +124,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 lastNode = br;
             }
             if (line) {
-                const textNode = document.createTextNode(line);
-                fragment.appendChild(textNode);
-                lastNode = textNode;
+                const txt = document.createTextNode(line);
+                fragment.appendChild(txt);
+                lastNode = txt;
             }
         });
 
         range.insertNode(fragment);
-
-        // Đặt con trỏ đúng vị trí sau nội dung vừa paste
         if (lastNode) {
             range.setStartAfter(lastNode);
-            range.collapse(true);
-        } else {
             range.collapse(true);
         }
         sel.removeAllRanges();
         sel.addRange(range);
 
-        if ('requestIdleCallback' in window) {
-            requestIdleCallback(highlightKeywords);
-        } else {
-            setTimeout(highlightKeywords, 0);
-        }
+        requestIdleCallback ? requestIdleCallback(highlightKeywords) : setTimeout(highlightKeywords, 0);
     });
 
     // === INPUT DEBOUNCE ===
@@ -161,7 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
         inputTimeout = setTimeout(highlightKeywords, 16);
     });
 
-    // === KEYWORDS – TỰ FOCUS LẠI ===
+    // === KEYWORDS ===
     const addKeywordsFromInput = () => {
         const vals = keywordsInput.value.split(',').map(s => s.trim()).filter(Boolean);
         vals.forEach(v => {
@@ -180,21 +167,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         keywordsInput.value = '';
         highlightKeywords();
-        keywordsInput.focus(); // tự focus lại để gõ tiếp
+        keywordsInput.focus();
     };
 
-    keywordsInput.addEventListener('keydown', e => {
-        if (e.key === 'Enter') { e.preventDefault(); addKeywordsFromInput(); }
-    });
-    keywordsInput.addEventListener('input', () => {
-        if (keywordsInput.value.includes(',')) addKeywordsFromInput();
-    });
+    keywordsInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addKeywordsFromInput(); } });
+    keywordsInput.addEventListener('input', () => { if (keywordsInput.value.includes(',')) addKeywordsFromInput(); });
 
-    searchBtn.onclick = () => {
-        replacedKeywords = [];
-        highlightKeywords();
-    };
-
+    searchBtn.onclick = () => { replacedKeywords = []; highlightKeywords(); };
     clearBtn.onclick = () => {
         keywordsTags.innerHTML = '';
         currentKeywords = [];
@@ -211,7 +190,7 @@ document.addEventListener('DOMContentLoaded', () => {
     fontFamily.onchange = syncFont;
     fontSize.onchange = syncFont;
 
-    // === REPLACE ALL ===
+    // === REPLACE ALL – ĐÃ SỬA document.createTreeWalker ===
     replaceAllBtn.onclick = () => {
         const pairs = Array.from(punctuationList.querySelectorAll('.punctuation-item')).map(el => ({
             find: el.querySelector('.find').value.trim(),
@@ -221,7 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!pairs.length) return showNotification('Chưa có cặp!', 'error');
 
         let changed = false;
-        const walker = document.createTreeTreeWalker(textLayer, NodeFilter.SHOW_TEXT);
+        const walker = document.createTreeWalker(textLayer, NodeFilter.SHOW_TEXT);  // ĐÃ SỬA
         const nodes = [];
         while (walker.nextNode()) nodes.push(walker.currentNode);
 
@@ -257,7 +236,6 @@ document.addEventListener('DOMContentLoaded', () => {
         Object.keys(settings.modes).sort().forEach(m => modeSelect.add(new Option(m, m)));
         modeSelect.value = currentMode;
         loadPairs();
-        updateModeButtons();
     }
 
     function loadPairs() {
@@ -307,14 +285,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     addPairBtn.onclick = () => addPair();
     saveSettingsBtn.onclick = saveSettings;
-
-    function updateModeButtons() {
-        const isDefault = currentMode === 'default';
-        const renameBtn = document.getElementById('rename-mode');
-        const deleteBtn = document.getElementById('delete-mode');
-        if (renameBtn) renameBtn.classList.toggle('hidden', isDefault);
-        if (deleteBtn) deleteBtn.classList.toggle('hidden', isDefault);
-    }
 
     function showNotification(msg, type = 'success') {
         const n = document.createElement('div');
