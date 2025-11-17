@@ -16,11 +16,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveSettingsBtn = document.getElementById('save-settings');
     const replaceAllBtn = document.getElementById('replace-all');
     const punctuationList = document.getElementById('punctuation-list');
-    const textLayer = document.getElementById('text-layer'); // contenteditable
+    const textLayer = document.getElementById('text-layer');
 
     // === STATE ===
-    let currentKeywords = [];           // Từ khóa tìm kiếm
-    let replacedKeywords = [];          // Từ thay thế (ưu tiên cao hơn)
+    let currentKeywords = [];
+    let replacedKeywords = [];
     let currentMode = 'default';
     const SETTINGS_KEY = 'replace_settings';
     const HIGHLIGHT_CLASSES = ['hl-yellow', 'hl-pink', 'hl-blue', 'hl-green', 'hl-orange', 'hl-purple'];
@@ -49,10 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function removeHighlights() {
         const marks = textLayer.querySelectorAll('mark[data-hl]');
-        marks.forEach(m => {
-            const text = document.createTextNode(m.textContent);
-            m.replaceWith(text);
-        });
+        marks.forEach(m => m.replaceWith(document.createTextNode(m.textContent)));
         textLayer.normalize();
     }
 
@@ -90,9 +87,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 let match;
                 while ((match = regex.exec(text)) !== null) {
                     const idx = match.index;
-                    if (idx > lastIndex) {
-                        frag.appendChild(document.createTextNode(text.slice(lastIndex, idx)));
-                    }
+                    if (idx > lastIndex) frag.appendChild(document.createTextNode(text.slice(lastIndex, idx)));
                     const mark = document.createElement('mark');
                     mark.setAttribute('data-hl', '1');
                     mark.className = kw.class;
@@ -101,11 +96,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     lastIndex = idx + match[0].length;
                 }
             }
-
             if (lastIndex > 0 && lastIndex < text.length) {
                 frag.appendChild(document.createTextNode(text.slice(lastIndex)));
             }
-
             if (frag.childNodes.length > 0) {
                 textNode.parentNode.replaceChild(frag, textNode);
             }
@@ -115,28 +108,26 @@ document.addEventListener('DOMContentLoaded', () => {
         restoreSelection(saved);
     }
 
-    // === PASTE KHÔNG LAG (chuẩn Google Docs) ===
+    // === PASTE KHÔNG LAG ===
     textLayer.addEventListener('paste', e => {
         e.preventDefault();
         const text = e.clipboardData.getData('text/plain');
         document.execCommand('insertText', false, text);
-
-        // Highlight chạy sau khi browser rảnh → KHÔNG LAG
         if ('requestIdleCallback' in window) {
-            requestIdleCallback(() => highlightKeywords());
+            requestIdleCallback(highlightKeywords);
         } else {
             setTimeout(highlightKeywords, 0);
         }
     });
 
-    // === INPUT DEBOUNCE (mượt khi gõ) ===
+    // === INPUT DEBOUNCE ===
     let inputTimeout;
     textLayer.addEventListener('input', () => {
         clearTimeout(inputTimeout);
         inputTimeout = setTimeout(highlightKeywords, 16);
     });
 
-    // === KEYWORDS INPUT ===
+    // === KEYWORDS ===
     const addKeywordsFromInput = () => {
         const vals = keywordsInput.value.split(',').map(s => s.trim()).filter(Boolean);
         vals.forEach(v => {
@@ -146,7 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         keywordsInput.value = '';
-        highlightKeywords(); // BẮT BUỘC chạy ngay
+        highlightKeywords();
     };
 
     const addKeywordTag = word => {
@@ -161,13 +152,8 @@ document.addEventListener('DOMContentLoaded', () => {
         keywordsTags.appendChild(tag);
     };
 
-    keywordsInput.addEventListener('keydown', e => {
-        if (e.key === 'Enter') { e.preventDefault(); addKeywordsFromInput(); }
-    });
-    keywordsInput.addEventListener('input', () => {
-        if (keywordsInput.value.includes(',')) addKeywordsFromInput();
-    });
-
+    keywordsInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addKeywordsFromInput(); } });
+    keywordsInput.addEventListener('input', () => { if (keywordsInput.value.includes(',')) addKeywordsFromInput(); });
     searchBtn.onclick = () => highlightKeywords();
     clearBtn.onclick = () => {
         keywordsTags.innerHTML = '';
@@ -176,18 +162,16 @@ document.addEventListener('DOMContentLoaded', () => {
         highlightKeywords();
     };
 
-    // === FONT CHANGE ===
+    // === FONT ===
     const syncFont = () => {
-        const font = fontFamily.value;
-        const size = fontSize.value;
-        textLayer.style.fontFamily = font;
-        textLayer.style.fontSize = size;
+        textLayer.style.fontFamily = fontFamily.value;
+        textLayer.style.fontSize = fontSize.value;
         highlightKeywords();
     };
     fontFamily.onchange = syncFont;
     fontSize.onchange = syncFont;
 
-    // === REPLACE ALL → TỪ MỚI THÀNH KEYWORD ===
+    // === REPLACE ALL ===
     replaceAllBtn.onclick = () => {
         const pairs = Array.from(punctuationList.querySelectorAll('.punctuation-item')).map(el => ({
             find: el.querySelector('.find').value.trim(),
@@ -224,7 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // === MODE & SETTINGS (giữ nguyên 100%) ===
+    // === MODE & SETTINGS ===
     function loadModes() {
         const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || { modes: { default: { pairs: [], matchCase: false } } };
         modeSelect.innerHTML = '';
@@ -239,7 +223,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const data = settings.modes[currentMode] || { pairs: [], matchCase: false };
         punctuationList.innerHTML = '';
         data.pairs.forEach(p => addPair(p.find, p.replace));
-        if (!data.pairs.length) addPair();
+        if (!data.pairs.length) addPair();                    // ĐÃ SỬA DÒNG LỖI
         matchCaseCb.checked = data.matchCase;
         matchCaseBtn.textContent = data.matchCase ? 'Case: Bật' : 'Case: Tắt';
         matchCaseBtn.classList.toggle('bg-green-500', data.matchCase);
