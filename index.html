@@ -16,6 +16,7 @@
        .hl-orange { background: #ffcc99; color: black; }
        .hl-purple { background: #e6ccff; color: black; }
 
+        /* ... Phần CSS không đổi ... */
         /* ============================= */
         /* FIX: Đảm bảo chiều cao 100% cho editor */
         /* ============================= */
@@ -51,6 +52,18 @@
         }
         #text-layer::-webkit-scrollbar-thumb:hover {
             background: rgba(0, 0, 0, 0.5);
+        }
+        /* Fix cho màu tag */
+        #keywords-tags .tag {
+            background: #e0e0e0; /* Màu nền tag mặc định */
+            padding: 4px 8px;
+            border-radius: 16px;
+            font-size: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-right: 4px;
+            margin-bottom: 4px;
         }
     </style>
 </head>
@@ -115,35 +128,35 @@
         </div>
 
         <div id="settings-panel" class="w-1/5 p-4 bg-white shadow-md overflow-y-auto text-xs">
-            <h2 class="text-xl font-bold mb-4">Thay Thế</h2>
+            <h2 class="text-xl font-bold mb-4">Cấu hình Thay Thế</h2>
+            
             <div class="mode-controls mb-3 space-y-1">
-                <div class="flex gap-1">
+                <label class="block mb-1 font-medium text-gray-700">Chế độ:</label>
+                <div class="flex gap-1 mb-1">
                     <select id="mode-select" class="flex-1 p-1 border rounded text-xs"></select>
-                    <button id="add-mode" class="px-1 py-0.5 bg-blue-500 text-white rounded text-xs">Thêm</button>
+                    <button id="add-mode" class="px-2 py-0.5 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 font-medium">Tạo Mới</button>
                 </div>
-                <div class="flex gap-1">
-                    <button id="copy-mode" class="flex-1 px-1 py-0.5 bg-blue-500 text-white rounded text-xs">Sao</button>
-                    <button id="match-case" class="flex-1 px-1 py-0.5 bg-gray-500 text-white rounded text-xs">Case</button>
+                <div class="grid grid-cols-2 gap-1 mb-1">
+                    <button id="copy-mode" class="px-1 py-0.5 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 font-medium">Sao Chép</button>
+                    <button id="match-case" class="px-1 py-0.5 bg-gray-500 text-white rounded text-xs hover:bg-gray-600 font-medium">Case: TẮT</button>
                 </div>
-                <div class="flex gap-1">
-                    <button id="export-settings" class="flex-1 px-1 py-0.5 bg-blue-500 text-white rounded text-xs">Xuất</button>
-                    <button id="import-settings" class="flex-1 px-1 py-0.5 bg-blue-500 text-white rounded text-xs">Nhập</button>
-                </div>
-                <div class="flex gap-1">
-                    <button id="rename-mode" class="flex-1 px-1 py-0.5 bg-gray-500 text-white rounded text-xs hidden">Đổi tên</button>
-                    <button id="delete-mode" class="flex-1 px-1 py-0.5 bg-red-500 text-white rounded text-xs hidden">Xóa</button>
+                <div class="grid grid-cols-2 gap-1 mb-1">
+                    <button id="rename-mode" class="px-1 py-0.5 bg-gray-500 text-white rounded text-xs hover:bg-gray-600 font-medium hidden">Đổi Tên</button>
+                    <button id="delete-mode" class="px-1 py-0.5 bg-red-500 text-white rounded text-xs hover:bg-red-600 font-medium hidden">Xóa Chế Độ</button>
                 </div>
             </div>
-
-            <div class="action-buttons mb-3 flex gap-1">
-                <button id="add-pair" class="flex-1 px-2 py-1 bg-blue-500 text-white rounded text-xs">Cặp</button>
-                <button id="save-settings" class="flex-1 px-2 py-1 bg-green-600 text-white rounded text-xs">Lưu</button>
-                <button id="replace-all" class="flex-1 px-2 py-1 bg-purple-600 text-white rounded text-xs">Thay</button>
+            
+            <div class="action-buttons mb-3 grid grid-cols-3 gap-1">
+                <button id="add-pair" class="px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 font-medium">Thêm Cặp</button>
+                <button id="save-settings" class="px-2 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 font-medium">Lưu Cấu Hình</button>
+                <button id="replace-all" class="px-2 py-1 bg-purple-600 text-white rounded text-xs hover:bg-purple-700 font-medium">Thực Hiện Thay Thế</button>
             </div>
 
-            <div id="punctuation-list" class="space-y-2 text-xs"></div>
+            <label class="block mb-1 font-medium text-gray-700">Các Cặp Thay Thế (Tìm → Thay):</label>
+            <div id="punctuation-list" class="space-y-2 text-xs">
+                </div>
         </div>
-    </div>
+        </div>
 
     <div id="notification-container"></div>
 
