@@ -9,91 +9,47 @@
     <link rel="stylesheet" href="index.css">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500&display=swap" rel="stylesheet">
     <style>
-       .hl-yellow { background: #ffff99; color: black; }
-       .hl-pink   { background: #ffcccc; color: black; }
-       .hl-blue   { background: #99ccff; color: black; }
-       .hl-green  { background: #ccffcc; color: black; }
-       .hl-orange { background: #ffcc99; color: black; }
-       .hl-purple { background: #e6ccff; color: black; }
+        .hl-yellow { background: #ffff99 !important; color: black; }
+        .hl-pink   { background: #ffcccc; color: black; }
+        .hl-blue   { background: #99ccff; color: black; }
+        .hl-green  { background: #ccffcc; color: black; }
+        .hl-orange { background: #ffcc99; color: black; }
+        .hl-purple { background: #e6ccff; color: black; }
 
-        /* FIX: Đảm bảo chiều cao 100% cho editor */
-        #editor-wrapper {
-            height: 100%;
-            position: relative;
-            background: white;
-        }
-
-        #highlight-layer,
+        #editor-wrapper { height: 100%; position: relative; background: white; }
+        #highlight-layer, #text-layer { box-sizing: border-box; height: 100%; }
         #text-layer {
-            box-sizing: border-box;
-            height: 100%; 
+            overflow-y: auto !important; overflow-x: hidden; padding-right: 8px;
+            scrollbar-width: thin; caret-color: black;
         }
+        #text-layer::-webkit-scrollbar { width: 6px; }
+        #text-layer::-webkit-scrollbar-track { background: transparent; }
+        #text-layer::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.3); border-radius: 3px; }
+        #text-layer::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.5); }
 
-        #text-layer {
-            overflow-y: auto!important;
-            overflow-x: hidden;
-            padding-right: 8px;
-            scrollbar-width: thin;
-        }
+        /* Tag keywords màu xanh nhạt */
+        #keywords-tags .tag { background: #dbeafe; border: 1px solid #93c5fd; }
 
-        /* Thanh cuộn mỏng đẹp */
-        #text-layer::-webkit-scrollbar {
-            width: 6px;
-        }
-        #text-layer::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        #text-layer::-webkit-scrollbar-thumb {
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 3px;
-        }
-        #text-layer::-webkit-scrollbar-thumb:hover {
-            background: rgba(0, 0, 0, 0.5);
-        }
-        /* Fix cho màu tag */
-        #keywords-tags .tag {
-            background: #e0e0e0; /* Màu nền tag mặc định */
-            padding: 4px 8px;
-            border-radius: 16px;
-            font-size: 12px;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            margin-right: 4px;
-            margin-bottom: 4px;
-        }
-        
-        /* FIX: Điều chỉnh kích thước nút trong action-buttons */
-        .action-buttons button {
-            height: 24px; /* Tăng nhẹ để khớp với Case: Tắt */
-            line-height: 1;
-            padding: 4px 6px !important; 
-        }
-
-        /* FIX: Đảm bảo nút case đủ chỗ */
-        #match-case {
-            min-width: 60px; /* Cố định chiều rộng để chữ Bật/Tắt không bị tràn */
-        }
+        /* Nút Case & Xóa chế độ */
+        #match-case, #delete-mode-btn { min-width: 68px; font-size: 11px; }
     </style>
 </head>
 <body class="bg-gray-100 h-screen flex flex-col">
-
-    <div id="main-app" class="flex flex-1 overflow-hidden h-full"> 
+    <div id="main-app" class="flex flex-1 overflow-hidden h-full">
+        <!-- Panel Tìm kiếm -->
         <div id="main-panel" class="w-1/5 p-4 bg-white shadow-md overflow-y-auto text-sm">
             <h2 class="text-xl font-bold mb-4">Tìm Kiếm</h2>
             <div class="mb-4 grid grid-cols-2 gap-2">
-                <div>
-                    <label class="block mb-1 text-xs">Font:</label>
-                    <select id="fontFamily" class="w-full p-1.5 border rounded text-xs text-gray-700">
+                <div><label class="block mb-1 text-xs">Font:</label>
+                    <select id="fontFamily" class="w-full p-1.5 border rounded text-xs">
                         <option value="Arial">Arial</option>
                         <option value="Calibri">Calibri</option>
                         <option value="Montserrat" selected>Montserrat</option>
                         <option value="Times New Roman">Times New Roman</option>
                     </select>
                 </div>
-                <div>
-                    <label class="block mb-1 text-xs">Cỡ chữ:</label>
-                    <select id="fontSize" class="w-full p-1.5 border rounded text-xs text-gray-700">
+                <div><label class="block mb-1 text-xs">Cỡ chữ:</label>
+                    <select id="fontSize" class="w-full p-1.5 border rounded text-xs">
                         <option value="14px">14</option>
                         <option value="16px" selected>16</option>
                         <option value="18px">18</option>
@@ -116,55 +72,46 @@
             <div id="keywords-tags" class="flex flex-wrap gap-1"></div>
         </div>
 
+        <!-- Editor -->
         <div id="text-panel" class="flex-1 p-6 bg-white shadow-md mx-4 flex flex-col overflow-hidden">
             <div class="flex justify-between items-end mb-2">
-                 <h2 class="text-xl font-bold">Nội Dung Chương</h2>
-                 <div class="text-xs text-right space-y-0.5">
-                    <div class="text-red-600 font-bold">DON@TE: MB BANK - TRINH THI XUAN HUONG - STK: 0917678211</div>
-                    <div class="text-gray-600">
-                        Góp ý: <a href="https://www.facebook.com/trinh.hg.57" target="_blank" class="underline text-blue-600 hover:text-blue-800">fb.com/trinh.hg.57</a>
-                    </div>
-                 </div>
+                <h2 class="text-xl font-bold">Nội Dung Chương</h2>
+                <div class="text-xs text-right space-y-0.5">
+                    <div class="text-red-600 font-bold">DON@TE: MB BANK - TRINH THI XUAN HUONG - 0917678211</div>
+                    <div class="text-gray-600">Góp ý: <a href="https://www.facebook.com/trinh.hg.57" target="_blank" class="underline text-blue-600">fb.com/trinh.hg.57</a></div>
+                </div>
             </div>
-            
-            <div id="editor-wrapper" class="relative flex-1 min-h-0 border-2 border-gray-300 rounded-lg">
-                <div id="highlight-layer" class="absolute inset-0 p-6 pointer-events-none whitespace-pre-wrap overflow-hidden"
-                     style="font-family: Arial; font-size: 16px; line-height: 1.8; z-index: 1; color: transparent;"></div>
-                <div id="text-layer" contenteditable="true"
-                     class="relative p-6 bg-transparent caret-black outline-none whitespace-pre-wrap"
-                     style="font-family: Arial; font-size: 16px; line-height: 1.8; z-index: 2;"></div>
+            <div id="editor-wrapper" class="relative flex-1 min-h-0 border-2 border-gray-300 rounded-lg overflow-hidden">
+                <div id="highlight-layer" class="absolute inset-0 p-6 pointer-events-none whitespace-pre-wrap" style="z-index:1; color:transparent;"></div>
+                <div id="text-layer" contenteditable="true" class="relative p-6 bg-transparent outline-none whitespace-pre-wrap" style="z-index:2;"></div>
             </div>
         </div>
 
+        <!-- Panel Thay thế -->
         <div id="settings-panel" class="w-1/5 p-4 bg-white shadow-md overflow-y-auto text-xs">
             <h2 class="text-xl font-bold mb-4">Cấu hình Thay Thế</h2>
-            
             <div class="mode-controls mb-3 space-y-1">
                 <label class="block mb-1 font-medium text-gray-700">Chế độ:</label>
                 <div class="flex gap-1 mb-1">
                     <select id="mode-select" class="flex-1 p-1 border rounded text-xs"></select>
-                    <button id="add-mode" class="px-2 py-0.5 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 font-medium">Tạo Mới</button>
+                    <button id="add-mode" class="px-2 py-0.5 bg-blue-500 text-white rounded text-xs hover:bg-blue-600">Tạo Mới</button>
                 </div>
-                <div class="grid grid-cols-3 gap-1 mb-1">
-                    <button id="rename-mode" class="px-1 py-0.5 bg-gray-500 text-white rounded text-xs hover:bg-gray-600 font-medium text-center h-6 flex items-center justify-center hidden">Đổi Tên</button>
-                    <button id="delete-mode" class="px-1 py-0.5 bg-red-500 text-white rounded text-xs hover:bg-red-600 font-medium text-center h-6 flex items-center justify-center hidden">Xóa Chế Độ</button>
-                    <button id="match-case" class="px-1 py-0.5 bg-gray-500 text-white rounded text-xs hover:bg-gray-600 font-medium text-center h-6 flex items-center justify-center">Case: TẮT</button>
+                <div class="flex gap-1 mb-1">
+                    <button id="rename-mode" class="flex-1 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600 hidden">Đổi Tên</button>
+                    <button id="delete-mode-btn" class="flex-1 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600 hidden">Xóa</button>
+                    <button id="match-case" class="flex-1 py-1 bg-gray-500 text-white rounded text-xs">Case: TẮT</button>
                 </div>
             </div>
-            
             <div class="action-buttons mb-3 grid grid-cols-3 gap-1">
-                <button id="add-pair" class="px-1 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 font-medium text-center h-6 flex items-center justify-center">+ Cặp</button>
-                <button id="save-settings" class="px-1 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 font-medium text-center h-6 flex items-center justify-center">Lưu</button>
-                <button id="replace-all" class="px-1 py-1 bg-purple-600 text-white rounded text-xs hover:bg-purple-700 font-medium text-center h-6 flex items-center justify-center">Thay Thế</button>
+                <button id="add-pair" class="px-1 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600">+ Cặp</button>
+                <button id="save-settings" class="px-1 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700">Lưu</button>
+                <button id="replace-all" class="px-1 py-1 bg-purple-600 text-white rounded text-xs hover:bg-purple-700">Thay Thế</button>
             </div>
-
-            <div id="punctuation-list" class="space-y-2 text-xs">
-                </div>
+            <div id="punctuation-list" class="space-y-2 text-xs"></div>
         </div>
-        </div>
+    </div>
 
     <div id="notification-container"></div>
-
     <script src="index.js"></script>
 </body>
 </html>
