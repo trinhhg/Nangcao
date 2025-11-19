@@ -6,8 +6,6 @@
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    margin-right: 4px;
-    margin-bottom: 4px;
 }
 #keywords-tags .tag .remove-tag { 
     cursor: pointer; 
@@ -15,20 +13,23 @@
     font-size: 14px; 
 }
 
+/* FIX: Cặp tìm/thay thế mới */
 #punctuation-list .punctuation-item {
     display: flex;
-    gap: 4px;
+    gap: 4px; /* Giảm gap để sát hơn, không cần mũi tên */
     align-items: center;
 }
 #punctuation-list .punctuation-item input {
-    flex: 1;
+    flex: 1; /* Chia đều 2 ô */
     padding: 6px 8px;
     font-size: 11px;
     border: 1px solid #ccc;
     border-radius: 4px;
     min-width: 0;
 }
-#punctuation-list .punctuation-item button.remove-pair {
+#punctuation-list .punctuation-item button.remove-pair { 
+    width: 20px; /* Cố định kích thước nhỏ */
+    height: 20px;
     padding: 0;
     background: #dc3545;
     color: white;
@@ -36,12 +37,11 @@
     border-radius: 4px;
     font-size: 11px;
     cursor: pointer;
-    width: 22px;
-    height: 22px;
     line-height: 1;
+    flex-shrink: 0;
 }
 
-/* Notifications */
+/* ... Phần notification không đổi ... */
 #notification-container {
     position: fixed;
     top: 20px;
@@ -69,39 +69,15 @@ body {
     margin: 0;
 }
 
-/* Editor 2-layer */
+/* 2-Layer Editor */
 #highlight-layer { 
     color: transparent; 
     user-select: none; 
     -webkit-user-select: none; 
 }
-#highlight-layer span, #highlight-layer mark { color: black!important; }
+#highlight-layer span { color: black!important; }
 
-#main-app { height: 100%; }
-
-#editor-wrapper { 
+/* FIX: Đảm bảo container ứng dụng chính chiếm toàn bộ phần còn lại của viewport */
+#main-app {
     height: 100%;
-    position: relative;
-    background: white;
 }
-#highlight-layer, #text-layer { box-sizing: border-box; height: 100%; }
-#text-layer {
-    overflow-y: auto!important;
-    overflow-x: hidden;
-    padding-right: 8px;
-    scrollbar-width: thin;
-}
-#text-layer::-webkit-scrollbar { width: 6px; }
-#text-layer::-webkit-scrollbar-track { background: transparent; }
-#text-layer::-webkit-scrollbar-thumb {
-    background: rgba(0,0,0,0.3);
-    border-radius: 3px;
-}
-#text-layer::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.5); }
-
-.hl-yellow { background: #ffff99; color: black; }
-.hl-pink   { background: #ffcccc; color: black; }
-.hl-blue   { background: #99ccff; color: black; }
-.hl-green  { background: #ccffcc; color: black; }
-.hl-orange { background: #ffcc99; color: black; }
-.hl-purple { background: #e6ccff; color: black; }
