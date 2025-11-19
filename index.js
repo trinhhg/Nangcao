@@ -13,16 +13,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const textLayer        = document.getElementById('text-layer');
 
     // === STATE ===
-    // FIX CÚ PHÁP: Khởi tạo mảng trống
-    let currentKeywords  =; 
-    let replacedKeywords =; 
+    let currentKeywords  = [];           // Sửa lỗi cú pháp
+    let replacedKeywords = [];           // Sửa lỗi cú pháp
     const HIGHLIGHT_CLASSES = ['hl-yellow','hl-pink','hl-blue','hl-green','hl-orange','hl-purple'];
 
     // === UTILS ===
-    // Thoát các ký tự đặc biệt Regex, quan trọng cho việc tìm kiếm chính xác
     const escapeRegex = str => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-    // Lưu/trả con trỏ an toàn (Selection/Range Safety)
+    // Lưu/trả con trỏ an toàn
     let savedRange = null;
     function saveSelection() {
         const sel = window.getSelection();
@@ -40,35 +38,42 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // === 1. TẠO REGEX CHUẨN KHÔNG LỖI ===
+    // === 1. TẠO REGEX CHUẨN ===
     function buildRegex(word) {
         if (!word) return null;
         const escaped = escapeRegex(word);
-        const flags = matchCaseCb.checked? 'g' : 'gi';
-        // Sử dụng \b (đã được thoát) để đảm bảo RegExp nhận được \b (Word boundary)
-        const pattern = wholeWordsCb.checked? `\\b${escaped}\\b` : escaped;
+        const flags = matchCaseCb.checked ? 'g' : 'gi';
+        const pattern = wholeWordsCb.checked ? `\\b${escaped}\\b` : escaped;
         return new RegExp(pattern, flags);
     }
 
-    // === 2. XÓA HIGHLIGHT AN TOÀN (VÀ NORMALIZE) ===
+    // === 2. XÓA HIGHLIGHT AN TOÀN ===
     function removeHighlightsSafe(root = textLayer) {
         root.querySelectorAll('mark[data-hl]').forEach(mark => {
-            // Thay thế thẻ mark bằng chính nội dung text của nó
             mark.replaceWith(document.createTextNode(mark.textContent));
         });
-        // Normalize: gộp các text node liền kề, giảm phân mảnh
         root.normalize();
     }
 
-    // === 3. HIGHLIGHT CHUẨN (ROBUST TEXT NODE REPLACEMENT) ===
+    // === 3. HIGHLIGHT CHUẨN ===
     function highlightKeywords() {
         saveSelection();
         removeHighlightsSafe();
 
-        // FIX CÚ PHÁP: Khởi tạo mảng keywordsToHighlight đúng cú pháp
-        const keywordsToHighlight =, priority: 999 })),
-            // Priority 100: Các từ khóa tìm kiếm hiện tại
-           ...currentKeywords.map((t, i) => ({ text: t, cls: HIGHLIGHT_CLASSES[(replacedKeywords.length + i) % 6], priority: 100 }))
+        // Từ khóa đã được thay thế (ưu tiên cao nhất)
+        const keywordsToHighlight = [
+            // Priority 999: Các từ đã được replace (nếu có)
+            ...replacedKeywords.map((t, i) => ({ 
+                text: t, 
+                cls: HIGHLIGHT_CLASSES[i % 6], 
+                priority: 999 
+            })),
+            // Priority 100: Các từ khóa đang tìm kiếm
+            ...currentKeywords.map((t, i) => ({ 
+                text: t, 
+                cls: HIGHLIGHT_CLASSES[(replacedKeywords.length + i) % 6], 
+                priority: 100 
+            }))
         ];
 
         if (!keywordsToHighlight.length) {
@@ -76,100 +81,91 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Ưu tiên: 1. Priority cao (999); 2. Độ dài giảm dần (từ dài trước)
-        keywordsToHighlight.sort((a, b) => b.priority - a.priority |
-
-| b.text.length - a.text.length);
+        // Sắp xếp: priority cao trước → từ dài trước (tránh overlap sai)
+        keywordsToHighlight.sort((a, b) => 
+            b.priority - a.priority || b.text.length - a.text.length
+        );
 
         const walker = document.createTreeWalker(textLayer, NodeFilter.SHOW_TEXT, null, false);
         let node;
 
-        // Duyệt từng text node một cách an toàn
         while (node = walker.nextNode()) {
             const originalText = node.nodeValue;
             let hasMatch = false;
             let bestFragment = null;
 
-            // Chạy qua các từ khóa theo thứ tự ưu tiên
             for (const kw of keywordsToHighlight) {
                 const regex = buildRegex(kw.text);
                 if (!regex) continue;
 
-                // FIX CÚ PHÁP: Khởi tạo mảng allMatches đúng cú pháp
-                const allMatches =; 
+                const allMatches = [];                     // Sửa lỗi cú pháp
                 let match;
                 regex.lastIndex = 0;
-                while ((match = regex.exec(originalText))!== null) {
+                while ((match = regex.exec(originalText)) !== null) {
                     allMatches.push({ 
                         index: match.index, 
-                        length: match.length, // Sử dụng match.length để đảm bảo độ dài chính xác
-                        content: match, 
+                        length: match[0].length,        // match[0] là chuỗi khớp
+                        content: match[0], 
                         cls: kw.cls 
                     });
                     hasMatch = true;
                 }
 
                 if (hasMatch) {
-                    // Sắp xếp các match theo vị trí bắt đầu
                     allMatches.sort((a, b) => a.index - b.index);
 
                     let lastIndex = 0;
-                    let tempFragment = document.createDocumentFragment(); 
+                    const tempFragment = document.createDocumentFragment();
 
-                    allMatches.forEach(match => {
-                        // Thêm text thuần trước match
-                        if (match.index > lastIndex) {
-                            tempFragment.appendChild(document.createTextNode(originalText.substring(lastIndex, match.index)));
+                    allMatches.forEach(m => {
+                        if (m.index > lastIndex) {
+                            tempFragment.appendChild(
+                                document.createTextNode(originalText.substring(lastIndex, m.index))
+                            );
                         }
-
-                        // Thêm thẻ mark
                         const mark = document.createElement('mark');
-                        mark.className = match.cls;
+                        mark.className = m.cls;
                         mark.setAttribute('data-hl', '1');
-                        mark.textContent = match.content;
+                        mark.textContent = m.content;
                         tempFragment.appendChild(mark);
 
-                        lastIndex = match.index + match.length;
+                        lastIndex = m.index + m.length;
                     });
 
-                    // Thêm phần text thuần còn lại
                     if (lastIndex < originalText.length) {
-                        tempFragment.appendChild(document.createTextNode(originalText.substring(lastIndex)));
+                        tempFragment.appendChild(
+                            document.createTextNode(originalText.substring(lastIndex))
+                        );
                     }
 
-                    // Lưu fragment tốt nhất và thoát vòng lặp keywords (ưu tiên cao hơn đã được xử lý)
                     bestFragment = tempFragment;
-                    break;
+                    break; // Đã tìm được từ khóa ưu tiên cao nhất → thoát vòng lặp keywords
                 }
             }
 
-            // Nếu tìm thấy match (bestFragment!== null), thực hiện thay thế nguyên tử
             if (bestFragment) {
-                // Thay thế node văn bản gốc bằng fragment mới (Thao tác nguyên tử)
                 node.replaceWith(bestFragment);
-                // TreeWalker sẽ tự động tìm node văn bản tiếp theo sau khi thay thế
             }
         }
 
         restoreSelection();
     }
 
-    // === 4. REPLACE ALL SIÊU AN TOÀN & CHÍNH XÁC (JOYDEEPDEB MODEL) ===
+    // === 4. REPLACE ALL SIÊU AN TOÀN ===
     function replaceAllSafe() {
         saveSelection();
         removeHighlightsSafe();
 
         const pairs = Array.from(punctuationList.querySelectorAll('.punctuation-item'))
-        .map(el => ({
+            .map(el => ({
                 find: el.querySelector('.find').value.trim(),
                 replace: el.querySelector('.replace').value
             }))
-        .filter(p => p.find);
+            .filter(p => p.find);
 
         if (!pairs.length) return alert('Chưa có cặp thay thế nào!');
 
         let changed = false;
-        // Chỉ duyệt qua text nodes
         const walker = document.createTreeWalker(textLayer, NodeFilter.SHOW_TEXT);
 
         while (walker.nextNode()) {
@@ -177,38 +173,33 @@ document.addEventListener('DOMContentLoaded', () => {
             let text = node.nodeValue;
             let originalText = text;
 
-            // Xử lý tuần tự từng cặp thay thế
             pairs.forEach(pair => {
                 const regex = buildRegex(pair.find);
                 if (!regex) return;
-
-                // Thực hiện replace trên chuỗi (không phải DOM)
                 text = text.replace(regex, () => {
-                    changed = true; 
+                    changed = true;
                     return pair.replace;
                 });
             });
 
-            // Chỉ ghi DOM nếu chuỗi đã thay đổi, tối ưu hóa hiệu năng
-            if (text!== originalText) {
+            if (text !== originalText) {
                 node.nodeValue = text;
             }
         }
 
         if (changed) {
-            // FIX CÚ PHÁP: Khởi tạo mảng trống
             replacedKeywords = pairs.map(p => p.replace).filter(Boolean);
             highlightKeywords();
             alert('Đã thay thế tất cả thành công!');
         } else {
-            highlightKeywords(); // Vẫn gọi highlight để khôi phục trạng thái
+            highlightKeywords();
             alert('Không tìm thấy từ nào để thay thế.');
         }
 
         restoreSelection();
     }
 
-    // === PASTE SẠCH – GIỮ NGUYÊN ĐOẠN, KHÔNG DÍNH HTML ===
+    // === PASTE SẠCH ===
     textLayer.addEventListener('paste', e => {
         e.preventDefault();
         const text = e.clipboardData.getData('text/plain');
@@ -230,7 +221,6 @@ document.addEventListener('DOMContentLoaded', () => {
         range.insertNode(frag);
         range.collapse(false);
 
-        // Highlight lại sau khi paste
         setTimeout(highlightKeywords, 0);
     });
 
@@ -238,13 +228,11 @@ document.addEventListener('DOMContentLoaded', () => {
     let highlightTimeout;
     textLayer.addEventListener('input', () => {
         clearTimeout(highlightTimeout);
-        // Debounce 100ms cho các thao tác DOM nặng
-        highlightTimeout = setTimeout(highlightKeywords, 100); 
+        highlightTimeout = setTimeout(highlightKeywords, 100);
     });
 
-    // === KEYWORDS TAG SYSTEM + FIX FOCUS ===
+    // === KEYWORDS TAG SYSTEM ===
     const addKeywords = () => {
-        // Chỉ tách bằng Enter hoặc dấu phẩy
         const vals = keywordsInput.value.split(',').map(s => s.trim()).filter(Boolean);
         if (!vals.length) {
             keywordsInput.value = '';
@@ -252,7 +240,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         vals.forEach(v => {
-            if (v &&!currentKeywords.includes(v)) {
+            if (v && !currentKeywords.includes(v)) {
                 currentKeywords.push(v);
 
                 const tag = document.createElement('div');
@@ -262,7 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 tag.querySelector('.remove-tag').onclick = (e) => {
                     e.stopPropagation();
                     tag.remove();
-                    currentKeywords = currentKeywords.filter(x => x!== v);
+                    currentKeywords = currentKeywords.filter(x => x !== v);
                     highlightKeywords();
                 };
 
@@ -272,23 +260,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         keywordsInput.value = '';
         highlightKeywords();
-
-        // FIX FOCUS – Đảm bảo focus được khôi phục sau thao tác DOM
         setTimeout(() => keywordsInput.focus(), 0);
     };
 
-    // FIX LỖI: Xử lý keydown cho Enter và Comma, chặn hành vi mặc định
     keywordsInput.addEventListener('keydown', e => {
-        // FIX CÚ PHÁP: Sử dụng ||
-        if (e.key === 'Enter' |
-
-| e.key === ',') { 
-            e.preventDefault(); 
+        if (e.key === 'Enter' || e.key === ',') {   // Sửa lỗi cú pháp: dùng ||
+            e.preventDefault();
             addKeywords();
         }
     });
 
-    // Xử lý blur: chỉ thêm keywords nếu có nội dung
     keywordsInput.addEventListener('blur', () => {
         if (keywordsInput.value.trim()) {
             setTimeout(addKeywords, 100);
@@ -297,16 +278,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // === BUTTONS ===
     searchBtn.onclick = () => {
-        // FIX CÚ PHÁP: Khởi tạo mảng trống
-        replacedKeywords =;
+        replacedKeywords = [];          // Reset replaced khi tìm mới
         highlightKeywords();
     };
 
     clearBtn.onclick = () => {
         keywordsTags.innerHTML = '';
-        // FIX CÚ PHÁP: Khởi tạo mảng trống
-        currentKeywords =;
-        replacedKeywords =;
+        currentKeywords = [];
+        replacedKeywords = [];
         highlightKeywords();
     };
 
@@ -315,13 +294,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // === FONT SETTINGS ===
     const syncFont = () => {
         textLayer.style.fontFamily = fontFamily.value;
-        textLayer.style.fontSize = fontSize.value;
-        // Đồng bộ font cho lớp highlight (quan trọng cho layout)
+        textLayer.style.fontSize   = fontSize.value;
         document.getElementById('highlight-layer').style.fontFamily = fontFamily.value;
-        document.getElementById('highlight-layer').style.fontSize = fontSize.value;
+        document.getElementById('highlight-layer').style.fontSize   = fontSize.value;
     };
     fontFamily.onchange = syncFont;
-    fontSize.onchange = syncFont;
+    fontSize.onchange   = syncFont;
 
     // === KHỞI ĐỘNG ===
     syncFont();
