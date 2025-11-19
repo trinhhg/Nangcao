@@ -1,4 +1,4 @@
-#keywords-tags .tag {
+#keywords-tags.tag {
     background: #e0e0e0;
     padding: 4px 8px;
     border-radius: 16px;
@@ -7,14 +7,14 @@
     align-items: center;
     gap: 4px;
 }
-#keywords-tags .tag .remove-tag { cursor: pointer; font-weight: bold; font-size: 14px; }
+#keywords-tags.tag.remove-tag { cursor: pointer; font-weight: bold; font-size: 14px; }
 
-#punctuation-list .punctuation-item {
+#punctuation-list.punctuation-item {
     display: flex;
     gap: 6px;
     align-items: center;
 }
-#punctuation-list .punctuation-item input {
+#punctuation-list.punctuation-item input {
     flex: 1;
     padding: 6px 8px;
     font-size: 11px;
@@ -22,7 +22,7 @@
     border-radius: 4px;
     min-width: 0;
 }
-#punctuation-list .punctuation-item button {
+#punctuation-list.punctuation-item button {
     padding: 4px 8px;
     background: #dc3545;
     color: white;
@@ -53,8 +53,21 @@
 @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
 
-body { font-family: 'Montserrat', Arial, sans-serif; }
+body { 
+    font-family: 'Montserrat', Arial, sans-serif; 
+    height: 100vh;
+    margin: 0;
+}
 
 /* 2-Layer Editor */
-#highlight-layer { color: transparent; user-select: none; -webkit-user-select: none; }
-#highlight-layer span { color: black !important; }
+#highlight-layer { 
+    color: transparent; 
+    user-select: none; 
+    -webkit-user-select: none; 
+}
+#highlight-layer span { color: black!important; }
+
+/* FIX: Đảm bảo container ứng dụng chính chiếm toàn bộ phần còn lại của viewport */
+#main-app {
+    height: 100%;
+}
