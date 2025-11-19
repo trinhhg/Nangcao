@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // FIX CÚ PHÁP: Khởi tạo mảng keywordsToHighlight đúng cú pháp
         const keywordsToHighlight =, priority: 999 })),
             // Priority 100: Các từ khóa tìm kiếm hiện tại
-          ...currentKeywords.map((t, i) => ({ text: t, cls: HIGHLIGHT_CLASSES[(replacedKeywords.length + i) % 6], priority: 100 }))
+           ...currentKeywords.map((t, i) => ({ text: t, cls: HIGHLIGHT_CLASSES[(replacedKeywords.length + i) % 6], priority: 100 }))
         ];
 
         if (!keywordsToHighlight.length) {
@@ -77,7 +77,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Ưu tiên: 1. Priority cao (999); 2. Độ dài giảm dần (từ dài trước)
-        // FIX CÚ PHÁP: Sử dụng ||
         keywordsToHighlight.sort((a, b) => b.priority - a.priority |
 
 | b.text.length - a.text.length);
@@ -103,7 +102,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 while ((match = regex.exec(originalText))!== null) {
                     allMatches.push({ 
                         index: match.index, 
-                        length: match.length, 
+                        length: match.length, // Sử dụng match.length để đảm bảo độ dài chính xác
                         content: match, 
                         cls: kw.cls 
                     });
@@ -161,11 +160,11 @@ document.addEventListener('DOMContentLoaded', () => {
         removeHighlightsSafe();
 
         const pairs = Array.from(punctuationList.querySelectorAll('.punctuation-item'))
-         .map(el => ({
+        .map(el => ({
                 find: el.querySelector('.find').value.trim(),
                 replace: el.querySelector('.replace').value
             }))
-         .filter(p => p.find);
+        .filter(p => p.find);
 
         if (!pairs.length) return alert('Chưa có cặp thay thế nào!');
 
