@@ -13,13 +13,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const textLayer        = document.getElementById('text-layer');
 
     // === STATE ===
-    let currentKeywords  =;
-    let replacedKeywords =;
+    // FIX: Khởi tạo mảng trống
+    let currentKeywords  =; 
+    let replacedKeywords =; 
     const HIGHLIGHT_CLASSES = ['hl-yellow','hl-pink','hl-blue','hl-green','hl-orange','hl-purple'];
 
     // === UTILS ===
     // Thoát các ký tự đặc biệt Regex, quan trọng cho việc tìm kiếm chính xác
-    const escapeRegex = str => str.replace(/[.*+?^${}()|[\]\\\\]/g, '\\\\$&');
+    const escapeRegex = str => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
     // Lưu/trả con trỏ an toàn (Selection/Range Safety)
     let savedRange = null;
@@ -44,7 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!word) return null;
         const escaped = escapeRegex(word);
         const flags = matchCaseCb.checked? 'g' : 'gi';
-        // Sử dụng \\b để đảm bảo RegExp nhận được \b (Word boundary)
+        // Sử dụng \b (đã được thoát) để đảm bảo RegExp nhận được \b (Word boundary)
         const pattern = wholeWordsCb.checked? `\\b${escaped}\\b` : escaped;
         return new RegExp(pattern, flags);
     }
@@ -64,8 +65,9 @@ document.addEventListener('DOMContentLoaded', () => {
         saveSelection();
         removeHighlightsSafe();
 
+        // FIX: Khởi tạo mảng keywordsToHighlight đúng cú pháp
         const keywordsToHighlight =, priority: 999 })),
-            // Priority 100: Các từ khóa tìm kiếm
+            // Priority 100: Các từ khóa tìm kiếm hiện tại
            ...currentKeywords.map((t, i) => ({ text: t, cls: HIGHLIGHT_CLASSES[(replacedKeywords.length + i) % 6], priority: 100 }))
         ];
 
@@ -74,7 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Ưu tiên: 1. Priority cao (999); 2. Độ dài giảm dần
+        // Ưu tiên: 1. Priority cao (999); 2. Độ dài giảm dần (từ dài trước)
         keywordsToHighlight.sort((a, b) => b.priority - a.priority |
 
 | b.text.length - a.text.length);
@@ -85,20 +87,25 @@ document.addEventListener('DOMContentLoaded', () => {
         // Duyệt từng text node một cách an toàn
         while (node = walker.nextNode()) {
             const originalText = node.nodeValue;
-            let tempFragment = document.createDocumentFragment();
             let hasMatch = false;
+            let bestFragment = null;
 
             // Chạy qua các từ khóa theo thứ tự ưu tiên
             for (const kw of keywordsToHighlight) {
                 const regex = buildRegex(kw.text);
                 if (!regex) continue;
 
-                // Lấy tất cả match trên chuỗi node.nodeValue
-                const allMatches =;
+                // FIX: Khởi tạo mảng allMatches đúng cú pháp
+                const allMatches =; 
                 let match;
                 regex.lastIndex = 0;
                 while ((match = regex.exec(originalText))!== null) {
-                    allMatches.push({ index: match.index, length: match.length, content: match, cls: kw.cls });
+                    allMatches.push({ 
+                        index: match.index, 
+                        length: match.length, 
+                        content: match, 
+                        cls: kw.cls 
+                    });
                     hasMatch = true;
                 }
 
@@ -107,7 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     allMatches.sort((a, b) => a.index - b.index);
 
                     let lastIndex = 0;
-                    tempFragment = document.createDocumentFragment(); // Reset fragment cho node này
+                    let tempFragment = document.createDocumentFragment(); 
 
                     allMatches.forEach(match => {
                         // Thêm text thuần trước match
@@ -130,13 +137,17 @@ document.addEventListener('DOMContentLoaded', () => {
                         tempFragment.appendChild(document.createTextNode(originalText.substring(lastIndex)));
                     }
 
-                    // Thay thế node văn bản gốc bằng fragment mới (Thao tác nguyên tử)
-                    node.replaceWith(tempFragment);
-
-                    // Quan trọng: Sau khi thay thế node, ta phải dừng vòng lặp keywords
-                    // và chuyển sang node tiếp theo của TreeWalker.
+                    // Lưu fragment tốt nhất và thoát vòng lặp keywords (ưu tiên cao hơn đã được xử lý)
+                    bestFragment = tempFragment;
                     break;
                 }
+            }
+
+            // Nếu tìm thấy match (bestFragment!== null), thực hiện thay thế nguyên tử
+            if (bestFragment) {
+                // Thay thế node văn bản gốc bằng fragment mới (Thao tác nguyên tử)
+                node.replaceWith(bestFragment);
+                // TreeWalker sẽ tự động tìm node văn bản tiếp theo sau khi thay thế
             }
         }
 
@@ -149,40 +160,37 @@ document.addEventListener('DOMContentLoaded', () => {
         removeHighlightsSafe();
 
         const pairs = Array.from(punctuationList.querySelectorAll('.punctuation-item'))
-           .map(el => ({
+          .map(el => ({
                 find: el.querySelector('.find').value.trim(),
                 replace: el.querySelector('.replace').value
             }))
-           .filter(p => p.find);
+          .filter(p => p.find);
 
         if (!pairs.length) return alert('Chưa có cặp thay thế nào!');
 
         let changed = false;
-        // Chỉ duyệt qua text nodes 
-        const wal[span_5](start_span)[span_5](end_span)ker = document.createTreeWalker(textLayer, NodeFilter.SHOW_TEXT);
+        // Chỉ duyệt qua text nodes
+        const walker = document.createTreeWalker(textLayer, NodeFilter.SHOW_TEXT);
 
         while (walker.nextNode()) {
             let node = walker.currentNode;
             let text = node.nodeValue;
             let originalText = text;
 
-            // Xử lý tuần tự từng cặp thay thế 
-        [span_9](start_span)[span_9](end_span)[span_11](start_span)[span_11](end_span)    pairs.forEach(pair => {
+            // Xử lý tuần tự từng cặp thay thế
+            pairs.forEach(pair => {
                 const regex = buildRegex(pair.find);
                 if (!regex) return;
 
-                // Thực hiện replace trên chuỗi (không phải DOM) [span_17](start_span)[span_17](end_span)
-                text = text.replace(regex, (match) => {
-                    // Nếu chuỗi thay thế khác với match, đánh dấu đã thay đổi
-                    if (match!== pair.replace) {
-                        changed = true;
-                    }
+                // Thực hiện replace trên chuỗi (không phải DOM)
+                text = text.replace(regex, () => {
+                    changed = true; // Chỉ cần match là đánh dấu changed
                     return pair.replace;
                 });
             });
 
-            // Chỉ ghi DOM nếu chuỗi đã thay đổi, tối ưu hóa hiệu năng 
-            if (text!== or[span_6](start_span)[span_6](end_span)iginalText) {
+            // Chỉ ghi DOM nếu chuỗi đã thay đổi, tối ưu hóa hiệu năng
+            if (text!== originalText) {
                 node.nodeValue = text;
             }
         }
@@ -235,6 +243,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // === KEYWORDS TAG SYSTEM + FIX FOCUS ===
     const addKeywords = () => {
+        // Chỉ tách bằng Enter hoặc dấu phẩy
         const vals = keywordsInput.value.split(',').map(s => s.trim()).filter(Boolean);
         if (!vals.length) {
             keywordsInput.value = '';
@@ -263,15 +272,16 @@ document.addEventListener('DOMContentLoaded', () => {
         keywordsInput.value = '';
         highlightKeywords();
 
-        // FIX FOCUS – Đảm bảo focus được khôi phục sau thao tác DOM 
-     [span_15](start_span)[span_15](end_span)   setTimeout(() => keywordsInput.focus(), 0);
+        // FIX FOCUS – Đảm bảo focus được khôi phục sau thao tác DOM
+        setTimeout(() => keywordsInput.focus(), 0);
     };
 
-    // FIX LỖI: Xử lý keydown cho Enter và Comma, chặn hành vi mặc định 
-    keyword[span_13](start_span)[span_13](end_span)sInput.addEventListener('keydown', e => {
+    // FIX LỖI: Xử lý keydown cho Enter và Comma, chặn hành vi mặc định
+    keywordsInput.addEventListener('keydown', e => {
+        // FIX CÚ PHÁP: Sử dụng ||
         if (e.key === 'Enter' |
 
-| e.key === ',') {
+| e.key === ',') { 
             e.preventDefault(); 
             addKeywords();
         }
