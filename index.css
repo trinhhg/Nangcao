@@ -13,14 +13,13 @@
     font-size: 14px; 
 }
 
-/* FIX: Cặp tìm/thay thế mới */
 #punctuation-list .punctuation-item {
     display: flex;
-    gap: 4px; /* Giảm gap để sát hơn, không cần mũi tên */
+    gap: 4px; 
     align-items: center;
 }
 #punctuation-list .punctuation-item input {
-    flex: 1; /* Chia đều 2 ô */
+    flex: 1; 
     padding: 6px 8px;
     font-size: 11px;
     border: 1px solid #ccc;
@@ -28,7 +27,7 @@
     min-width: 0;
 }
 #punctuation-list .punctuation-item button.remove-pair { 
-    width: 20px; /* Cố định kích thước nhỏ */
+    width: 20px; 
     height: 20px;
     padding: 0;
     background: #dc3545;
