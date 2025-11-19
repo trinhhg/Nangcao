@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const textLayer        = document.getElementById('text-layer');
 
     // === STATE ===
-    // FIX: Khởi tạo mảng trống
+    // FIX CÚ PHÁP: Khởi tạo mảng trống
     let currentKeywords  =; 
     let replacedKeywords =; 
     const HIGHLIGHT_CLASSES = ['hl-yellow','hl-pink','hl-blue','hl-green','hl-orange','hl-purple'];
@@ -65,10 +65,10 @@ document.addEventListener('DOMContentLoaded', () => {
         saveSelection();
         removeHighlightsSafe();
 
-        // FIX: Khởi tạo mảng keywordsToHighlight đúng cú pháp
+        // FIX CÚ PHÁP: Khởi tạo mảng keywordsToHighlight đúng cú pháp
         const keywordsToHighlight =, priority: 999 })),
             // Priority 100: Các từ khóa tìm kiếm hiện tại
-           ...currentKeywords.map((t, i) => ({ text: t, cls: HIGHLIGHT_CLASSES[(replacedKeywords.length + i) % 6], priority: 100 }))
+          ...currentKeywords.map((t, i) => ({ text: t, cls: HIGHLIGHT_CLASSES[(replacedKeywords.length + i) % 6], priority: 100 }))
         ];
 
         if (!keywordsToHighlight.length) {
@@ -77,6 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Ưu tiên: 1. Priority cao (999); 2. Độ dài giảm dần (từ dài trước)
+        // FIX CÚ PHÁP: Sử dụng ||
         keywordsToHighlight.sort((a, b) => b.priority - a.priority |
 
 | b.text.length - a.text.length);
@@ -95,7 +96,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const regex = buildRegex(kw.text);
                 if (!regex) continue;
 
-                // FIX: Khởi tạo mảng allMatches đúng cú pháp
+                // FIX CÚ PHÁP: Khởi tạo mảng allMatches đúng cú pháp
                 const allMatches =; 
                 let match;
                 regex.lastIndex = 0;
@@ -160,11 +161,11 @@ document.addEventListener('DOMContentLoaded', () => {
         removeHighlightsSafe();
 
         const pairs = Array.from(punctuationList.querySelectorAll('.punctuation-item'))
-          .map(el => ({
+         .map(el => ({
                 find: el.querySelector('.find').value.trim(),
                 replace: el.querySelector('.replace').value
             }))
-          .filter(p => p.find);
+         .filter(p => p.find);
 
         if (!pairs.length) return alert('Chưa có cặp thay thế nào!');
 
@@ -184,7 +185,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Thực hiện replace trên chuỗi (không phải DOM)
                 text = text.replace(regex, () => {
-                    changed = true; // Chỉ cần match là đánh dấu changed
+                    changed = true; 
                     return pair.replace;
                 });
             });
@@ -196,6 +197,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (changed) {
+            // FIX CÚ PHÁP: Khởi tạo mảng trống
             replacedKeywords = pairs.map(p => p.replace).filter(Boolean);
             highlightKeywords();
             alert('Đã thay thế tất cả thành công!');
@@ -296,12 +298,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // === BUTTONS ===
     searchBtn.onclick = () => {
+        // FIX CÚ PHÁP: Khởi tạo mảng trống
         replacedKeywords =;
         highlightKeywords();
     };
 
     clearBtn.onclick = () => {
         keywordsTags.innerHTML = '';
+        // FIX CÚ PHÁP: Khởi tạo mảng trống
         currentKeywords =;
         replacedKeywords =;
         highlightKeywords();
