@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // === STATE ===
     let currentKeywords  = [];
-    // FIX 2: Đổi tên và Mục đích: Dùng để highlight các từ CŨ đã bị thay thế (đã tìm thấy)
+    // FIX 1: Chứa các từ GỐC đã bị thay thế trong lần Replace cuối cùng
     let lastReplacedFinds = []; 
     const HIGHLIGHT_CLASSES = ['hl-yellow','hl-pink','hl-blue','hl-green','hl-orange','hl-purple'];
 
@@ -27,7 +27,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // DOM Elements cho chế độ Thay Thế
     const modeSelect = document.getElementById('mode-select');
     const addModeBtn = document.getElementById('add-mode');
-    const copyModeBtn = document.getElementById('copy-mode');
     const matchCaseReplaceBtn = document.getElementById('match-case'); // Phân biệt case THAY THẾ
     const addPairBtn = document.getElementById('add-pair');
     const saveSettingsBtn = document.getElementById('save-settings');
@@ -64,7 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const notif = document.createElement('div');
         notif.className = `notification ${type}`;
         notif.textContent = message;
-        container.prepend(notif); // Đặt thông báo mới nhất lên trên cùng
+        container.prepend(notif); 
 
         setTimeout(() => {
             notif.remove();
@@ -72,11 +71,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // === 1. TẠO REGEX CHUẨN ===
+    // FIX 2: Tùy chọn wholeWords và matchCase được truyền vào để đảm bảo tính linh hoạt
     function buildRegex(word, isWholeWords = false, isMatchCase = false) {
         if (!word) return null;
         const escaped = escapeRegex(word);
         const flags = isMatchCase ? 'g' : 'gi';
-        const pattern = isWholeWords ? `\\b${escaped}\\b` : escaped;
+        // FIX 2: Logic wholeWords
+        const pattern = isWholeWords ? `\\b${escaped}\\b` : escaped; 
         return new RegExp(pattern, flags);
     }
 
@@ -88,7 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
         root.normalize();
     }
 
-    // === 3. HIGHLIGHT CHUẨN (VỚI THUẬT TOÁN GIẢI QUYẾT XUNG ĐỘT) - FIX LỖI 1 & 2 & 3 ===
+    // === 3. HIGHLIGHT CHUẨN (VỚI THUẬT TOÁN GIẢI QUYẾT XUNG ĐỘT) ===
     function highlightKeywords() {
         saveSelection();
         removeHighlightsSafe();
@@ -96,21 +97,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const searchWholeWords = wholeWordsCb.checked;
         const searchMatchCase = matchCaseCb.checked;
         
-        // Cấu trúc từ khóa ưu tiên
+        // FIX 1: Ưu tiên highlight các từ đã bị thay thế (lastReplacedFinds)
         const keywordsToHighlight = [
-            // Priority 999: Các từ đã được replace (ưu tiên cao nhất)
-            // Dùng lastReplacedFinds để highlight các từ GỐC đã bị thay thế
-            ...lastReplacedFinds.map((t, i) => ({ 
+            // Priority 999: Các từ gốc đã bị thay thế (màu vàng - chỉ dùng hl-yellow)
+            ...lastReplacedFinds.map(t => ({ 
                 text: t, 
-                cls: HIGHLIGHT_CLASSES[i % 6], // Màu 1-6
+                cls: 'hl-yellow', // Màu cố định cho từ đã bị thay thế
                 priority: 999,
-                isWholeWords: searchWholeWords, // Dùng tùy chọn tìm kiếm
+                isWholeWords: searchWholeWords, 
                 isMatchCase: searchMatchCase
             })),
             // Priority 100: Các từ khóa đang tìm kiếm
             ...currentKeywords.map((t, i) => ({ 
                 text: t, 
-                cls: HIGHLIGHT_CLASSES[(lastReplacedFinds.length + i) % 6], // Màu khác (nếu có)
+                // Dùng màu khác, bắt đầu từ index 1 để màu vàng (index 0) được ưu tiên cho replace
+                cls: HIGHLIGHT_CLASSES[(1 + i) % 6], 
                 priority: 100,
                 isWholeWords: searchWholeWords,
                 isMatchCase: searchMatchCase
@@ -129,9 +130,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const originalText = node.nodeValue;
             let allMatchesInNode = [];
 
-            // Phase 1: Aggregating All Matches (Thu thập tất cả các kết quả khớp)
+            // Phase 1: Aggregating All Matches 
             for (const kw of keywordsToHighlight) {
-                // Sửa: Luôn dùng tùy chọn tìm kiếm (searchMatchCase, searchWholeWords)
+                // FIX 2: Truyền đúng tùy chọn tìm kiếm (matchCase/wholeWords) vào buildRegex
                 const regex = buildRegex(kw.text, kw.isWholeWords, kw.isMatchCase); 
                 if (!regex) continue;
 
@@ -150,8 +151,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (!allMatchesInNode.length) continue;
 
-            // Phase 2: Definitive Sorting and Conflict Resolution Setup
-            // Sắp xếp: Vị trí (Tăng dần) -> Ưu tiên (Giảm dần, P999 trước P100) -> Độ dài (Giảm dần, từ dài trước)
+            // Phase 2: Sorting and Conflict Resolution Setup
+            // Sắp xếp: Vị trí (Tăng dần) -> Ưu tiên (Giảm dần) -> Độ dài (Giảm dần)
             allMatchesInNode.sort((a, b) => 
                 a.index - b.index || b.priority - a.priority || b.length - a.length
             );
@@ -161,9 +162,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const tempFragment = document.createDocumentFragment();
 
             allMatchesInNode.forEach(m => {
-                // Kiểm tra xung đột không gian: chỉ chấp nhận nếu bắt đầu sau kết thúc của kết quả trước đó
                 if (m.index >= lastIndex) {
-                    // 1. Thêm đoạn văn bản không highlight (khe hở)
+                    // 1. Thêm đoạn văn bản không highlight 
                     if (m.index > lastIndex) {
                         tempFragment.appendChild(
                             document.createTextNode(originalText.substring(lastIndex, m.index))
@@ -189,14 +189,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 );
             }
 
-            // Thay thế node gốc bằng fragment mới
             if (tempFragment.childNodes.length > 0) {
                 node.replaceWith(tempFragment);
             }
-            
-            // Tiếp tục tree walker từ các node mới được chèn (hoặc node tiếp theo)
-            // (walker.nextNode() sẽ tự động xử lý các node mới, nhưng đôi khi cần điều chỉnh)
-            // Trong trường hợp này, vì replaceWith thay thế node, walker sẽ tự chuyển đến node kế tiếp đúng.
         }
 
         restoreSelection();
@@ -212,59 +207,63 @@ document.addEventListener('DOMContentLoaded', () => {
              showNotification('Lỗi: Chế độ thay thế không tồn tại.', 'error');
              return;
         }
+        // Lấy danh sách cặp hiện tại từ UI (chưa lưu) để đảm bảo thay thế là mới nhất
+        const pairs = Array.from(punctuationList.querySelectorAll('.punctuation-item')).map(el => ({
+            find: el.querySelector('.find').value.trim(),
+            replace: el.querySelector('.replace').value
+        })).filter(p => p.find);
 
-        const pairs = mode.pairs.filter(p => p.find);
+        // Đảm bảo lấy đúng options đã lưu
         const replaceMatchCase = mode.options.matchCase || false;
-        // Dùng tùy chọn WholeWords của chế độ thay thế. Nếu không có, mặc định là false
         const replaceWholeWords = mode.options.wholeWords || false; 
 
         if (!pairs.length) {
             showNotification('Chưa có cặp thay thế nào trong chế độ này!', 'error');
-            highlightKeywords(); // Trả lại highlight ban đầu
+            highlightKeywords(); 
             return;
         }
 
         let changed = false;
         const walker = document.createTreeWalker(textLayer, NodeFilter.SHOW_TEXT);
-        let findsUsed = new Set(); // Theo dõi các từ đã bị thay thế
+        let findsUsed = new Set(); 
+
+        // Sắp xếp lại pairs theo độ dài giảm dần
+        pairs.sort((a, b) => b.find.length - a.find.length); 
 
         while (walker.nextNode()) {
             let node = walker.currentNode;
             let text = node.nodeValue;
             let originalText = text;
+            let tempText = text;
 
-            // Sắp xếp lại pairs theo độ dài giảm dần để tránh thay thế các từ dài sau khi các từ con ngắn đã bị thay thế
-            pairs.sort((a, b) => b.find.length - a.find.length); 
-
+            // Áp dụng từng cặp thay thế lên tempText
             pairs.forEach(pair => {
                 const regex = buildRegex(pair.find, replaceWholeWords, replaceMatchCase);
                 if (!regex) return;
                 
-                // Thực hiện thay thế
-                text = text.replace(regex, (match) => {
-                    if (match !== pair.replace) { // Đảm bảo thực sự thay đổi
+                tempText = tempText.replace(regex, (match) => {
+                    if (match !== pair.replace) { 
                         changed = true;
                         findsUsed.add(pair.find); // Lưu từ gốc đã bị thay thế
                         return pair.replace;
                     }
-                    return match; // Không thay thế
+                    return match; 
                 });
             });
 
-            if (text !== originalText) {
-                node.nodeValue = text;
+            if (tempText !== originalText) {
+                node.nodeValue = tempText;
             }
         }
 
-        // FIX 2, 3: Cập nhật lastReplacedFinds cho việc highlight ưu tiên
+        // FIX 1: Cập nhật lastReplacedFinds cho highlight từ đã thay thế
         lastReplacedFinds = Array.from(findsUsed);
 
         if (changed) {
             highlightKeywords();
             showNotification('Đã thay thế tất cả thành công!', 'success');
         } else {
-            // Không thay thế gì, reset và highlight lại
-            lastReplacedFinds = []; 
+            lastReplacedFinds = []; // Không thay thế gì, reset
             highlightKeywords();
             showNotification('Không tìm thấy từ nào để thay thế.', 'error');
         }
@@ -285,7 +284,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentKeywords.push(v);
                 
                 const tag = document.createElement('div');
-                // FIX: Class name phải khớp với index.css
                 tag.className = 'tag';
                 tag.innerHTML = `${v} <span class="remove-tag">×</span>`;
 
@@ -293,7 +291,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     e.stopPropagation();
                     tag.remove();
                     currentKeywords = currentKeywords.filter(x => x !== v);
-                    highlightKeywords();
+                    // Chỉ xóa khỏi danh sách, không highlight ngay
                 };
 
                 keywordsTags.appendChild(tag);
@@ -301,10 +299,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         keywordsInput.value = '';
-        highlightKeywords(); // Highlight ngay sau khi thêm
+        // FIX 6: KHÔNG highlight ngay khi thêm, chỉ thêm vào danh sách
         setTimeout(() => keywordsInput.focus(), 0);
     };
 
+    // FIX 6: Thêm keywords khi Enter/dấu phẩy, KHÔNG highlight ngay
     keywordsInput.addEventListener('keydown', e => {
         if (e.key === 'Enter' || e.key === ',') {
             e.preventDefault();
@@ -342,7 +341,8 @@ document.addEventListener('DOMContentLoaded', () => {
         range.insertNode(frag);
         range.collapse(false);
 
-        setTimeout(highlightKeywords, 0);
+        // Vẫn highlight khi Paste để người dùng thấy kết quả
+        setTimeout(highlightKeywords, 0); 
     });
 
     let highlightTimeout;
@@ -362,13 +362,15 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     fontFamily.onchange = syncFont;
     fontSize.onchange   = syncFont;
-    matchCaseCb.onchange = highlightKeywords; // Cập nhật highlight khi thay đổi tùy chọn
-    wholeWordsCb.onchange = highlightKeywords; // Cập nhật highlight khi thay đổi tùy chọn
+    
+    // Khi thay đổi tùy chọn tìm kiếm (Case/Whole Word), cần highlight lại ngay
+    matchCaseCb.onchange = highlightKeywords; 
+    wholeWordsCb.onchange = highlightKeywords; 
     // === END FONT SETTINGS & INPUT/PASTE LISTENERS ===
 
 
     // =========================================================
-    // === CHỨC NĂNG THAY THẾ (REPLACE MODE MANAGEMENT) - FIX LỖI 4, 5, 6 ===
+    // === CHỨC NĂNG THAY THẾ (REPLACE MODE MANAGEMENT) ===
     // =========================================================
 
     // --- A. Khởi tạo & Đồng bộ ---
@@ -381,13 +383,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const storedActiveMode = localStorage.getItem(ACTIVE_MODE_NAME_KEY);
             activeModeName = storedActiveMode || 'Mặc định';
 
-            // Nếu không có chế độ nào, tạo chế độ mặc định
             if (Object.keys(replaceModes).length === 0) {
                 replaceModes['Mặc định'] = { pairs: [], options: { matchCase: false, wholeWords: false } };
                 saveModesToStorage();
             }
 
-            // Đảm bảo chế độ hoạt động tồn tại
             if (!replaceModes[activeModeName]) {
                 activeModeName = Object.keys(replaceModes)[0];
                 localStorage.setItem(ACTIVE_MODE_NAME_KEY, activeModeName);
@@ -421,12 +421,10 @@ document.addEventListener('DOMContentLoaded', () => {
             modeSelect.appendChild(option);
         });
         
-        // Hiện/Ẩn nút Xóa/Đổi tên
         const isDefaultMode = activeModeName === 'Mặc định';
         deleteModeBtn.classList.toggle('hidden', isDefaultMode);
         renameModeBtn.classList.toggle('hidden', isDefaultMode);
         
-        // Cập nhật trạng thái nút Match Case
         const activeMode = replaceModes[activeModeName];
         if (activeMode && activeMode.options) {
             matchCaseReplaceBtn.textContent = activeMode.options.matchCase ? 'Case: BẬT' : 'Case: TẮT';
@@ -447,7 +445,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function addPairUI(find = '', replace = '', shouldFocus = true) {
         const item = document.createElement('div');
-        // FIX 6: Xóa text "→"
         item.className = 'punctuation-item'; 
 
         item.innerHTML = `
@@ -458,14 +455,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         item.querySelector('.remove-pair').onclick = () => {
             item.remove();
-            saveCurrentModeSettings();
+            // KHÔNG tự động lưu
         };
         
         item.querySelectorAll('input').forEach(input => {
-            input.oninput = () => {
-                clearTimeout(input.saveTimeout);
-                input.saveTimeout = setTimeout(saveCurrentModeSettings, 500);
-            };
+            // FIX 4: Loại bỏ logic tự động lưu khi input
+            // input.oninput = ... (Đã loại bỏ)
         });
 
         punctuationList.appendChild(item);
@@ -476,6 +471,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // --- C. Xử lý sự kiện (Persistence) ---
 
+    // FIX 4: Hàm này chỉ được gọi khi bấm nút "Lưu"
     function saveCurrentModeSettings() {
         const pairs = Array.from(punctuationList.querySelectorAll('.punctuation-item')).map(el => ({
             find: el.querySelector('.find').value.trim(),
@@ -488,17 +484,13 @@ document.addEventListener('DOMContentLoaded', () => {
         
         saveModesToStorage();
         showNotification(`Đã lưu cấu hình cho chế độ "${activeModeName}".`, 'success');
-        
-        // FIX 3: Khi lưu/thay đổi cài đặt thay thế, reset trạng thái highlight của replace để không bị xung đột
-        lastReplacedFinds = []; 
-        highlightKeywords(); 
     }
     
     function updateModeOptions(key, value) {
         if (replaceModes[activeModeName]) {
             replaceModes[activeModeName].options[key] = value;
             saveModesToStorage();
-            updateModeSelectUI(); // Cập nhật nút Case
+            updateModeSelectUI(); 
             showNotification(`Đã cập nhật tùy chọn cho chế độ "${activeModeName}".`, 'success');
         }
     }
@@ -512,7 +504,7 @@ document.addEventListener('DOMContentLoaded', () => {
             updateModeSelectUI();
             updatePunctuationListUI();
             
-            // Xóa highlight cũ và highlight lại dựa trên cài đặt mới
+            // Khi đổi chế độ, reset trạng thái highlight thay thế
             lastReplacedFinds = []; 
             highlightKeywords();
         }
@@ -525,7 +517,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     matchCaseReplaceBtn.onclick = () => {
         const mode = replaceModes[activeModeName];
-        // Đảm bảo options tồn tại
         if (!mode.options) mode.options = { matchCase: false, wholeWords: false }; 
 
         const newCase = !mode.options.matchCase;
@@ -542,29 +533,24 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Thêm tùy chọn WholeWords cho tương lai (mặc định false)
         replaceModes[newName] = { pairs: [], options: { matchCase: false, wholeWords: false } };
         loadActiveMode(newName);
     };
-    
-    // FIX 4: Xóa nút Copy, thay bằng nút Delete/Rename (đã có trong HTML)
-    // copyModeBtn.onclick = ... (Đã bị loại bỏ)
     
     deleteModeBtn.onclick = () => {
         if (activeModeName === 'Mặc định' || !confirm(`Bạn có chắc muốn xóa chế độ "${activeModeName}"?`)) return;
         
         delete replaceModes[activeModeName];
         
-        // Chuyển sang chế độ đầu tiên còn lại
         activeModeName = Object.keys(replaceModes)[0]; 
         
         saveModesToStorage();
-        loadActiveMode(activeModeName); // Tải lại giao diện
+        loadActiveMode(activeModeName); 
         showNotification('Đã xóa chế độ thành công.', 'success');
     };
     
     renameModeBtn.onclick = () => {
-        if (activeModeName === 'Mặc định') return; // Không cho đổi tên mặc định
+        if (activeModeName === 'Mặc định') return; 
         let newName = prompt(`Đổi tên chế độ "${activeModeName}" thành:`);
         if (!newName || !newName.trim() || newName === activeModeName) return;
         newName = newName.trim();
@@ -577,24 +563,24 @@ document.addEventListener('DOMContentLoaded', () => {
         const modeToRename = replaceModes[activeModeName];
         delete replaceModes[activeModeName];
         replaceModes[newName] = modeToRename;
-        loadActiveMode(newName); // Tải lại với tên mới
+        loadActiveMode(newName); 
     }
     
     // =========================================================
     // === BUTTONS VÀ KHỞI ĐỘNG ===
     // =========================================================
 
+    // FIX 6: Highlight chỉ chạy khi bấm nút Tìm Kiếm
     searchBtn.onclick = () => {
-        // FIX 3: Reset lastReplacedFinds khi tìm mới (đảm bảo highlight chỉ dựa trên currentKeywords/cũ)
-        lastReplacedFinds = []; 
+        // Cần highlight lại khi tìm kiếm để reset lại highlight
         highlightKeywords();
     };
 
     clearBtn.onclick = () => {
         keywordsTags.innerHTML = '';
         currentKeywords = [];
-        lastReplacedFinds = []; // Reset cả replacedKeywords
-        highlightKeywords();
+        lastReplacedFinds = [];
+        highlightKeywords(); // Highlight sau khi xóa để xóa hết highlight cũ
     };
 
     // === KHỞI ĐỘNG CHÍNH ===
@@ -602,9 +588,8 @@ document.addEventListener('DOMContentLoaded', () => {
     loadModesFromStorage();
     updateModeSelectUI();
     updatePunctuationListUI();
-    // Đặt nội dung mặc định để có thể thấy highlight ngay
-    if (!textLayer.textContent.trim()) {
-        textLayer.textContent = "Xin chào, đây là công cụ Tìm Kiếm và Thay Thế Chương.\n\nNhập nội dung vào đây. Thử nhập một số từ khóa tìm kiếm như 'Tìm' hoặc 'Chương' ở bên trái và bấm 'Tìm Kiếm'.\n\nBạn có thể cấu hình các cặp thay thế ở bên phải và quản lý nhiều chế độ thay thế khác nhau.";
-    }
+    
+    // FIX 5: Xóa văn bản mẫu.
+    textLayer.textContent = ""; 
     highlightKeywords();
 });
