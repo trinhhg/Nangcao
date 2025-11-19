@@ -9,15 +9,15 @@
     <link rel="stylesheet" href="index.css">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500&display=swap" rel="stylesheet">
     <style>
-        .hl-yellow { background: #ffff99; color: black; }
-        .hl-pink   { background: #ffcccc; color: black; }
-        .hl-blue   { background: #99ccff; color: black; }
-        .hl-green  { background: #ccffcc; color: black; }
-        .hl-orange { background: #ffcc99; color: black; }
-        .hl-purple { background: #e6ccff; color: black; }
+       .hl-yellow { background: #ffff99; color: black; }
+       .hl-pink   { background: #ffcccc; color: black; }
+       .hl-blue   { background: #99ccff; color: black; }
+       .hl-green  { background: #ccffcc; color: black; }
+       .hl-orange { background: #ffcc99; color: black; }
+       .hl-purple { background: #e6ccff; color: black; }
 
         /* ============================= */
-        /* ✅ FIX: SCROLL + KHÔNG TRÀN MÀN HÌNH */
+        /* FIX: Đảm bảo chiều cao 100% cho editor */
         /* ============================= */
         #editor-wrapper {
             height: 100%;
@@ -27,12 +27,12 @@
 
         #highlight-layer,
         #text-layer {
-            height: 100% !important;
             box-sizing: border-box;
+            height: 100%; 
         }
 
         #text-layer {
-            overflow-y: auto !important;
+            overflow-y: auto!important;
             overflow-x: hidden;
             padding-right: 8px;
             scrollbar-width: thin;
@@ -56,204 +56,96 @@
 </head>
 <body class="bg-gray-100 h-screen flex flex-col">
 
-    <!-- Auth Form -->
-    <div id="auth-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
-            <h2 class="text-2xl font-bold text-center mb-6 text-gray-800">Đăng Nhập / Đăng Ký</h2>
-            <form id="auth-form" class="space-y-4">
-                <input type="email" id="auth-email" placeholder="Email" required
-                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <input type="password" id="auth-password" placeholder="Mật khẩu (≥6 ký tự)" required
-                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <div class="flex gap-2">
-                    <button type="submit" id="login-btn" class="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition">
-                        Đăng Nhập
-                    </button>
-                    <button type="button" id="signup-btn" class="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition">
-                        Đăng Ký
-                    </button>
+    <div id="main-app" class="flex flex-1 overflow-hidden h-full"> 
+        <div id="main-panel" class="w-1/5 p-4 bg-white shadow-md overflow-y-auto text-sm">
+            <h2 class="text-xl font-bold mb-4">Tìm Kiếm</h2>
+            <div class="mb-4 grid grid-cols-2 gap-2">
+                <div>
+                    <label class="block mb-1 text-xs">Font:</label>
+                    <select id="fontFamily" class="w-full p-1.5 border rounded text-xs text-gray-700">
+                        <option value="Arial">Arial</option>
+                        <option value="Calibri">Calibri</option>
+                        <option value="Montserrat" selected>Montserrat</option>
+                        <option value="Times New Roman">Times New Roman</option>
+                    </select>
                 </div>
-                <div id="auth-error" class="text-red-600 text-sm text-center min-h-6"></div>
-            </form>
+                <div>
+                    <label class="block mb-1 text-xs">Cỡ chữ:</label>
+                    <select id="fontSize" class="w-full p-1.5 border rounded text-xs text-gray-700">
+                        <option value="14px">14</option>
+                        <option value="16px" selected>16</option>
+                        <option value="18px">18</option>
+                        <option value="20px">20</option>
+                    </select>
+                </div>
+            </div>
+            <div class="mb-4">
+                <label class="block mb-2"><input type="checkbox" id="matchCase" class="mr-2"> Phân biệt hoa/thường</label>
+                <label class="block mb-2"><input type="checkbox" id="wholeWords" class="mr-2"> Từ hoàn chỉnh</label>
+            </div>
+            <div class="mb-4">
+                <label class="block mb-2">Từ khóa:</label>
+                <input type="text" id="keywords-input" placeholder="Nhập, Enter, dấu phẩy..." class="w-full p-2 border rounded bg-gray-50 text-sm">
+            </div>
+            <div class="flex gap-2 mb-2">
+                <button id="search" class="flex-1 bg-green-500 text-white py-2 rounded hover:bg-green-600 text-xs font-medium">Tìm Kiếm</button>
+                <button id="clear" class="flex-1 bg-red-500 text-white py-2 rounded hover:bg-red-600 text-xs font-medium">Xóa Tất Cả</button>
+            </div>
+            <div id="keywords-tags" class="flex flex-wrap gap-1"></div>
         </div>
-    </div>
 
-    <!-- GIAO DIỆN CHÍNH -->
-    <div id="app-container" class="hidden flex flex-col h-screen">
-        <!-- THANH TRẮNG + ĐỎ NỔI BẬT -->
-        <div class="p-2 bg-white border-b-4 border-gray-300 text-xs flex justify-between items-center shadow-sm">
-            <div class="text-red-600 font-bold">
-                Góp ý: <a href="https://www.facebook.com/trinh.hg.57" target="_blank" class="underline text-blue-600 hover:text-blue-800">fb.com/trinh.hg.57</a>
-                &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
-                <span class="text-red-700">DON@TE: MB BANK - TRINH THI XUAN HUONG - STK: 0917678211</span>
+        <div id="text-panel" class="flex-1 p-6 bg-white shadow-md mx-4 flex flex-col overflow-hidden">
+            <div class="flex justify-between items-end mb-2">
+                 <h2 class="text-xl font-bold">Nội Dung Chương</h2>
+                 <div class="text-xs text-right space-y-0.5">
+                    <div class="text-red-600 font-bold">DON@TE: MB BANK - TRINH THI XUAN HUONG - STK: 0917678211</div>
+                    <div class="text-gray-600">
+                        Góp ý: <a href="https://www.facebook.com/trinh.hg.57" target="_blank" class="underline text-blue-600 hover:text-blue-800">fb.com/trinh.hg.57</a>
+                    </div>
+                 </div>
             </div>
-            <button id="logout-btn" class="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700">Đăng xuất</button>
+            
+            <div id="editor-wrapper" class="relative flex-1 min-h-0 border-2 border-gray-300 rounded-lg">
+                <div id="highlight-layer" class="absolute inset-0 p-6 pointer-events-none whitespace-pre-wrap overflow-hidden"
+                     style="font-family: Arial; font-size: 16px; line-height: 1.8; z-index: 1; color: transparent;"></div>
+                <div id="text-layer" contenteditable="true"
+                     class="relative p-6 bg-transparent caret-black outline-none whitespace-pre-wrap"
+                     style="font-family: Arial; font-size: 16px; line-height: 1.8; z-index: 2;"></div>
+            </div>
         </div>
 
-        <div class="flex flex-1 overflow-hidden">
-            <!-- Left Panel -->
-            <div id="main-panel" class="w-1/5 p-4 bg-white shadow-md overflow-y-auto text-sm">
-                <h2 class="text-xl font-bold mb-4">Tìm Kiếm</h2>
-                <div class="mb-4 grid grid-cols-2 gap-2">
-                    <div>
-                        <label class="block mb-1 text-xs">Font:</label>
-                        <select id="fontFamily" class="w-full p-1.5 border rounded text-xs text-gray-700">
-                            <option value="Arial">Arial</option>
-                            <option value="Calibri">Calibri</option>
-                            <option value="Montserrat">Montserrat</option>
-                            <option value="Times New Roman">Times New Roman</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block mb-1 text-xs">Cỡ chữ:</label>
-                        <select id="fontSize" class="w-full p-1.5 border rounded text-xs text-gray-700">
-                            <option value="14px">14</option>
-                            <option value="16px">16</option>
-                            <option value="18px">18</option>
-                            <option value="20px">20</option>
-                        </select>
-                    </div>
+        <div id="settings-panel" class="w-1/5 p-4 bg-white shadow-md overflow-y-auto text-xs">
+            <h2 class="text-xl font-bold mb-4">Thay Thế</h2>
+            <div class="mode-controls mb-3 space-y-1">
+                <div class="flex gap-1">
+                    <select id="mode-select" class="flex-1 p-1 border rounded text-xs"></select>
+                    <button id="add-mode" class="px-1 py-0.5 bg-blue-500 text-white rounded text-xs">Thêm</button>
                 </div>
-                <div class="mb-4">
-                    <label class="block mb-2"><input type="checkbox" id="matchCase" class="mr-2"> Phân biệt hoa/thường</label>
-                    <label class="block mb-2"><input type="checkbox" id="wholeWords" class="mr-2"> Từ hoàn chỉnh</label>
+                <div class="flex gap-1">
+                    <button id="copy-mode" class="flex-1 px-1 py-0.5 bg-blue-500 text-white rounded text-xs">Sao</button>
+                    <button id="match-case" class="flex-1 px-1 py-0.5 bg-gray-500 text-white rounded text-xs">Case</button>
                 </div>
-                <div class="mb-4">
-                    <label class="block mb-2">Từ khóa:</label>
-                    <input type="text" id="keywords-input" placeholder="Nhập, Enter, dấu phẩy..." class="w-full p-2 border rounded bg-gray-50 text-sm">
+                <div class="flex gap-1">
+                    <button id="export-settings" class="flex-1 px-1 py-0.5 bg-blue-500 text-white rounded text-xs">Xuất</button>
+                    <button id="import-settings" class="flex-1 px-1 py-0.5 bg-blue-500 text-white rounded text-xs">Nhập</button>
                 </div>
-                <div class="flex gap-2 mb-2">
-                    <button id="search" class="flex-1 bg-green-500 text-white py-2 rounded hover:bg-green-600 text-xs font-medium">Tìm Kiếm</button>
-                    <button id="clear" class="flex-1 bg-red-500 text-white py-2 rounded hover:bg-red-600 text-xs font-medium">Xóa Tất Cả</button>
-                </div>
-                <div id="keywords-tags" class="flex flex-wrap gap-1"></div>
-            </div>
-
-            <!-- Center: Ô VĂN BẢN KHÔNG TRÀN MÀN HÌNH -->
-            <div id="text-panel" class="flex-1 p-6 bg-white shadow-md mx-4 flex flex-col overflow-hidden">
-                <h2 class="text-xl font-bold mb-2">Nội Dung Chương</h2>
-                <!-- ✅ ĐÃ FIX: min-h-0 + không tràn -->
-                <div id="editor-wrapper" class="relative flex-1 min-h-0 border-2 border-gray-300 rounded-lg">
-                    <div id="highlight-layer" class="absolute inset-0 p-6 pointer-events-none whitespace-pre-wrap overflow-hidden"
-                         style="font-family: Arial; font-size: 16px; line-height: 1.8; z-index: 1; color: transparent;"></div>
-                    <div id="text-layer" contenteditable="true"
-                         class="relative p-6 bg-transparent caret-black outline-none whitespace-pre-wrap"
-                         style="font-family: Arial; font-size: 16px; line-height: 1.8; z-index: 2;"></div>
+                <div class="flex gap-1">
+                    <button id="rename-mode" class="flex-1 px-1 py-0.5 bg-gray-500 text-white rounded text-xs hidden">Đổi tên</button>
+                    <button id="delete-mode" class="flex-1 px-1 py-0.5 bg-red-500 text-white rounded text-xs hidden">Xóa</button>
                 </div>
             </div>
 
-            <!-- Right Panel -->
-            <div id="settings-panel" class="w-1/5 p-4 bg-white shadow-md overflow-y-auto text-xs">
-                <h2 class="text-xl font-bold mb-4">Thay Thế</h2>
-                <div class="mode-controls mb-3 space-y-1">
-                    <div class="flex gap-1">
-                        <select id="mode-select" class="flex-1 p-1 border rounded text-xs"></select>
-                        <button id="add-mode" class="px-1 py-0.5 bg-blue-500 text-white rounded text-xs">Thêm</button>
-                    </div>
-                    <div class="flex gap-1">
-                        <button id="copy-mode" class="flex-1 px-1 py-0.5 bg-blue-500 text-white rounded text-xs">Sao</button>
-                        <button id="match-case" class="flex-1 px-1 py-0.5 bg-gray-500 text-white rounded text-xs">Case</button>
-                    </div>
-                    <div class="flex gap-1">
-                        <button id="export-settings" class="flex-1 px-1 py-0.5 bg-blue-500 text-white rounded text-xs">Xuất</button>
-                        <button id="import-settings" class="flex-1 px-1 py-0.5 bg-blue-500 text-white rounded text-xs">Nhập</button>
-                    </div>
-                    <div class="flex gap-1">
-                        <button id="rename-mode" class="flex-1 px-1 py-0.5 bg-gray-500 text-white rounded text-xs hidden">Đổi tên</button>
-                        <button id="delete-mode" class="flex-1 px-1 py-0.5 bg-red-500 text-white rounded text-xs hidden">Xóa</button>
-                    </div>
-                </div>
-
-                <div class="action-buttons mb-3 flex gap-1">
-                    <button id="add-pair" class="flex-1 px-2 py-1 bg-blue-500 text-white rounded text-xs">Cặp</button>
-                    <button id="save-settings" class="flex-1 px-2 py-1 bg-green-600 text-white rounded text-xs">Lưu</button>
-                    <button id="replace-all" class="flex-1 px-2 py-1 bg-purple-600 text-white rounded text-xs">Thay</button>
-                </div>
-
-                <div id="punctuation-list" class="space-y-2 text-xs"></div>
+            <div class="action-buttons mb-3 flex gap-1">
+                <button id="add-pair" class="flex-1 px-2 py-1 bg-blue-500 text-white rounded text-xs">Cặp</button>
+                <button id="save-settings" class="flex-1 px-2 py-1 bg-green-600 text-white rounded text-xs">Lưu</button>
+                <button id="replace-all" class="flex-1 px-2 py-1 bg-purple-600 text-white rounded text-xs">Thay</button>
             </div>
+
+            <div id="punctuation-list" class="space-y-2 text-xs"></div>
         </div>
     </div>
 
     <div id="notification-container"></div>
-
-    <!-- Nhost SDK -->
-    <script type="module">
-        import { NhostClient } from 'https://esm.sh/@nhost/nhost-js@3.3.1';
-        const nhost = new NhostClient({ subdomain: "ogltettlkspwxyqphmth", region: "eu-central-1" });
-
-        const authOverlay = document.getElementById('auth-overlay');
-        const appContainer = document.getElementById('app-container');
-        const authError = document.getElementById('auth-error');
-        const loginBtn = document.getElementById('login-btn');
-        const signupBtn = document.getElementById('signup-btn');
-        const logoutBtn = document.getElementById('logout-btn');
-        const emailInput = document.getElementById('auth-email');
-        const passwordInput = document.getElementById('auth-password');
-
-        const validateEmail = e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.trim());
-        const validatePassword = p => p && p.length >= 6;
-
-        const showApp = () => {
-            authOverlay.classList.add('hidden');
-            appContainer.classList.remove('hidden');
-        };
-
-        const checkSession = async () => {
-            try {
-                const session = await nhost.auth.getSession();
-                if (session?.session?.accessToken) showApp();
-            } catch (err) {
-                console.warn('Session check failed:', err);
-            }
-        };
-
-        checkSession();
-        nhost.auth.onAuthStateChanged((event, session) => {
-            if (session?.accessToken) showApp();
-            else authOverlay.classList.remove('hidden');
-        });
-
-        loginBtn.onclick = async (e) => {
-            e.preventDefault();
-            const email = emailInput.value.trim();
-            const password = passwordInput.value;
-            if (!validateEmail(email)) return authError.textContent = 'Email không hợp lệ';
-            if (!validatePassword(password)) return authError.textContent = 'Mật khẩu ≥6 ký tự';
-            authError.textContent = 'Đang đăng nhập...';
-            try {
-                const { error } = await nhost.auth.signIn({ email, password });
-                if (error) throw error;
-                showApp();
-            } catch (err) {
-                authError.textContent = err.message || 'Lỗi đăng nhập';
-            }
-        };
-
-        signupBtn.onclick = async () => {
-            const email = emailInput.value.trim();
-            const password = passwordInput.value;
-            if (!validateEmail(email)) return authError.textContent = 'Email không hợp lệ';
-            if (!validatePassword(password)) return authError.textContent = 'Mật khẩu ≥6 ký tự';
-            authError.textContent = 'Đang đăng ký...';
-            try {
-                const { error } = await nhost.auth.signUp({ email, password });
-                if (error) throw error;
-                authError.textContent = 'Đăng ký thành công! Đăng nhập ngay.';
-                authError.style.color = 'green';
-            } catch (err) {
-                authError.textContent = err.message || 'Lỗi đăng ký';
-            }
-        };
-
-        logoutBtn.onclick = async () => {
-            await nhost.auth.signOut();
-            authOverlay.classList.remove('hidden');
-            appContainer.classList.add('hidden');
-        };
-
-        window.nhost = nhost;
-    </script>
 
     <script src="index.js"></script>
 </body>
