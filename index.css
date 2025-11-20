@@ -17,27 +17,30 @@
     margin-left: 4px;
 }
 
+/* Fix: Thu gọn punctuation-item thành grid 3 cột, không scroll ngang */
 #punctuation-list .punctuation-item {
-    display: flex;
+    display: grid;
+    grid-template-columns: 1fr 1fr auto; /* Tìm | Thay | Xóa */
     gap: 4px;
     align-items: center;
     margin-bottom: 4px;
 }
 #punctuation-list .punctuation-item input {
-    flex: 1;
-    padding: 6px 8px;
-    font-size: 11px;
+    flex: none; /* Bỏ flex:1 để grid tự chia */
+    min-width: 0; /* Ngăn tràn panel */
+    padding: 4px 6px; /* Giảm padding để fit */
+    font-size: 10px; /* Giảm font cho gọn */
     border: 1px solid #ccc;
     border-radius: 4px;
 }
 #punctuation-list .punctuation-item button.remove-pair {
-    width: 24px;
-    height: 24px;
+    width: 20px; /* Giảm size button */
+    height: 20px;
     background: #dc3545;
     color: white;
     border: none;
     border-radius: 4px;
-    font-size: 12px;
+    font-size: 10px;
     cursor: pointer;
 }
 
