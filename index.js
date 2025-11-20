@@ -24,6 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // State
     let currentKeywords = [];
     let replacedRanges = []; // {start, end} cho highlight vàng
+    let isPasting = false; // Flag để tránh highlight trong paste
     const HIGHLIGHT_CLASSES = ['hl-yellow','hl-pink','hl-blue','hl-green','hl-orange','hl-purple'];
 
     const REPLACE_MODES_KEY = 'replaceModes';
@@ -65,19 +66,18 @@ document.addEventListener('DOMContentLoaded', () => {
         return new RegExp(pattern, flags);
     }
 
-    // Highlight với cursor restore (fix lem + đảo ngược)
+    // Highlight với flag paste (fix flash trong paste)
     function highlightKeywords() {
-        saveSelection(); // Save trước
+        if (isPasting) return; // Bỏ qua nếu đang paste
+        saveSelection();
         const text = textLayer.textContent || '';
-        textLayer.innerHTML = ''; // Clear an toàn
+        textLayer.innerHTML = '';
 
         const searchWholeWords = wholeWordsCb.checked;
         const searchMatchCase = matchCaseCb.checked;
 
         const keywordsToHighlight = [
-            // Replaced: vàng, ưu tiên 999
             ...replacedRanges.map(r => ({ start: r.start, end: r.end, cls: 'hl-yellow', priority: 999 })),
-            // Keywords: màu khác, ưu tiên 100
             ...currentKeywords.map((t, i) => ({ 
                 text: t, 
                 cls: HIGHLIGHT_CLASSES[(i + 1) % 6], 
@@ -104,7 +104,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Sort + filter overlap
         matches.sort((a, b) => a.start - b.start || b.priority - a.priority || b.end - a.end);
         const finalMatches = [];
         let lastEnd = 0;
@@ -115,7 +114,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Rebuild DOM
         const frag = document.createDocumentFragment();
         let pos = 0;
         for (const m of finalMatches) {
@@ -134,10 +132,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         textLayer.appendChild(frag);
 
-        setTimeout(restoreSelection, 0); // Defer restore
+        setTimeout(restoreSelection, 10); // Delay nhỏ để DOM ổn định
     }
 
-    // Replace với log vị trí mới (fix không highlight replaced)
+    // Replace với log vị trí mới
     function replaceAllSafe() {
         saveSelection();
         const text = textLayer.textContent || '';
@@ -155,7 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
         pairs.sort((a, b) => b.find.length - a.find.length);
         const matchCase = mode.options?.matchCase || false;
         let newText = text;
-        replacedRanges = []; // Reset
+        replacedRanges = [];
         let offset = 0;
 
         pairs.forEach(pair => {
@@ -164,7 +162,7 @@ document.addEventListener('DOMContentLoaded', () => {
             newText = newText.replace(regex, (match, index) => {
                 const start = index + offset;
                 const end = start + pair.replace.length;
-                replacedRanges.push({ start, end }); // Log vị trí MỚI
+                replacedRanges.push({ start, end });
                 offset += pair.replace.length - match.length;
                 return pair.replace;
             });
@@ -177,7 +175,7 @@ document.addEventListener('DOMContentLoaded', () => {
         restoreSelection();
     }
 
-    // Keywords (fix Enter + focus)
+    // Keywords (giữ fix Enter)
     function addKeywords() {
         const vals = keywordsInput.value.split(',').map(s => s.trim()).filter(Boolean);
         let added = false;
@@ -193,19 +191,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     currentKeywords = currentKeywords.filter(x => x !== v);
                     highlightKeywords();
                 };
-                keywordsTags.appendChild(tag); // Append để không đảo
+                keywordsTags.appendChild(tag);
                 added = true;
             }
         });
         keywordsInput.value = '';
         if (added) highlightKeywords();
-        keywordsInput.focus(); // Focus lại sau add
+        keywordsInput.focus();
     }
 
     keywordsInput.addEventListener('keydown', e => {
         if (e.key === 'Enter' || e.key === ',') {
             e.preventDefault();
-            e.stopPropagation(); // Chặn bubbling
+            e.stopPropagation();
             addKeywords();
         }
     });
@@ -213,13 +211,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (keywordsInput.value.trim()) addKeywords();
     });
 
-    // Paste giữ xuống dòng (fix dồn cục)
+    // Paste fix: Plain text + flag + delay highlight (fix flash/biến mất)
     textLayer.addEventListener('paste', e => {
         e.preventDefault();
+        isPasting = true; // Flag để bỏ qua highlight
         const pastedText = (e.clipboardData || window.clipboardData).getData('text/plain');
-        const lines = pastedText.split(/\r?\n/);
+        const lines = pastedText.split(/\r?\n/); // Giữ line breaks
         const sel = window.getSelection();
         if (sel.rangeCount) {
+            saveSelection(); // Save trước insert
             const range = sel.getRangeAt(0);
             range.deleteContents();
             lines.forEach((line, i) => {
@@ -229,8 +229,13 @@ document.addEventListener('DOMContentLoaded', () => {
             range.collapse(false);
             sel.removeAllRanges();
             sel.addRange(range);
+            restoreSelection(); // Restore ngay
         }
-        setTimeout(highlightKeywords, 0);
+        // Delay highlight sau paste để DOM ổn định (fix flash)
+        setTimeout(() => {
+            isPasting = false;
+            highlightKeywords();
+        }, 200); // Tăng delay từ 0 lên 200ms
     });
 
     let highlightTimer;
@@ -250,7 +255,7 @@ document.addEventListener('DOMContentLoaded', () => {
     fontFamily.onchange = fontSize.onchange = syncFont;
     matchCaseCb.onchange = wholeWordsCb.onchange = highlightKeywords;
 
-    // Replace Mode Management (giữ nguyên, chỉ fix append)
+    // Replace Mode Management (cập nhật addPairUI cho grid mới)
     function loadModes() {
         try {
             const data = localStorage.getItem(REPLACE_MODES_KEY);
@@ -303,7 +308,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <button class="remove-pair" title="Xóa">×</button>
         `;
         div.querySelector('.remove-pair').onclick = () => div.remove();
-        punctuationList.appendChild(div); // Append fix đảo
+        punctuationList.appendChild(div); // Append để không đảo
         if (focus) div.querySelector('.find').focus();
     }
 
