@@ -1,6 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // DOM
-    const editor = document.getElementById('editor');
+    const textLayer = document.getElementById('text-layer');
     const keywordsInput = document.getElementById('keywords-input');
     const keywordsTags = document.getElementById('keywords-tags');
     const searchBtn = document.getElementById('search');
@@ -9,26 +8,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const fontSize = document.getElementById('fontSize');
     const matchCaseCb = document.getElementById('matchCase');
     const wholeWordsCb = document.getElementById('wholeWords');
+    const replaceAllBtn = document.getElementById('replace-all');
     const punctuationList = document.getElementById('punctuation-list');
     const modeSelect = document.getElementById('mode-select');
     const addModeBtn = document.getElementById('add-mode');
+    const matchCaseReplaceBtn = document.getElementById('match-case');
+    const deleteModeBtn = document.getElementById('delete-mode-btn');
     const renameModeBtn = document.getElementById('rename-mode');
-    const deleteModeBtn = document.getElementById('delete-mode');
     const addPairBtn = document.getElementById('add-pair');
     const saveSettingsBtn = document.getElementById('save-settings');
-    const replaceAllBtn = document.getElementById('replace-all');
-    const toggleCaseBtn = document.getElementById('toggle-case');
 
-    // STATE
-    let keywords = [];
-    let replacedRanges = []; // [{start, end}]
-    const KEYWORD_COLORS = ['hl-1','hl-2','hl-3','hl-4','hl-5','hl-6'];
-    const MODES_KEY = 'replace_modes_v3';
-    const ACTIVE_KEY = 'active_mode_v3';
+    let currentKeywords = [];
+    let replacedRanges = []; // [{start, end}] — để highlight vàng chính xác
+    const COLORS = ['hl-pink','hl-blue','hl-green','hl-orange','hl-purple','hl-yellow'];
+
+    const MODES_KEY = 'replaceModes_v4';
+    const ACTIVE_KEY = 'activeMode_v4';
     let modes = { 'Mặc định': { pairs: [], options: { matchCase: false } } };
     let activeMode = 'Mặc định';
 
-    // NOTIFY
     const notify = (msg, type = 'success') => {
         const n = document.createElement('div');
         n.className = `notification ${type}`;
@@ -37,59 +35,36 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => n.remove(), 3000);
     };
 
-    // === PASTE CHUẨN GOOGLE DOCS ===
-    const insertPlainTextAtCursor = (text) => {
-        const sel = window.getSelection();
-        if (!sel.rangeCount) return;
-        const range = sel.getRangeAt(0);
-        range.deleteContents();
-
-        const lines = text.split(/\r\n|\r|\n/);
-        lines.forEach((line, i) => {
-            if (i > 0) range.insertNode(document.createElement('br'));
-            if (line) range.insertNode(document.createTextNode(line));
-        });
-        range.collapse(false);
-        sel.removeAllRanges();
-        sel.addRange(range);
-    };
-
-    editor.addEventListener('paste', e => {
-        e.preventDefault();
-        const text = (e.clipboardData || window.clipboardData).getData('text/plain');
-        insertPlainTextAtCursor(text);
-    });
-
-    // === HIGHLIGHT ENGINE CHUẨN NOTION ===
-    const escapeRegExp = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const escapeRegex = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const buildRegex = (word, whole, mc) => {
         if (!word) return null;
-        const esc = escapeRegExp(word);
+        const esc = escapeRegex(word);
         const pattern = whole ? `\\b${esc}\\b` : esc;
         return new RegExp(pattern, mc ? 'g' : 'gi');
     };
 
+    // === HIGHLIGHT CHUẨN 100% ===
     const highlight = () => {
-        const text = editor.textContent || '';
+        const text = textLayer.textContent || '';
         const items = [
-            ...keywords.map((k, i) => ({ text: k, cls: KEYWORD_COLORS[i % 6], prio: 100 })),
-            ...replacedRanges.map(r => ({ text: text.slice(r.start, r.end), cls: 'hl-yellow', prio: 999 }))
+            ...currentKeywords.map((k, i) => ({ text: k, cls: COLORS[i % 5], prio: 100 })),
+            ...replacedRanges.map(r => ({ start: r.start, end: r.end, cls: 'hl-yellow', prio: 999 }))
         ];
 
-        const matchCase = matchCaseCb.checked;
-        const whole = wholeWordsCb.checked;
-
         const matches = [];
+        const mc = matchCaseCb.checked;
+        const ww = wholeWordsCb.checked;
+
         items.forEach(item => {
-            if (item.prio === 999) {
-                matches.push({ start: item.start || 0, end: item.end || 0, cls: item.cls, prio: item.prio });
-                return;
-            }
-            const re = buildRegex(item.text, whole, matchCase);
-            if (!re) return;
-            let m;
-            while ((m = re.exec(text)) !== null) {
-                matches.push({ start: m.index, end: re.lastIndex, cls: item.cls, prio: item.prio });
+            if (item.start !== undefined) {
+                matches.push({ start: item.start, end: item.end, cls: item.cls, prio: item.prio });
+            } else {
+                const re = buildRegex(item.text, ww, mc);
+                if (!re) return;
+                let m;
+                while ((m = re.exec(text)) !== null) {
+                    matches.push({ start: m.index, end: re.lastIndex, cls: item.cls, prio: item.prio });
+                }
             }
         });
 
@@ -108,7 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
         for (const m of final) {
             if (m.start > pos) frag.appendChild(document.createTextNode(text.slice(pos, m.start)));
             const span = document.createElement('mark');
-            span.className = m.cls + ' hl';
+            span.className = m.cls;
             span.setAttribute('data-hl', '1');
             span.textContent = text.slice(m.start, m.end);
             frag.appendChild(span);
@@ -116,24 +91,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (pos < text.length) frag.appendChild(document.createTextNode(text.slice(pos)));
 
-        editor.innerHTML = '';
-        editor.appendChild(frag);
+        textLayer.innerHTML = '';
+        textLayer.appendChild(frag);
     };
 
-    // === REPLACE VỚI LOG VỊ TRÍ ===
+    // === REPLACE + LOG VỊ TRÍ (để highlight vàng) ===
     const replaceAll = () => {
-        let text = editor.textContent || '';
+        let text = textLayer.textContent || '';
         const mode = modes[activeMode];
-        if (!mode || !mode.pairs.length) return notify('Chưa có cặp thay thế!', 'error');
+        if (!mode || !mode.pairs?.length) return notify('Chưa có cặp thay thế!', 'error');
 
-        const pairs = mode.pairs.filter(p => p.find);
-        const opts = mode.options || {};
         replacedRanges = [];
+        let offset = 0;
 
-        pairs.forEach(p => {
-            const re = buildRegex(p.find, false, opts.matchCase);
+        mode.pairs.forEach(p => {
+            if (!p.find) return;
+            const re = buildRegex(p.find, false, mode.options?.matchCase);
             if (!re) return;
-            let offset = 0;
+
             text = text.replace(re, (match, i) => {
                 const start = i + offset;
                 const end = start + p.replace.length;
@@ -143,9 +118,9 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
-        editor.textContent = text;
+        textLayer.textContent = text;
         if (replacedRanges.length) {
-            notify(`Đã thay thế ${replacedRanges.length} vị trí!`, 'success');
+            notify(`Đã thay thế ${replacedRanges.length} chỗ!`, 'success');
         } else {
             replacedRanges = [];
             notify('Không tìm thấy gì để thay.', 'error');
@@ -154,59 +129,72 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // === KEYWORDS ===
-    const addKeyword = (word) => {
-        word = word.trim();
-        if (!word || keywords.includes(word)) return;
-        keywords.push(word);
-        const tag = document.createElement('div');
-        tag.className = 'tag';
-        tag.innerHTML = `${word} <span class="remove">×</span>`;
-        tag.querySelector('.remove').onclick = () => {
-            tag.remove();
-            keywords = keywords.filter(k => k !== word);
-            highlight();
-        };
-        keywordsTags.appendChild(tag);
+    const addKeyword = () => {
+        const vals = keywordsInput.value.split(',').map(s => s.trim()).filter(Boolean);
+        vals.forEach(v => {
+            if (v && !currentKeywords.includes(v)) {
+                currentKeywords.push(v);
+                const tag = document.createElement('div');
+                tag.className = 'tag';
+                tag.innerHTML = `${v} <span class="remove-tag">×</span>`;
+                tag.querySelector('.remove-tag').onclick = () => {
+                    tag.remove();
+                    currentKeywords = currentKeywords.filter(x => x !== v);
+                    highlight();
+                };
+                keywordsTags.appendChild(tag); // append, không prepend → không đảo ngược
+            }
+        });
+        keywordsInput.value = '';
         highlight();
     };
 
     keywordsInput.addEventListener('keydown', e => {
         if (e.key === 'Enter' || e.key === ',') {
             e.preventDefault();
-            const val = keywordsInput.value.trim();
-            if (val) addKeyword(val);
-            keywordsInput.value = '';
+            addKeyword();
         }
     });
+    keywordsInput.addEventListener('blur', addKeyword);
 
-    keywordsInput.addEventListener('blur', () => {
-        const val = keywordsInput.value.trim();
-        if (val) addKeyword(val);
-        keywordsInput.value = '';
+    // === PASTE GIỮ NGUYÊN XUỐNG DÒNG ===
+    textLayer.addEventListener('paste', e => {
+        e.preventDefault();
+        const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+        const lines = text.split(/\r\n|\r|\n/);
+        const sel = window.getSelection();
+        if (!sel.rangeCount) return;
+        const range = sel.getRangeAt(0);
+        range.deleteContents();
+
+        lines.forEach((line, i) => {
+            if (i > 0) range.insertNode(document.createElement('br'));
+            if (line) range.insertNode(document.createTextNode(line));
+        });
+        range.collapse(false);
     });
 
-    // === EVENTS ===
-    searchBtn.onclick = () => { replacedRanges = []; highlight(); };
-    clearBtn.onclick = () => {
-        keywords = []; replacedRanges = [];
-        keywordsTags.innerHTML = '';
-        highlight();
+    // === FONT + EVENTS ===
+    const syncFont = () => {
+        textLayer.style.fontFamily = fontFamily.value;
+        textLayer.style.fontSize = fontSize.value;
     };
-    replaceAllBtn.onclick = replaceAll;
+    fontFamily.onchange = fontSize.onchange = syncFont;
+    matchCaseCb.onchange = wholeWordsCb.onchange = highlight;
 
     let timer;
-    editor.addEventListener('input', () => {
+    textLayer.addEventListener('input', () => {
         clearTimeout(timer);
         timer = setTimeout(highlight, 200);
     });
 
-    // Font
-    const syncFont = () => {
-        editor.style.fontFamily = fontFamily.value;
-        editor.style.fontSize = fontSize.value;
+    searchBtn.onclick = () => { replacedRanges = []; highlight(); };
+    clearBtn.onclick = () => {
+        currentKeywords = []; replacedRanges = [];
+        keywordsTags.innerHTML = '';
+        highlight();
     };
-    fontFamily.onchange = fontSize.onchange = syncFont;
-    matchCaseCb.onchange = wholeWordsCb.onchange = highlight;
+    replaceAllBtn.onclick = replaceAll;
 
     // === MODES ===
     const loadModes = () => {
@@ -214,73 +202,55 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = localStorage.getItem(MODES_KEY);
             if (data) modes = JSON.parse(data);
             activeMode = localStorage.getItem(ACTIVE_KEY) || 'Mặc định';
-            if (!modes[activeMode]) activeMode = 'Mặc định';
         } catch(e) {}
         if (!modes['Mặc định']) modes['Mặc định'] = { pairs: [], options: { matchCase: false } };
         saveModes();
-        renderModes();
+        updateUI();
     };
-
     const saveModes = () => {
         localStorage.setItem(MODES_KEY, JSON.stringify(modes));
         localStorage.setItem(ACTIVE_KEY, activeMode);
     };
-
-    const renderModes = () => {
+    const updateUI = () => {
         modeSelect.innerHTML = '';
         Object.keys(modes).forEach(n => modeSelect.add(new Option(n, n, false, n === activeMode)));
 
-        const isDefault = activeMode === 'Mặc định';
-        deleteModeBtn.classList.toggle('hidden', isDefault);
-        renameModeBtn.classList.toggle('hidden', isDefault);
+        const isDef = activeMode === 'Mặc định';
+        deleteModeBtn.classList.toggle('hidden', isDef);
+        renameModeBtn.classList.toggle('hidden', isDef);
 
-        toggleCaseBtn.textContent = modes[activeMode].options?.matchCase ? 'Case: BẬT' : 'Case: TẮT';
-        toggleCaseBtn.className = modes[activeMode].options?.matchCase
-            ? 'w-full mb-4 py-2 bg-green-600 text-white rounded text-xs'
-            : 'w-full mb-4 py-2 bg-gray-600 text-white rounded text-xs';
+        const opt = modes[activeMode].options || { matchCase: false };
+        matchCaseReplaceBtn.textContent = opt.matchCase ? 'Case: BẬT' : 'Case: TẮT';
+        matchCaseReplaceBtn.classList.toggle('bg-green-600', opt.matchCase);
+        matchCaseReplaceBtn.classList.toggle('bg-gray-500', !opt.matchCase);
 
         punctuationList.innerHTML = '';
-        (modes[activeMode].pairs || []).forEach(p => addPairRow(p.find, p.replace));
+        (modes[activeMode].pairs || []).forEach(p => {
+            const div = document.createElement('div');
+            div.className = 'punctuation-item';
+            div.innerHTML = `<input type="text" class="find" placeholder="Tìm" value="${p.find || ''}">
+                            <input type="text" class="replace" placeholder="Thay bằng" value="${p.replace || ''}">
+                            <button class="remove-pair">×</button>`;
+            div.querySelector('.remove-pair').onclick = () => div.remove();
+            punctuationList.appendChild(div); // append, không prepend
+        });
     };
 
-    const addPairRow = (find = '', rep = '') => {
-        const div = document.createElement('div');
-        div.className = 'flex gap-2 items-center';
-        div.innerHTML = `
-            <input type="text" class="find flex-1 p-2 border rounded text-xs" placeholder="Tìm" value="${find}">
-            <span class="text-gray-500">→</span>
-            <input type="text" class="replace flex-1 p-2 border rounded text-xs" placeholder="Thay bằng" value="${rep}">
-            <button class="w-8 h-8 bg-red-500 text-white rounded hover:bg-red-600 text-xl">×</button>
-        `;
-        div.querySelector('button').onclick = () => div.remove();
-        punctuationList.prepend(div);
-    };
-
-    const saveCurrentMode = () => {
-        const rows = punctuationList.querySelectorAll('div');
-        modes[activeMode].pairs = Array.from(rows).map(r => ({
-            find: r.querySelector('.find').value.trim(),
-            replace: r.querySelector('.replace').value
-        }));
-        saveModes();
-        notify(`Đã lưu "${activeMode}"`);
-    };
-
-    modeSelect.onchange = () => { activeMode = modeSelect.value; saveModes(); renderModes(); };
+    modeSelect.onchange = () => { activeMode = modeSelect.value; saveModes(); updateUI(); };
     addModeBtn.onclick = () => {
         const name = prompt('Tên chế độ mới:')?.trim();
         if (!name || modes[name]) return notify('Tên đã tồn tại!', 'error');
         modes[name] = { pairs: [], options: { matchCase: false } };
         activeMode = name;
         saveModes();
-        renderModes();
+        updateUI();
     };
     deleteModeBtn.onclick = () => {
-        if (activeMode === 'Mặc định' || !confirm(`Xóa "${activeMode}"?`)) return;
+        if (activeMode === 'Mặc định' || !confirm('Xóa?')) return;
         delete modes[activeMode];
-        activeMode = Object.keys(modes)[0];
+        activeMode = 'Mặc định';
         saveModes();
-        renderModes();
+        updateUI();
     };
     renameModeBtn.onclick = () => {
         const newName = prompt('Tên mới:', activeMode)?.trim();
@@ -289,17 +259,29 @@ document.addEventListener('DOMContentLoaded', () => {
         delete modes[activeMode];
         activeMode = newName;
         saveModes();
-        renderModes();
+        updateUI();
     };
-    toggleCaseBtn.onclick = () => {
-        const opt = modes[activeMode].options || {};
-        opt.matchCase = !opt.matchCase;
-        modes[activeMode].options = opt;
+    matchCaseReplaceBtn.onclick = () => {
+        modes[activeMode].options.matchCase = !modes[activeMode].options.matchCase;
         saveModes();
-        renderModes();
+        updateUI();
     };
-    addPairBtn.onclick = () => addPairRow();
-    saveSettingsBtn.onclick = saveCurrentMode;
+    addPairBtn.onclick = () => {
+        const div = document.createElement('div');
+        div.className = 'punctuation-item';
+        div.innerHTML = '<input type="text" class="find" placeholder="Tìm"><input type="text" class="replace" placeholder="Thay bằng"><button class="remove-pair">×</button>';
+        div.querySelector('.remove-pair').onclick = () => div.remove();
+        punctuationList.appendChild(div);
+        div.querySelector('.find').focus();
+    };
+    saveSettingsBtn.onclick = () => {
+        modes[activeMode].pairs = Array.from(punctuationList.children).map(el => ({
+            find: el.querySelector('.find').value.trim(),
+            replace: el.querySelector('.replace').value
+        }));
+        saveModes();
+        notify(`Đã lưu "${activeMode}"`);
+    };
 
     // INIT
     syncFont();
