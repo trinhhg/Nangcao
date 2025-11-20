@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tìm Kiếm & Thay Thế Chương (Production Grade)</title>
+    <title>Tìm Kiếm & Thay Thế Chương - Production Fix</title>
     <link rel="icon" href="data:,">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet">
@@ -11,50 +11,37 @@
     <style>
         :root {
             --hl-yellow: #ffff99;
-            --hl-pink: #ffcccc;
-            --hl-blue: #99ccff;
-            --hl-green: #ccffcc;
-            --hl-orange: #ffcc99;
-            --hl-purple: #e6ccff;
+            --hl-1: #ff9f43; --hl-2: #1dd1a1; --hl-3: #54a0ff;
+            --hl-4: #f368e0; --hl-5: #ee5253; --hl-6: #ff6b6b;
         }
         .hl { border-radius: 3px; padding: 0 2px; margin: 0 1px; }
         .hl-yellow { background: var(--hl-yellow); }
-        .hl-pink   { background: var(--hl-pink); }
-        .hl-blue   { background: var(--hl-blue); }
-        .hl-green  { background: var(--hl-green); }
-        .hl-orange { background: var(--hl-orange); }
-        .hl-purple { background: var(--hl-purple); }
+        .hl-1 { background: var(--hl-1); color: white; }
+        .hl-2 { background: var(--hl-2); color: white; }
+        .hl-3 { background: var(--hl-3); color: white; }
+        .hl-4 { background: var(--hl-4); color: white; }
+        .hl-5 { background: var(--hl-5); color: white; }
+        .hl-6 { background: var(--hl-6); color: white; }
 
-        body { font-family: 'Montserrat', sans-serif; margin: 0; height: 100vh; overflow: hidden; }
+        body { font-family: 'Montserrat', sans-serif; margin: 0; height: 100vh; overflow: hidden; background: #f3f4f6; }
         #main-app { display: grid; grid-template-columns: 320px 1fr 320px; height: 100%; }
-        .panel { overflow-y: auto; padding: 16px; background: white; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-        #text-panel { position: relative; display: flex; flex-direction: column; }
-        #editor { 
-            flex: 1; 
-            min-height: 0;
-            padding: 24px;
-            background: white;
-            border: 2px solid #d1d5db;
-            border-radius: 8px;
-            overflow-y: auto;
-            white-space: pre-wrap;
-            word-break: break-word;
-            outline: none;
-            caret-color: black;
-            font-size: 16px;
-            line-height: 1.6;
+        .panel { padding: 16px; background: white; box-shadow: 0 0 15px rgba(0,0,0,0.1); overflow-y: auto; }
+        #editor {
+            flex: 1; min-height: 0; padding: 24px; margin: 0 16px;
+            background: white; border: 2px solid #d1d5db; border-radius: 12px;
+            outline: none; caret-color: black; font-size: 16px; line-height: 1.7;
+            white-space: pre-wrap; word-break: break-word; overflow-y: auto;
         }
-        #editor mark[data-hl] { pointer-events: none; }
-        .tag { 
-            background: #dbeafe; color: #1e40af; padding: 4px 10px; border-radius: 20px; 
-            font-size: 12px; display: inline-flex; align-items: center; gap: 6px; 
-            margin: 4px 4px 4px 0; border: 1px solid #93c5fd; cursor: default;
+        .tag {
+            background: #dbeafe; color: #1e40af; padding: 6px 12px; border-radius: 20px;
+            font-size: 12px; display: inline-flex; align-items: center; gap: 8px;
+            margin: 4px 4px 4px 0; border: 1px solid #93c5fd; user-select: none;
         }
-        .tag .remove { cursor: pointer; font-weight: bold; font-size: 16px; }
-        .notification { 
-            position: fixed; top: 20px; right: 20px; z-index: 9999; 
-            padding: 12px 20px; border-radius: 8px; color: white; 
-            box-shadow: 0 4px 20px rgba(0,0,0,0.2); animation: slide 0.4s ease;
+        .tag .remove { cursor: pointer; font-weight: bold; font-size: 18px; }
+        .notification {
+            be: fixed; top: 20px; right: 20px; z-index: 9999; padding: 12px 20px;
+            border-radius: 8px; color: white; box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            animation: slide 0.4s ease;
         }
         .notification.success { background: #22c55e; }
         .notification.error { background: #ef4444; }
@@ -62,7 +49,7 @@
         input, select { min-width: 0; }
     </style>
 </head>
-<body class="bg-gray-100">
+<body>
     <div id="main-app">
         <!-- Panel Tìm kiếm -->
         <div class="panel">
@@ -88,27 +75,24 @@
                 </div>
             </div>
 
-            <div class="mb-4 space-y-2">
+            <div class="space-y-2 mb-4">
                 <label><input type="checkbox" id="matchCase"> Phân biệt hoa/thường</label>
                 <label><input type="checkbox" id="wholeWords"> Từ hoàn chỉnh</label>
             </div>
 
-            <div class="mb-3">
-                <input type="text" id="keywords-input" placeholder="Nhập từ khóa, Enter hoặc dấu phẩy..." 
-                       class="w-full p-2.5 border rounded bg-gray-50 text-sm">
-            </div>
+            <input type="text" id="keywords-input" placeholder="Nhập từ khóa, Enter hoặc phẩy..." class="w-full p-3 border rounded bg-gray-50 text-sm mb-3">
 
             <div class="flex gap-2 mb-3">
-                <button id="search" class="flex-1 bg-green-600 text-white py-2.5 rounded hover:bg-green-700 text-sm font-medium">Tìm & Highlight</button>
-                <button id="clear" class="flex-1 bg-red-600 text-white py-2.5 rounded hover:bg-red-700 text-sm font-medium">Xóa Tất Cả</button>
+                <button id="search" class="flex-1 bg-green-600 text-white py-2.5 rounded hover:bg-green-700 font-medium">Tìm & Highlight</button>
+                <button id="clear" class="flex-1 bg-red-600 text-white py-2.5 rounded hover:bg-red-700 font-medium">Xóa Tất Cả</button>
             </div>
 
             <div id="keywords-tags" class="flex flex-wrap"></div>
         </div>
 
-        <!-- Editor Chính -->
-        <div id="text-panel" class="mx-4 flex flex-col">
-            <div class="flex justify-between items-end mb-3">
+        <!-- Editor -->
+        <div class="flex flex-col">
+            <div class="flex justify-between items-end mb-3 px-4">
                 <h2 class="text-xl font-bold">Nội Dung Chương</h2>
                 <div class="text-xs text-right">
                     <div class="text-red-600 font-bold">DON@TE: MB BANK - TRINH THI XUAN HUONG - 0917678211</div>
@@ -132,13 +116,13 @@
                 </div>
             </div>
 
-            <div class="flex gap-2 mb-3">
-                <button id="add-pair" class="flex-1 py-2 bg-blue-600 text-white rounded text-xs">+ Cặp</button>
-                <button id="save-settings" class="flex-1 py-2 bg-green-600 text-white rounded text-xs">Lưu</button>
-                <button id="replace-all" class="flex-1 py-2 bg-purple-600 text-white rounded text-xs">Thay Tất Cả</button>
+            <div class="grid grid-cols-3 gap-2 mb-3">
+                <button id="add-pair" class="py-2 bg-blue-600 text-white rounded text-xs">+ Cặp</button>
+                <button id="save-settings" class="py-2 bg-green-600 text-white rounded text-xs">Lưu</button>
+                <button id="replace-all" class="py-2 bg-purple-600 text-white rounded text-xs">Thay Tất Cả</button>
             </div>
 
-            <button id="toggle-case" class="w-full mb-3 py-2 bg-gray-600 text-white rounded text-xs">Case: TẮT</button>
+            <button id="toggle-case" class="w-full mb-4 py-2 bg-gray-600 text-white rounded text-xs">Case: TẮT</button>
 
             <div id="punctuation-list" class="space-y-2"></div>
         </div>
