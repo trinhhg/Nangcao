@@ -7,7 +7,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const fontSize = document.getElementById('fontSize');
     const matchCaseCb = document.getElementById('matchCase');
     const wholeWordsCb = document.getElementById('wholeWords');
-    const highlightReplacesCb = document.getElementById('highlightReplaces');
     const replaceAllBtn = document.getElementById('replace-all');
     const punctuationList = document.getElementById('punctuation-list');
     const textLayer = document.getElementById('text-layer');
@@ -52,14 +51,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const escapeRegex = str => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+    // Vietnamese word boundaries
+    const VIET_BOUNDARIES = '[^a-zA-Z0-9àáãạảăắằẳẵặâấầẩẫậèéẹẻẽêềếểễệìíĩỉịòóõọỏôốồổỗộơớờởỡợùúũụủưứừửữựỳỵỷỹýđÀÁÃẠẢĂẮẰẲẴẶÂẤẦẨẪẬÈÉẸẺẼÊỀẾỂỄỆÌÍĨỈỊÒÓÕỌỎÔỐỒỔỖỘƠỚỜỞỠỢÙÚŨỤỦƯỨỪỬỮỰỲỴỶỸÝĐ ]';
+
     function buildRegex(word, wholeWords = false, matchCase = false) {
         if (!word) return null;
         const escaped = escapeRegex(word);
         let pattern = escaped;
         if (wholeWords) {
-            // Sửa regex: Thêm boundaries đúng cho tiếng Việt, và đóng ngoặc
-            const boundaries = '[^a-zA-Z0-9áàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵđÁÀẢÃẠĂẮẰẲẴẶÂẤẦẨẪẬÉÈẺẼẸÊẾỀỂỄỆÍÌỈĨỊÓÒỎÕỌÔỐỒỔỖỘƠỚỜỞỠỢÚÙỦŨỤƯỨỪỬỮỰÝỲỶỸỴĐ ]'; // Space or non-alphanum
-            pattern = `(^|\( {boundaries})( \){escaped})(\( | \){boundaries})`;
+            pattern = `(^|\( {VIET_BOUNDARIES})( \){escaped})(\( | \){VIET_BOUNDARIES})`;
         }
         const flags = matchCase ? 'g' : 'gi';
         return new RegExp(pattern, flags);
@@ -74,61 +75,45 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const matches = [];
 
-        // Từ đã replace → vàng (ưu tiên cao nhất)
+        // Replaced ranges: Vàng, priority cao nhất (luôn highlight vị trí sau replace)
         replacedRanges.forEach(r => {
-            if (r.start < text.length && r.end <= text.length) {
+            if (r.start >= 0 && r.end <= text.length && r.start < r.end) {
                 matches.push({start: r.start, end: r.end, cls: 'hl-yellow', priority: 999});
             }
         });
 
-        // Keywords hiện tại
+        // Keywords: Màu luân phiên, priority trung bình
         currentKeywords.forEach((kw, i) => {
             const regex = buildRegex(kw, wholeWordsCb.checked, matchCaseCb.checked);
             if (!regex) return;
             let m;
             while ((m = regex.exec(text)) !== null) {
+                const fullMatch = m[0];
                 const start = wholeWordsCb.checked ? m.index + m[1].length : m.index;
                 const end = start + kw.length;
-                matches.push({start, end, cls: HIGHLIGHT_CLASSES[(i % 5) + 1], priority: 100}); // +1 để tránh yellow
+                matches.push({start, end, cls: HIGHLIGHT_CLASSES[(i % 5) + 1], priority: 100});
             }
         });
 
-        // Nếu highlight replaces: Thêm find pairs như keywords (màu yellow, nhưng ưu tiên thấp hơn replaced)
-        if (highlightReplacesCb.checked) {
-            const mode = replaceModes[activeModeName];
-            if (mode && mode.pairs) {
-                mode.pairs.forEach(p => {
-                    if (!p.find) return;
-                    const regex = buildRegex(p.find, false, mode.options?.matchCase);
-                    if (!regex) return;
-                    let m;
-                    while ((m = regex.exec(text)) !== null) {
-                        const start = m.index;
-                        const end = start + p.find.length;
-                        matches.push({start, end, cls: 'hl-yellow', priority: 50}); // Thấp hơn replaced
-                    }
-                });
-            }
-        }
-
-        // Sắp xếp theo start, ưu tiên cao trước, loại overlap (giữ cái priority cao hơn nếu overlap)
+        // Sort và loại overlap (giữ priority cao hơn)
         matches.sort((a, b) => a.start - b.start || b.priority - a.priority || a.end - b.end);
         const final = [];
         let lastEnd = 0;
-        for (let i = 0; i < matches.length; i++) {
-            const m = matches[i];
+        for (const m of matches) {
             if (m.start >= lastEnd) {
                 final.push(m);
                 lastEnd = m.end;
-            } else if (m.priority > matches.find(prev => prev.end > m.start)?.priority || !matches.find(prev => prev.end > m.start)) {
-                // Nếu overlap, thay thế nếu priority cao hơn
-                const prevIndex = final.findIndex(p => p.end > m.start);
-                if (prevIndex > -1) final[prevIndex] = m;
-                lastEnd = Math.max(lastEnd, m.end);
+            } else {
+                // Nếu overlap, check priority
+                const overlapped = final.findLast(p => p.end > m.start);
+                if (overlapped && m.priority > overlapped.priority) {
+                    final[final.indexOf(overlapped)] = m;
+                    lastEnd = Math.max(lastEnd, m.end);
+                }
             }
         }
 
-        // Rebuild highlight layer
+        // Build highlight
         const frag = document.createDocumentFragment();
         let pos = 0;
         for (const m of final) {
@@ -155,9 +140,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!mode || !mode.pairs?.length) { showNotification('Chưa có cặp thay thế!', 'error'); restoreSelection(); return; }
 
         let newText = text;
-        replacedRanges = [];
-        let offset = 0;
-        const pairs = mode.pairs.filter(p => p.find).sort((a,b) => b.find.length - a.find.length);
+        replacedRanges = []; // Clear trước
+        const pairs = mode.pairs.filter(p => p.find).sort((a, b) => b.find.length - a.find.length);
+        let globalOffset = 0;
 
         pairs.forEach(p => {
             const regex = buildRegex(p.find, false, mode.options?.matchCase);
@@ -166,12 +151,25 @@ document.addEventListener('DOMContentLoaded', () => {
             let match;
             while ((match = regex.exec(newText)) !== null) {
                 const idx = match.index;
-                const start = idx + offset;
-                replacedRanges.push({start, end: start + p.replace.length});
-                newText = newText.slice(0, idx) + p.replace + newText.slice(idx + p.find.length);
-                offset += p.replace.length - p.find.length;
-                regex.lastIndex = idx + p.replace.length; // Cập nhật index để tránh loop vô tận
+                const origLength = p.find.length;
+                const newLength = p.replace.length;
+                const delta = newLength - origLength;
+
+                // Thay thế
+                newText = newText.slice(0, idx) + p.replace + newText.slice(idx + origLength);
+
+                // Lưu range mới (vị trí sau replace)
+                const newStart = idx + globalOffset;
+                const newEnd = newStart + newLength;
+                replacedRanges.push({start: newStart, end: newEnd});
+
+                globalOffset += delta;
+
+                // Cập nhật lastIndex để tránh loop sai
+                regex.lastIndex = idx + newLength;
             }
+            // Reset lastIndex cho pair tiếp theo
+            regex.lastIndex = 0;
         });
 
         textLayer.textContent = newText;
@@ -180,9 +178,16 @@ document.addEventListener('DOMContentLoaded', () => {
         restoreSelection();
     }
 
+    // Sync scroll giữa layers
+    function syncScroll() {
+        highlightLayer.scrollTop = textLayer.scrollTop;
+        highlightLayer.scrollLeft = textLayer.scrollLeft;
+    }
+    textLayer.addEventListener('scroll', syncScroll);
+
     // Keywords
     function addKeywords() {
-        const vals = keywordsInput.value.split(',').map(s=>s.trim()).filter(Boolean);
+        const vals = keywordsInput.value.split(',').map(s => s.trim()).filter(Boolean);
         vals.forEach(v => {
             if (v && !currentKeywords.includes(v)) {
                 currentKeywords.push(v);
@@ -201,10 +206,10 @@ document.addEventListener('DOMContentLoaded', () => {
         highlightKeywords();
         keywordsInput.focus();
     }
-    keywordsInput.addEventListener('keydown', e => { if (e.key==='Enter' || e.key===',') { e.preventDefault(); addKeywords(); }});
+    keywordsInput.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addKeywords(); } });
     keywordsInput.addEventListener('blur', () => { if (keywordsInput.value.trim()) addKeywords(); });
 
-    // Paste giữ format
+    // Paste
     textLayer.addEventListener('paste', e => {
         e.preventDefault();
         const text = (e.clipboardData || window.clipboardData).getData('text/plain');
@@ -225,17 +230,12 @@ document.addEventListener('DOMContentLoaded', () => {
         textLayer.style.fontSize = newSize;
         highlightLayer.style.fontFamily = newFont;
         highlightLayer.style.fontSize = newSize;
-        // Resize observer để sync height nếu font thay đổi
-        if (window.ResizeObserver) {
-            const observer = new ResizeObserver(() => highlightKeywords());
-            observer.observe(textLayer);
-        }
-        highlightKeywords();
+        setTimeout(highlightKeywords, 100); // Delay để font apply
     }
     fontFamily.onchange = fontSize.onchange = syncFont;
-    matchCaseCb.onchange = wholeWordsCb.onchange = highlightReplacesCb.onchange = highlightKeywords;
+    matchCaseCb.onchange = wholeWordsCb.onchange = highlightKeywords;
 
-    // Replace modes (giữ nguyên, chỉ thêm updateUI cho checkbox mới)
+    // Replace modes (giữ nguyên)
     function loadModes() {
         try {
             replaceModes = JSON.parse(localStorage.getItem(REPLACE_MODES_KEY)) || {};
@@ -255,7 +255,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     function updateUI() {
         modeSelect.innerHTML = '';
-        Object.keys(replaceModes).forEach(n => modeSelect.add(new Option(n, n, false, n===activeModeName)));
+        Object.keys(replaceModes).forEach(n => modeSelect.add(new Option(n, n, false, n === activeModeName)));
         const isDefault = activeModeName === 'Mặc định';
         deleteModeBtn.classList.toggle('hidden', isDefault);
         renameModeBtn.classList.toggle('hidden', isDefault);
@@ -266,7 +266,7 @@ document.addEventListener('DOMContentLoaded', () => {
         punctuationList.innerHTML = '';
         (replaceModes[activeModeName].pairs || []).forEach(p => addPairUI(p.find, p.replace));
     }
-    function addPairUI(find='', replace='', focus=true) {
+    function addPairUI(find = '', replace = '', focus = true) {
         const div = document.createElement('div');
         div.className = 'punctuation-item';
         div.innerHTML = `<input type="text" class="find" placeholder="Tìm" value="${find}">
@@ -280,11 +280,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const pairs = Array.from(punctuationList.querySelectorAll('.punctuation-item')).map(el => ({
             find: el.querySelector('.find').value.trim(),
             replace: el.querySelector('.replace').value
-        })).filter(p => p.find); // Lọc pairs rỗng
+        })).filter(p => p.find);
         replaceModes[activeModeName].pairs = pairs;
         saveModes();
         showNotification(`Đã lưu "${activeModeName}"`);
-        highlightKeywords(); // Re-highlight sau save
+        highlightKeywords();
     }
 
     searchBtn.onclick = () => { replacedRanges = []; highlightKeywords(); };
