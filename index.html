@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tìm Kiếm & Thay Thế Chương - Final Fixed 100%</title>
     <link rel="icon" href="data:,">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
@@ -23,7 +23,7 @@
             white-space: pre-wrap; word-wrap: break-word;
         }
         #text-layer {
-            z-index: 2; background: transparent; color: black; caret-color: black;
+            z-index: 2; background: transparent; color: transparent; caret-color: black;
             outline: none; overflow-y: auto; scrollbar-width: thin;
         }
         #highlight-layer {
@@ -60,6 +60,7 @@
             <div class="mb-4">
                 <label class="block mb-2"><input type="checkbox" id="matchCase" class="mr-2"> Phân biệt hoa/thường</label>
                 <label class="block mb-2"><input type="checkbox" id="wholeWords" class="mr-2"> Từ hoàn chỉnh</label>
+                <label class="block mb-2"><input type="checkbox" id="highlightReplaces" class="mr-2" checked> Highlight thay thế như keywords</label>
             </div>
             <div class="mb-4">
                 <label class="block mb-2">Từ khóa:</label>
