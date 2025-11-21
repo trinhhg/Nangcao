@@ -1,8 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Global try-catch để ignore extension errors (từ Stack Overflow 2025)
+    // Global try-catch ignore extension errors
     window.addEventListener('error', e => {
         if (e.filename.includes('contentScript.js') || e.filename.includes('onboarding.js') || e.message.includes('undefined')) {
-            console.warn('Ignored extension error:', e.message); // Không crash
+            console.warn('Ignored extension error:', e.message);
             e.preventDefault();
             return false;
         }
@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveSettingsBtn = document.getElementById('save-settings');
 
     let currentKeywords = [];
-    let replacedRanges = []; // {start, end} sau replace
+    let replacedRanges = [];
     const HIGHLIGHT_CLASSES = ['hl-yellow','hl-pink','hl-blue','hl-green','hl-orange','hl-purple'];
 
     const REPLACE_MODES_KEY = 'replaceModes';
@@ -67,15 +67,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const escapeRegex = str => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-    // Vietnamese boundaries đầy đủ (từ Regex Tester 2025 )
-    const VIET_BOUNDARIES = '[^a-zA-Z0-9àáãạảăắằẳẵặâấầẩẫậèéẹẻẽêềếểễệìíĩỉịòóõọỏôốồổỗộơớờởỡợùúũụủưứừửữựỳỵỷỹýđÀÁÃẠẢĂẮẰẲẴẶÂẤẦẨẪẬÈÉẸẺẼÊỀẾỂỄỆÌÍĨỈỊÒÓÕỌỎÔỐỒỔỖỘƠỚỜỞỠỢÙÚŨỤỦƯỨỪỬỮỰỲỴỶỸÝĐ ]';
+    // Custom word boundaries cho tiếng Việt (từ MS Word wildcards + Regex101: hỗ trợ dấu, match "ông" riêng không trong "ôngbà")
+    const VIET_WORD_BOUNDARY = '(^|\\s|[^a-zA-Z0-9àáãạảăắằẳẵặâấầẩẫậèéẹẻẽêềếểễệìíĩỉịòóõọỏôốồổỗộơớờởỡợùúũụủưứừửữựỳỵỷỹýđÀÁÃẠẢĂẮẰẲẴẶÂẤẦẨẪẬÈÉẸẺẼÊỀẾỂỄỆÌÍĨỈỊÒÓÕỌỎÔỐỒỔỖỘƠỚỜỞỠỢÙÚŨỤỦƯỨỪỬỮỰỲỴỶỸÝĐ])';
 
     function buildRegex(word, wholeWords = false, matchCase = false) {
         if (!word) return null;
         const escaped = escapeRegex(word);
         let pattern = escaped;
         if (wholeWords) {
-            pattern = `(^|\( {VIET_BOUNDARIES})( \){escaped})(\( | \){VIET_BOUNDARIES})`;
+            // Như MS Word: <word> → (^|non-word)(word)(end|non-word)
+            pattern = `(\( {VIET_WORD_BOUNDARY})( \){escaped})(${VIET_WORD_BOUNDARY})`;
         }
         const flags = matchCase ? 'g' : 'gi';
         return new RegExp(pattern, flags);
@@ -86,19 +87,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const text = textLayer.textContent || '';
         highlightLayer.innerHTML = '';
 
-        if (!text) { 
-            restoreSelection(); 
-            return; 
-        }
+        if (!text) { restoreSelection(); return; }
 
-        // Fallback nếu lỗi
         textLayer.style.color = 'black';
         highlightLayer.style.display = 'none';
 
         try {
             const matches = [];
 
-            // Replaced: Vàng cao nhất (từ Range track)
+            // Replaced ranges: Vàng cao nhất
             replacedRanges.forEach(r => {
                 if (r.start >= 0 && r.end <= text.length && r.start < r.end) {
                     matches.push({start: r.start, end: r.end, cls: 'hl-yellow', priority: 999});
@@ -119,7 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            // Sort & loại overlap (từ CSS-Tricks 2025)
+            // Sort & loại overlap
             matches.sort((a, b) => a.start - b.start || b.priority - a.priority || a.end - b.end);
             const final = [];
             let lastEnd = 0;
@@ -165,7 +162,34 @@ document.addEventListener('DOMContentLoaded', () => {
         restoreSelection();
     }
 
+    // Force search với count (best practice: exec regex, đếm unique matches)
+    function forceSearchAndHighlight() {
+        if (currentKeywords.length === 0) {
+            showNotification('Không có từ khóa nào để tìm!', 'error');
+            return;
+        }
+        saveSelection();
+        const text = textLayer.textContent || '';
+        let totalMatches = 0;
+        const isWholeWords = wholeWordsCb ? wholeWordsCb.checked : false;
+        const isMatchCase = matchCaseCb ? matchCaseCb.checked : false;
+
+        currentKeywords.forEach(kw => {
+            const regex = buildRegex(kw, isWholeWords, isMatchCase);
+            if (regex) {
+                const matches = text.match(regex) || [];
+                totalMatches += matches.length; // Đếm tất cả matches cho keyword
+            }
+        });
+
+        highlightKeywords(); // Rebuild
+        const msg = totalMatches > 0 ? `Tìm thấy ${totalMatches} từ khóa!` : 'Không tìm thấy từ khóa nào!';
+        showNotification(msg, totalMatches > 0 ? 'success' : 'error');
+        restoreSelection();
+    }
+
     function replaceAllSafe() {
+        // Giữ nguyên như trước
         saveSelection();
         const text = textLayer.textContent || '';
         const mode = replaceModes[activeModeName];
@@ -178,7 +202,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         pairs.forEach(p => {
             const isMatchCase = mode.options?.matchCase || false;
-            const regex = buildRegex(p.find, false, isMatchCase); // Không whole word cho replace
+            const regex = buildRegex(p.find, false, isMatchCase);
             if (!regex) return;
             let match;
             regex.lastIndex = 0;
@@ -188,10 +212,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const newLength = p.replace.length;
                 const delta = newLength - origLength;
 
-                // Replace
                 newText = newText.slice(0, idx) + p.replace + newText.slice(idx + origLength);
 
-                // Track range mới (từ Stack Overflow )
                 const newStart = idx + globalOffset;
                 const newEnd = newStart + newLength;
                 replacedRanges.push({start: newStart, end: newEnd});
@@ -207,7 +229,7 @@ document.addEventListener('DOMContentLoaded', () => {
         restoreSelection();
     }
 
-    // Sync scroll mượt (RAF từ CSS-Tricks 2025)
+    // Sync scroll
     let rafId;
     function syncScroll() {
         cancelAnimationFrame(rafId);
@@ -218,36 +240,34 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     textLayer.addEventListener('scroll', syncScroll, { passive: true });
 
-    // Paste giữ format (HTML + \n → br, từ Stack Overflow )
+    // Paste giữ format (giữ nguyên)
     textLayer.addEventListener('paste', e => {
         e.preventDefault();
         saveSelection();
         const htmlData = (e.clipboardData || window.clipboardData).getData('text/html');
         const textData = (e.clipboardData || window.clipboardData).getData('text/plain');
-        let pasteContent = htmlData || textData.replace(/\n/g, '<br>'); // Fallback line breaks
+        let pasteContent = htmlData || textData.replace(/\n/g, '<br>');
 
-        // Sanitize: Giữ br/p, strip other (từ )
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = pasteContent;
         const walker = document.createTreeWalker(tempDiv, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT, null, false);
         let node;
         while (node = walker.nextNode()) {
             if (node.nodeType === Node.TEXT_NODE) {
-                // Giữ nguyên text
+                // Giữ text
             } else if (node.tagName !== 'BR' && node.tagName !== 'P') {
                 node.parentNode.replaceChild(document.createTextNode(node.textContent), node);
             }
         }
         pasteContent = tempDiv.innerHTML;
 
-        // Insert at cursor (từ MDN Range 2025)
         const sel = window.getSelection();
         if (sel.rangeCount) {
             const range = sel.getRangeAt(0);
             range.deleteContents();
             const frag = range.createContextualFragment(pasteContent);
             range.insertNode(frag);
-            range.collapse(false); // Cursor sau paste
+            range.collapse(false);
             sel.removeAllRanges();
             sel.addRange(range);
         }
@@ -255,7 +275,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(highlightKeywords, 50);
     });
 
-    // Keywords (giữ nguyên)
+    // Keywords add (giữ nguyên)
     function addKeywords() {
         const vals = keywordsInput.value.split(',').map(s => s.trim()).filter(Boolean);
         vals.forEach(v => {
@@ -295,13 +315,13 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(highlightKeywords, 100);
     }
 
-    // Events với check null
+    // Events
     if (fontFamily) fontFamily.onchange = syncFont;
     if (fontSize) fontSize.onchange = syncFont;
     if (matchCaseCb) matchCaseCb.onchange = highlightKeywords;
     if (wholeWordsCb) wholeWordsCb.onchange = highlightKeywords;
 
-    // Replace modes (giữ nguyên, thêm filter empty pairs)
+    // Replace modes (giữ nguyên)
     function loadModes() {
         try {
             replaceModes = JSON.parse(localStorage.getItem(REPLACE_MODES_KEY)) || {};
@@ -353,14 +373,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const pairs = Array.from(punctuationList.querySelectorAll('.punctuation-item')).map(el => ({
             find: el.querySelector('.find').value.trim(),
             replace: el.querySelector('.replace').value
-        })).filter(p => p.find); // Lọc empty
+        })).filter(p => p.find);
         replaceModes[activeModeName].pairs = pairs;
         saveModes();
         showNotification(`Đã lưu "${activeModeName}"`);
         highlightKeywords();
     }
 
-    if (searchBtn) searchBtn.onclick = () => { replacedRanges = []; highlightKeywords(); };
+    if (searchBtn) searchBtn.onclick = forceSearchAndHighlight; // Fix: Ép tìm + count
     if (clearBtn) clearBtn.onclick = () => { currentKeywords = []; replacedRanges = []; keywordsTags.innerHTML = ''; highlightKeywords(); };
     if (replaceAllBtn) replaceAllBtn.onclick = replaceAllSafe;
     if (addPairBtn) addPairBtn.onclick = () => addPairUI('', '', true);
