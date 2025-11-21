@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // === STATE ===
     let currentKeywords = [];
-    let lastReplacedFinds = []; // Từ gốc đã bị thay thế
+    let replacedRanges = []; // Vị trí mới sau replace (fix highlight full)
     const HIGHLIGHT_CLASSES = ['hl-yellow','hl-pink','hl-blue','hl-green','hl-orange','hl-purple'];
 
     // Replace modes
@@ -63,111 +63,93 @@ document.addEventListener('DOMContentLoaded', () => {
         const escaped = escapeRegex(word);
         let pattern = escaped;
         if (wholeWords) {
-            // Fix giống Word: boundary non-alphanumeric (không match trong "cats" nhưng match "cat ")
+            // Fix giống Word: boundary non-alphanumeric
             pattern = `(^|[^a-zA-Z0-9])(\( {escaped})( \)|[^a-zA-Z0-9])`;
         }
         const flags = matchCase ? 'g' : 'gi';
         return new RegExp(pattern, flags);
     }
 
-    function removeHighlightsSafe() {
-        textLayer.querySelectorAll('mark[data-hl]').forEach(mark => {
-            mark.replaceWith(...mark.childNodes);
-        });
-        textLayer.normalize();
-    }
-
-    // === HIGHLIGHT CHUẨN (fix reversed + whole words) ===
+    // === HIGHLIGHT CHUẨN (2-layer, fix HierarchyError + full highlight) ===
     function highlightKeywords() {
-        saveSelection(); // Fix reversed: save cursor trước
-        removeHighlightsSafe();
+        saveSelection();
+        const text = textLayer.textContent || '';
+        highlightLayer.innerHTML = ''; // Chỉ clear layer highlight, không đụng text-layer (fix error)
 
         const searchWholeWords = wholeWordsCb.checked;
         const searchMatchCase = matchCaseCb.checked;
 
         const keywordsToHighlight = [
-            // Từ đã replace: luôn màu vàng, ưu tiên cao nhất
-            ...lastReplacedFinds.map(t => ({ text: t, cls: 'hl-yellow', priority: 999 })),
-            // Từ khóa tìm kiếm: dùng các màu còn lại
+            // Từ đã replace: vàng, ưu tiên cao (loop full)
+            ...replacedRanges.map(r => ({ start: r.start, end: r.end, cls: 'hl-yellow', priority: 999 })),
+            // Keywords: màu khác
             ...currentKeywords.map((t, i) => ({ 
                 text: t, 
-                cls: HIGHLIGHT_CLASSES[(i + 1) % 6], // bỏ qua màu vàng
+                cls: HIGHLIGHT_CLASSES[(i + 1) % 6], 
                 priority: 100 
             }))
-        ].map(k => ({ ...k, wholeWords: searchWholeWords, matchCase: searchMatchCase }));
+        ];
 
-        if (!keywordsToHighlight.length) {
-            setTimeout(restoreSelection, 0); // Defer restore để tránh jump
+        if (!keywordsToHighlight.length || !text) {
+            restoreSelection();
             return;
         }
 
-        const walker = document.createTreeWalker(textLayer, NodeFilter.SHOW_TEXT);
-        let node;
-        while (node = walker.nextNode()) {
-            const text = node.nodeValue;
-            const matches = [];
-
-            for (const kw of keywordsToHighlight) {
-                const regex = buildRegex(kw.text, kw.wholeWords, kw.matchCase);
-                if (!regex) continue;
+        const matches = [];
+        keywordsToHighlight.forEach(kw => {
+            if (kw.start !== undefined) {
+                // Replaced: thêm trực tiếp
+                matches.push({ start: kw.start, end: kw.end, cls: kw.cls, priority: kw.priority });
+            } else {
+                // Keywords: loop full exec
+                const regex = buildRegex(kw.text, searchWholeWords, searchMatchCase);
+                if (!regex) return;
                 let m;
                 while ((m = regex.exec(text)) !== null) {
-                    // Fix whole words: nếu dùng group, adjust index cho group 2 (word chính)
-                    const matchStart = kw.wholeWords ? m.index + m[1].length : m.index;
-                    const matchEnd = matchStart + (kw.text.length);
-                    matches.push({
-                        start: matchStart,
-                        end: matchEnd,
-                        cls: kw.cls,
-                        priority: kw.priority
-                    });
+                    const matchStart = searchWholeWords ? m.index + m[1].length : m.index;
+                    const matchEnd = matchStart + kw.text.length;
+                    matches.push({ start: matchStart, end: matchEnd, cls: kw.cls, priority: kw.priority });
                 }
             }
+        });
 
-            if (!matches.length) continue;
-
-            // Sort: vị trí -> priority cao trước -> dài hơn trước
-            matches.sort((a, b) => a.start - b.start || b.priority - a.priority || b.end - a.end);
-
-            // Loại bỏ chồng lấn
-            const finalMatches = [];
-            let lastEnd = 0;
-            for (const m of matches) {
-                if (m.start >= lastEnd) {
-                    finalMatches.push(m);
-                    lastEnd = m.end;
-                }
+        // Sort + filter overlap
+        matches.sort((a, b) => a.start - b.start || b.priority - a.priority || b.end - a.end);
+        const finalMatches = [];
+        let lastEnd = 0;
+        for (const m of matches) {
+            if (m.start >= lastEnd) {
+                finalMatches.push(m);
+                lastEnd = m.end;
             }
-
-            if (!finalMatches.length) continue;
-
-            const frag = document.createDocumentFragment();
-            let pos = 0;
-            for (const m of finalMatches) {
-                if (m.start > pos) {
-                    frag.appendChild(document.createTextNode(text.slice(pos, m.start)));
-                }
-                const mark = document.createElement('mark');
-                mark.className = m.cls;
-                mark.setAttribute('data-hl', '1');
-                mark.textContent = text.slice(m.start, m.end);
-                frag.appendChild(mark);
-                pos = m.end;
-            }
-            if (pos < text.length) {
-                frag.appendChild(document.createTextNode(text.slice(pos)));
-            }
-            node.replaceWith(frag);
         }
 
-        setTimeout(restoreSelection, 0); // Defer restore fix reversed
+        // Rebuild highlight-layer (không đụng text-layer, fix error)
+        const frag = document.createDocumentFragment();
+        let pos = 0;
+        for (const m of finalMatches) {
+            if (m.start > pos) frag.appendChild(document.createTextNode(text.slice(pos, m.start)));
+            const mark = document.createElement('mark');
+            mark.className = m.cls;
+            mark.setAttribute('data-hl', '1');
+            mark.textContent = text.slice(m.start, m.end);
+            frag.appendChild(mark);
+            pos = m.end;
+        }
+        if (pos < text.length) frag.appendChild(document.createTextNode(text.slice(pos)));
+        highlightLayer.appendChild(frag);
+
+        // Sync font
+        highlightLayer.style.fontFamily = textLayer.style.fontFamily;
+        highlightLayer.style.fontSize = textLayer.style.fontSize;
+
+        setTimeout(restoreSelection, 0); // Defer fix cursor jump
     }
 
-    // === REPLACE ALL SIÊU AN TOÀN (giữ format) ===
+    // === REPLACE ALL (lưu vị trí mới, full highlight) ===
     function replaceAllSafe() {
         saveSelection();
-        removeHighlightsSafe();
-
+        const text = textLayer.textContent || '';
         const mode = replaceModes[activeModeName];
         if (!mode) return showNotification('Chưa chọn chế độ!', 'error');
 
@@ -180,46 +162,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!pairs.length) return showNotification('Chưa có cặp thay thế!', 'error');
 
-        // Sắp xếp theo độ dài giảm dần để tránh thay thế sai
         pairs.sort((a, b) => b.find.length - a.find.length);
-
-        const wholeWords = mode.options?.wholeWords || false;
         const matchCase = mode.options?.matchCase || false;
 
-        let changed = false;
-        const findsUsed = new Set();
+        let newText = text;
+        replacedRanges = []; // Reset
+        let offset = 0;
 
-        const walker = document.createTreeWalker(textLayer, NodeFilter.SHOW_TEXT);
-        let node;
-        while (node = walker.nextNode()) {
-            let text = node.nodeValue;
-            let newText = text;
+        pairs.forEach(pair => {
+            const regex = buildRegex(pair.find, false, matchCase);
+            if (!regex) return;
+            newText = newText.replace(regex, (match, index) => {
+                const start = index + offset;
+                const end = start + pair.replace.length;
+                replacedRanges.push({ start, end }); // Lưu vị trí mới (fix full highlight)
+                offset += pair.replace.length - match.length;
+                return pair.replace;
+            });
+        });
 
-            for (const pair of pairs) {
-                const regex = buildRegex(pair.find, wholeWords, matchCase);
-                if (!regex) continue;
-
-                newText = newText.replace(regex, (match) => {
-                    if (match !== pair.replace) {
-                        changed = true;
-                        findsUsed.add(pair.find);
-                    }
-                    return pair.replace;
-                });
-            }
-
-            if (newText !== text) {
-                node.nodeValue = newText;
-            }
-        }
-
-        lastReplacedFinds = Array.from(findsUsed);
+        textLayer.textContent = newText;
         highlightKeywords();
 
-        if (changed) {
+        if (replacedRanges.length) {
             showNotification('Thay thế thành công!', 'success');
         } else {
-            lastReplacedFinds = [];
+            replacedRanges = [];
             highlightKeywords();
             showNotification('Không tìm thấy từ nào để thay thế.', 'error');
         }
@@ -227,7 +195,7 @@ document.addEventListener('DOMContentLoaded', () => {
         restoreSelection();
     }
 
-    // === KEYWORDS TAG SYSTEM (giữ nguyên) ===
+    // === KEYWORDS TAG SYSTEM ===
     function addKeywords() {
         const vals = keywordsInput.value.split(',').map(s => s.trim()).filter(Boolean);
         vals.forEach(v => {
@@ -240,12 +208,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     e.stopPropagation();
                     tag.remove();
                     currentKeywords = currentKeywords.filter(x => x !== v);
+                    highlightKeywords();
                 };
-                keywordsTags.appendChild(tag);
+                keywordsTags.appendChild(tag); // Append fix order
             }
         });
         keywordsInput.value = '';
         keywordsInput.focus();
+        highlightKeywords();
     }
 
     keywordsInput.addEventListener('keydown', e => {
@@ -258,33 +228,31 @@ document.addEventListener('DOMContentLoaded', () => {
         if (keywordsInput.value.trim()) addKeywords();
     });
 
-    // === PASTE & INPUT (fix giữ format + reversed) ===
+    // === PASTE & INPUT (giữ format, fix reversed) ===
     textLayer.addEventListener('paste', e => {
         e.preventDefault();
         const htmlData = (e.clipboardData || window.clipboardData).getData('text/html');
         const plainData = (e.clipboardData || window.clipboardData).getData('text/plain');
 
         if (htmlData) {
-            // Parse HTML để giữ format selective (bold, italic, lists)
+            // Parse HTML giữ format selective
             const parser = new DOMParser();
             const doc = parser.parseFromString(htmlData, 'text/html');
-            // Clean: giữ <strong>, <em>, <br>, <ol>, <li>; bỏ font/size
-            const allowedTags = ['STRONG', 'EM', 'BR', 'OL', 'UL', 'LI'];
+            // Giữ strong, em, br; bỏ style
             doc.querySelectorAll('*').forEach(el => {
-                if (!allowedTags.includes(el.tagName)) {
+                if (!['STRONG', 'EM', 'BR'].includes(el.tagName)) {
                     el.replaceWith(...el.childNodes);
                 } else {
                     el.removeAttribute('style');
                 }
             });
             const frag = document.createDocumentFragment();
-            frag.append(...doc.body.childNodes);
+            frag.append(...Array.from(doc.body.childNodes));
             document.execCommand('insertHTML', false, frag.innerHTML); // Insert giữ structure
         } else {
-            // Fallback plain text với line breaks
             document.execCommand('insertText', false, plainData);
         }
-        setTimeout(highlightKeywords, 100); // Delay để DOM ổn định, fix reversed
+        setTimeout(highlightKeywords, 100);
     });
 
     let highlightTimer;
@@ -299,12 +267,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const size = fontSize.value;
         textLayer.style.fontFamily = highlightLayer.style.fontFamily = family;
         textLayer.style.fontSize = highlightLayer.style.fontSize = size;
+        highlightKeywords();
     }
     fontFamily.onchange = fontSize.onchange = syncFont;
 
     matchCaseCb.onchange = wholeWordsCb.onchange = highlightKeywords;
 
-    // === REPLACE MODE MANAGEMENT (giữ nguyên) ===
+    // === REPLACE MODE MANAGEMENT (fix order: append khi load, prepend khi add) ===
     function loadModes() {
         try {
             const data = localStorage.getItem(REPLACE_MODES_KEY);
@@ -345,7 +314,7 @@ document.addEventListener('DOMContentLoaded', () => {
         matchCaseReplaceBtn.classList.toggle('bg-gray-500', !opt.matchCase);
 
         punctuationList.innerHTML = '';
-        (replaceModes[activeModeName].pairs || []).forEach(p => addPairUI(p.find, p.replace));
+        (replaceModes[activeModeName].pairs || []).forEach(p => addPairUI(p.find, p.replace, false)); // Append khi load (giữ thứ tự)
     }
 
     function addPairUI(find = '', replace = '', focus = true) {
@@ -357,7 +326,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <button class="remove-pair" title="Xóa">×</button>
         `;
         div.querySelector('.remove-pair').onclick = () => div.remove();
-        punctuationList.prepend(div); // Thêm lên đầu
+        punctuationList.prepend(div); // Prepend khi add mới (mới lên đầu)
         if (focus) div.querySelector('.find').focus();
     }
 
@@ -372,10 +341,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // === EVENTS ===
-    searchBtn.onclick = () => { lastReplacedFinds = []; highlightKeywords(); };
+    searchBtn.onclick = () => { replacedRanges = []; highlightKeywords(); };
     clearBtn.onclick = () => {
         currentKeywords = [];
-        lastReplacedFinds = [];
+        replacedRanges = [];
         keywordsTags.innerHTML = '';
         highlightKeywords();
     };
@@ -386,7 +355,7 @@ document.addEventListener('DOMContentLoaded', () => {
     modeSelect.onchange = () => {
         activeModeName = modeSelect.value;
         saveModes();
-        lastReplacedFinds = [];
+        replacedRanges = [];
         updateUI();
         highlightKeywords();
     };
