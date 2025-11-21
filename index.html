@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tìm Kiếm & Thay Thế Chương - Final Fixed 100%</title>
+    <title>Tìm Kiếm & Thay Thế Chương - Fixed Scroll & Highlight</title>
     <link rel="icon" href="data:,">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet">
@@ -16,22 +16,50 @@
         .hl-orange { background: #ffcc99 !important; color: black; }
         .hl-purple { background: #e6ccff !important; color: black; }
 
-        #editor-wrapper { position: relative; background: white; }
+        #editor-wrapper { 
+            position: relative; 
+            background: white; 
+            overflow: hidden; /* Prevent double scroll */
+            height: 100%; /* Full height */
+        }
         #highlight-layer, #text-layer {
-            position: absolute; inset: 0; padding: 24px; box-sizing: border-box;
-            font-family: inherit; font-size: inherit; line-height: 1.6;
-            white-space: pre-wrap; word-wrap: break-word;
+            position: absolute; 
+            top: 0; left: 0; right: 0; bottom: 0; 
+            padding: 24px; 
+            box-sizing: border-box;
+            font-family: inherit; 
+            font-size: inherit; 
+            line-height: 1.6;
+            white-space: pre-wrap; 
+            word-wrap: break-word;
+            overflow-y: auto; /* Enable scroll on both */
+            scrollbar-width: thin;
         }
         #text-layer {
-            z-index: 2; background: transparent; color: transparent; caret-color: black;
-            outline: none; overflow-y: auto; scrollbar-width: thin;
+            z-index: 2; 
+            background: transparent; 
+            color: transparent; 
+            caret-color: black;
+            outline: none;
+            -webkit-overflow-scrolling: touch; /* Smooth scroll on iOS */
         }
         #highlight-layer {
-            z-index: 1; pointer-events: none; color: black;
+            z-index: 1; 
+            pointer-events: none; 
+            color: black;
+            -webkit-overflow-scrolling: touch;
         }
-        #highlight-layer mark { padding: 0 2px; border-radius: 2px; }
-        #text-layer::-webkit-scrollbar { width: 6px; }
-        #text-layer::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.3); border-radius: 3px; }
+        #highlight-layer mark { 
+            padding: 0 2px; 
+            border-radius: 2px; 
+        }
+        #text-layer::-webkit-scrollbar, #highlight-layer::-webkit-scrollbar { 
+            width: 6px; 
+        }
+        #text-layer::-webkit-scrollbar-thumb, #highlight-layer::-webkit-scrollbar-thumb { 
+            background: rgba(0,0,0,0.3); 
+            border-radius: 3px; 
+        }
     </style>
 </head>
 <body class="bg-gray-100 h-screen flex flex-col">
@@ -60,7 +88,6 @@
             <div class="mb-4">
                 <label class="block mb-2"><input type="checkbox" id="matchCase" class="mr-2"> Phân biệt hoa/thường</label>
                 <label class="block mb-2"><input type="checkbox" id="wholeWords" class="mr-2"> Từ hoàn chỉnh</label>
-                <label class="block mb-2"><input type="checkbox" id="highlightReplaces" class="mr-2" checked> Highlight thay thế như keywords</label>
             </div>
             <div class="mb-4">
                 <label class="block mb-2">Từ khóa:</label>
