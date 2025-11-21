@@ -28,6 +28,3 @@
 body { font-family: 'Montserrat', sans-serif; margin: 0; height: 100vh; }
 #main-app { height: 100%; }
 .hidden { display: none; }
-
-/* Fallback */
-#text-layer.fallback-visible { color: black !important; }
