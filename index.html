@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tìm Kiếm & Thay Thế Chương - Fixed Scroll & Highlight</title>
+    <title>Tìm Kiếm & Thay Thế Chương - Fixed All 2025</title>
     <link rel="icon" href="data:,">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet">
@@ -19,8 +19,8 @@
         #editor-wrapper { 
             position: relative; 
             background: white; 
-            overflow: hidden; /* Prevent double scroll */
-            height: 100%; /* Full height */
+            overflow: hidden; 
+            height: 100%; 
         }
         #highlight-layer, #text-layer {
             position: absolute; 
@@ -30,9 +30,9 @@
             font-family: inherit; 
             font-size: inherit; 
             line-height: 1.6;
-            white-space: pre-wrap; 
+            white-space: pre-wrap; /* Giữ line breaks & format */
             word-wrap: break-word;
-            overflow-y: auto; /* Enable scroll on both */
+            overflow-y: auto; 
             scrollbar-width: thin;
         }
         #text-layer {
@@ -41,7 +41,7 @@
             color: transparent; 
             caret-color: black;
             outline: none;
-            -webkit-overflow-scrolling: touch; /* Smooth scroll on iOS */
+            -webkit-overflow-scrolling: touch;
         }
         #highlight-layer {
             z-index: 1; 
@@ -52,6 +52,7 @@
         #highlight-layer mark { 
             padding: 0 2px; 
             border-radius: 2px; 
+            display: inline; /* Tránh break layout */
         }
         #text-layer::-webkit-scrollbar, #highlight-layer::-webkit-scrollbar { 
             width: 6px; 
@@ -60,6 +61,8 @@
             background: rgba(0,0,0,0.3); 
             border-radius: 3px; 
         }
+        /* Sanitize paste: Giữ br, strip other */
+        .paste-html br { display: block; margin: 0; }
     </style>
 </head>
 <body class="bg-gray-100 h-screen flex flex-col">
