@@ -29,7 +29,5 @@ body { font-family: 'Montserrat', sans-serif; margin: 0; height: 100vh; }
 #main-app { height: 100%; }
 .hidden { display: none; }
 
-/* Fallback cho transparent fail */
-#text-layer.fallback-visible {
-    color: black !important;
-}
+/* Fallback */
+#text-layer.fallback-visible { color: black !important; }
