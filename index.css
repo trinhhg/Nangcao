@@ -1,71 +1,29 @@
 #keywords-tags .tag {
-    background: #dbeafe;
-    color: #1e40af;
-    padding: 4px 8px;
-    border-radius: 16px;
-    font-size: 12px;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    margin: 2px;
+    background: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 16px;
+    font-size: 12px; display: inline-flex; align-items: center; gap: 4px; margin: 2px;
     border: 1px solid #93c5fd;
 }
-#keywords-tags .tag .remove-tag {
-    cursor: pointer;
-    font-weight: bold;
-    font-size: 14px;
-    margin-left: 4px;
-}
+#keywords-tags .tag .remove-tag { cursor: pointer; font-weight: bold; font-size: 14px; }
 
-/* Thu gọn punctuation-item thành grid 3 cột */
 #punctuation-list .punctuation-item {
-    display: grid;
-    grid-template-columns: 1fr 1fr auto;
-    gap: 4px;
-    align-items: center;
-    margin-bottom: 4px;
+    display: grid; grid-template-columns: 1fr 1fr auto; gap: 4px; align-items: center;
 }
 #punctuation-list .punctuation-item input {
-    flex: none;
-    min-width: 0;
-    padding: 4px 6px;
-    font-size: 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
+    min-width: 0; padding: 4px 6px; font-size: 10px; border: 1px solid #ccc; border-radius: 4px;
 }
 #punctuation-list .punctuation-item button.remove-pair {
-    width: 20px;
-    height: 20px;
-    background: #dc3545;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    font-size: 10px;
-    cursor: pointer;
+    width: 20px; height: 20px; background: #dc3545; color: white; border: none;
+    border-radius: 4px; font-size: 10px; cursor: pointer;
 }
 
-#notification-container {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    z-index: 1000;
-}
+#notification-container { position: fixed; top: 20px; right: 20px; z-index: 1000; }
 .notification {
-    padding: 10px 16px;
-    border-radius: 6px;
-    color: white;
-    font-size: 13px;
-    min-width: 180px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-    animation: slideIn 0.3s ease;
+    padding: 10px 16px; border-radius: 6px; color: white; font-size: 13px; min-width: 180px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2); animation: slideIn 0.3s ease;
 }
 .notification.success { background: #28a745; }
 .notification.error { background: #dc3545; }
-
-@keyframes slideIn {
-    from { transform: translateX(100%); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
-}
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
 body { font-family: 'Montserrat', sans-serif; margin: 0; height: 100vh; }
 #main-app { height: 100%; }
