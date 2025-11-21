@@ -1,359 +1,147 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const keywordsInput = document.getElementById('keywords-input');
-    const keywordsTags = document.getElementById('keywords-tags');
-    const searchBtn = document.getElementById('search');
-    const clearBtn = document.getElementById('clear');
-    const fontFamily = document.getElementById('fontFamily');
-    const fontSize = document.getElementById('fontSize');
-    const matchCaseCb = document.getElementById('matchCase');
-    const wholeWordsCb = document.getElementById('wholeWords'); // Có thể null nếu không có
-    const replaceAllBtn = document.getElementById('replace-all');
-    const punctuationList = document.getElementById('punctuation-list');
-    const textLayer = document.getElementById('text-layer');
-    const highlightLayer = document.getElementById('highlight-layer');
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tìm Kiếm & Thay Thế Chương - Fixed Scroll & Highlight</title>
+    <link rel="icon" href="data:,">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="index.css">
+    <style>
+        .hl-yellow { background: #ffff99 !important; color: black; }
+        .hl-pink   { background: #ffcccc !important; color: black; }
+        .hl-blue   { background: #99ccff !important; color: black; }
+        .hl-green  { background: #ccffcc !important; color: black; }
+        .hl-orange { background: #ffcc99 !important; color: black; }
+        .hl-purple { background: #e6ccff !important; color: black; }
 
-    const modeSelect = document.getElementById('mode-select');
-    const addModeBtn = document.getElementById('add-mode');
-    const matchCaseReplaceBtn = document.getElementById('match-case');
-    const deleteModeBtn = document.getElementById('delete-mode-btn');
-    const renameModeBtn = document.getElementById('rename-mode');
-    const addPairBtn = document.getElementById('add-pair');
-    const saveSettingsBtn = document.getElementById('save-settings');
-
-    let currentKeywords = [];
-    let replacedRanges = [];
-    const HIGHLIGHT_CLASSES = ['hl-yellow','hl-pink','hl-blue','hl-green','hl-orange','hl-purple'];
-
-    const REPLACE_MODES_KEY = 'replaceModes';
-    const ACTIVE_MODE_NAME_KEY = 'activeReplaceMode';
-    let replaceModes = {};
-    let activeModeName = 'Mặc định';
-
-    let savedRange = null;
-    function saveSelection() {
-        const sel = window.getSelection();
-        if (sel.rangeCount) savedRange = sel.getRangeAt(0).cloneRange();
-    }
-    function restoreSelection() {
-        if (!savedRange) return;
-        const sel = window.getSelection();
-        sel.removeAllRanges();
-        sel.addRange(savedRange);
-        savedRange = null;
-    }
-
-    function showNotification(msg, type = 'success') {
-        const div = document.createElement('div');
-        div.className = `notification ${type}`;
-        div.textContent = msg;
-        document.getElementById('notification-container').prepend(div);
-        setTimeout(() => div.remove(), 3000);
-    }
-
-    const escapeRegex = str => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-    // Vietnamese word boundaries
-    const VIET_BOUNDARIES = '[^a-zA-Z0-9àáãạảăắằẳẵặâấầẩẫậèéẹẻẽêềếểễệìíĩỉịòóõọỏôốồổỗộơớờởỡợùúũụủưứừửữựỳỵỷỹýđÀÁÃẠẢĂẮẰẲẴẶÂẤẦẨẪẬÈÉẸẺẼÊỀẾỂỄỆÌÍĨỈỊÒÓÕỌỎÔỐỒỔỖỘƠỚỜỞỠỢÙÚŨỤỦƯỨỪỬỮỰỲỴỶỸÝĐ ]';
-
-    function buildRegex(word, wholeWords = false, matchCase = false) {
-        if (!word) return null;
-        const escaped = escapeRegex(word);
-        let pattern = escaped;
-        if (wholeWords) {
-            pattern = `(^|\( {VIET_BOUNDARIES})( \){escaped})(\( | \){VIET_BOUNDARIES})`;
+        #editor-wrapper { 
+            position: relative; 
+            background: white; 
+            overflow: hidden; /* Prevent double scroll */
+            height: 100%; /* Full height */
         }
-        const flags = matchCase ? 'g' : 'gi';
-        return new RegExp(pattern, flags);
-    }
-
-    function highlightKeywords() {
-        saveSelection();
-        const text = textLayer.textContent || '';
-        highlightLayer.innerHTML = '';
-
-        if (!text) { 
-            restoreSelection(); 
-            return; 
+        #highlight-layer, #text-layer {
+            position: absolute; 
+            top: 0; left: 0; right: 0; bottom: 0; 
+            padding: 24px; 
+            box-sizing: border-box;
+            font-family: inherit; 
+            font-size: inherit; 
+            line-height: 1.6;
+            white-space: pre-wrap; 
+            word-wrap: break-word;
+            overflow-y: auto; /* Enable scroll on both */
+            scrollbar-width: thin;
         }
-
-        // Fallback nếu crash: Tạm hiện text
-        textLayer.style.color = 'black';
-        highlightLayer.style.display = 'none';
-
-        try {
-            const matches = [];
-
-            // Replaced ranges: Vàng, priority cao nhất
-            replacedRanges.forEach(r => {
-                if (r.start >= 0 && r.end <= text.length && r.start < r.end) {
-                    matches.push({start: r.start, end: r.end, cls: 'hl-yellow', priority: 999});
-                }
-            });
-
-            // Keywords: Màu luân phiên
-            currentKeywords.forEach((kw, i) => {
-                const isWholeWords = wholeWordsCb ? wholeWordsCb.checked : false;
-                const isMatchCase = matchCaseCb ? matchCaseCb.checked : false;
-                const regex = buildRegex(kw, isWholeWords, isMatchCase);
-                if (!regex) return;
-                let m;
-                while ((m = regex.exec(text)) !== null) {
-                    const start = wholeWordsCb && wholeWordsCb.checked ? m.index + m[1].length : m.index;
-                    const end = start + kw.length;
-                    matches.push({start, end, cls: HIGHLIGHT_CLASSES[(i % 5) + 1], priority: 100});
-                }
-            });
-
-            // Sort và loại overlap
-            matches.sort((a, b) => a.start - b.start || b.priority - a.priority || a.end - b.end);
-            const final = [];
-            let lastEnd = 0;
-            for (const m of matches) {
-                if (m.start >= lastEnd) {
-                    final.push(m);
-                    lastEnd = m.end;
-                } else {
-                    const overlapped = final.findLast(p => p.end > m.start);
-                    if (overlapped && m.priority > overlapped.priority) {
-                        const idx = final.indexOf(overlapped);
-                        if (idx > -1) final[idx] = m;
-                        lastEnd = Math.max(lastEnd, m.end);
-                    }
-                }
-            }
-
-            // Build highlight
-            const frag = document.createDocumentFragment();
-            let pos = 0;
-            for (const m of final) {
-                if (m.start > pos) frag.appendChild(document.createTextNode(text.slice(pos, m.start)));
-                const mark = document.createElement('mark');
-                mark.className = m.cls;
-                mark.textContent = text.slice(m.start, m.end);
-                frag.appendChild(mark);
-                pos = m.end;
-            }
-            if (pos < text.length) frag.appendChild(document.createTextNode(text.slice(pos)));
-            highlightLayer.appendChild(frag);
-
-            // Sync font
-            highlightLayer.style.fontFamily = textLayer.style.fontFamily;
-            highlightLayer.style.fontSize = textLayer.style.fontSize;
-
-            // Thành công: Ẩn fallback
-            textLayer.style.color = 'transparent';
-            highlightLayer.style.display = 'block';
-        } catch (e) {
-            console.error('Highlight error:', e);
-            showNotification('Lỗi highlight, hiển thị text gốc', 'error');
-            textLayer.style.color = 'black';
-            highlightLayer.style.display = 'none';
+        #text-layer {
+            z-index: 2; 
+            background: transparent; 
+            color: transparent; 
+            caret-color: black;
+            outline: none;
+            -webkit-overflow-scrolling: touch; /* Smooth scroll on iOS */
         }
-
-        restoreSelection();
-    }
-
-    function replaceAllSafe() {
-        saveSelection();
-        const text = textLayer.textContent || '';
-        const mode = replaceModes[activeModeName];
-        if (!mode || !mode.pairs?.length) { showNotification('Chưa có cặp thay thế!', 'error'); restoreSelection(); return; }
-
-        let newText = text;
-        replacedRanges = [];
-        const pairs = mode.pairs.filter(p => p.find).sort((a, b) => b.find.length - a.find.length);
-        let globalOffset = 0;
-
-        pairs.forEach(p => {
-            const isMatchCase = mode.options?.matchCase || false;
-            const regex = buildRegex(p.find, false, isMatchCase);
-            if (!regex) return;
-            let match;
-            while ((match = regex.exec(newText)) !== null) {
-                const idx = match.index;
-                const origLength = p.find.length;
-                const newLength = p.replace.length;
-                const delta = newLength - origLength;
-
-                newText = newText.slice(0, idx) + p.replace + newText.slice(idx + origLength);
-
-                const newStart = idx + globalOffset;
-                const newEnd = newStart + newLength;
-                replacedRanges.push({start: newStart, end: newEnd});
-
-                globalOffset += delta;
-                regex.lastIndex = idx + newLength;
-            }
-            regex.lastIndex = 0;
-        });
-
-        textLayer.textContent = newText;
-        highlightKeywords();
-        showNotification(`Đã thay thế ${replacedRanges.length} vị trí!`, 'success');
-        restoreSelection();
-    }
-
-    // Sync scroll mượt (sử dụng requestAnimationFrame)
-    let rafId;
-    function syncScroll() {
-        if (rafId) cancelAnimationFrame(rafId);
-        rafId = requestAnimationFrame(() => {
-            highlightLayer.scrollTop = textLayer.scrollTop;
-            highlightLayer.scrollLeft = textLayer.scrollLeft;
-        });
-    }
-    textLayer.addEventListener('scroll', syncScroll);
-
-    // Keywords
-    function addKeywords() {
-        const vals = keywordsInput.value.split(',').map(s => s.trim()).filter(Boolean);
-        vals.forEach(v => {
-            if (v && !currentKeywords.includes(v)) {
-                currentKeywords.push(v);
-                const tag = document.createElement('div');
-                tag.className = 'tag';
-                tag.innerHTML = `${v} <span class="remove-tag">×</span>`;
-                tag.querySelector('.remove-tag').onclick = () => {
-                    tag.remove();
-                    currentKeywords = currentKeywords.filter(x => x !== v);
-                    highlightKeywords();
-                };
-                keywordsTags.appendChild(tag);
-            }
-        });
-        keywordsInput.value = '';
-        highlightKeywords();
-        keywordsInput.focus();
-    }
-    keywordsInput.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addKeywords(); } });
-    keywordsInput.addEventListener('blur', () => { if (keywordsInput.value.trim()) addKeywords(); });
-
-    // Paste
-    textLayer.addEventListener('paste', e => {
-        e.preventDefault();
-        const text = (e.clipboardData || window.clipboardData).getData('text/plain');
-        document.execCommand('insertText', false, text);
-        setTimeout(highlightKeywords, 50);
-    });
-
-    let timer;
-    textLayer.addEventListener('input', () => { 
-        clearTimeout(timer); 
-        timer = setTimeout(highlightKeywords, 200); // Tăng debounce để mượt
-    });
-
-    function syncFont() {
-        const newFont = fontFamily.value;
-        const newSize = fontSize.value;
-        textLayer.style.fontFamily = newFont;
-        textLayer.style.fontSize = newSize;
-        highlightLayer.style.fontFamily = newFont;
-        highlightLayer.style.fontSize = newSize;
-        setTimeout(highlightKeywords, 100);
-    }
-
-    // Gán events với check null
-    if (fontFamily) fontFamily.onchange = syncFont;
-    if (fontSize) fontSize.onchange = syncFont;
-    if (matchCaseCb) matchCaseCb.onchange = highlightKeywords;
-    if (wholeWordsCb) wholeWordsCb.onchange = highlightKeywords; // Skip nếu null
-
-    // Replace modes
-    function loadModes() {
-        try {
-            replaceModes = JSON.parse(localStorage.getItem(REPLACE_MODES_KEY)) || {};
-            activeModeName = localStorage.getItem(ACTIVE_MODE_NAME_KEY) || 'Mặc định';
-            if (!replaceModes['Mặc định']) replaceModes['Mặc định'] = {pairs: [], options: {matchCase: false}};
-            if (!replaceModes[activeModeName]) activeModeName = 'Mặc định';
-        } catch { 
-            replaceModes = {'Mặc định': {pairs: [], options: {matchCase: false}}}; 
-            activeModeName = 'Mặc định'; 
+        #highlight-layer {
+            z-index: 1; 
+            pointer-events: none; 
+            color: black;
+            -webkit-overflow-scrolling: touch;
         }
-        saveModes(); 
-        updateUI();
-    }
-    function saveModes() {
-        localStorage.setItem(REPLACE_MODES_KEY, JSON.stringify(replaceModes));
-        localStorage.setItem(ACTIVE_MODE_NAME_KEY, activeModeName);
-    }
-    function updateUI() {
-        if (!modeSelect) return;
-        modeSelect.innerHTML = '';
-        Object.keys(replaceModes).forEach(n => modeSelect.add(new Option(n, n, false, n === activeModeName)));
-        const isDefault = activeModeName === 'Mặc định';
-        if (deleteModeBtn) deleteModeBtn.classList.toggle('hidden', isDefault);
-        if (renameModeBtn) renameModeBtn.classList.toggle('hidden', isDefault);
-        const opt = replaceModes[activeModeName].options || {matchCase: false};
-        if (matchCaseReplaceBtn) {
-            matchCaseReplaceBtn.textContent = opt.matchCase ? 'Case: BẬT' : 'Case: TẮT';
-            matchCaseReplaceBtn.classList.toggle('bg-green-600', opt.matchCase);
-            matchCaseReplaceBtn.classList.toggle('bg-gray-500', !opt.matchCase);
+        #highlight-layer mark { 
+            padding: 0 2px; 
+            border-radius: 2px; 
         }
-        if (punctuationList) {
-            punctuationList.innerHTML = '';
-            (replaceModes[activeModeName].pairs || []).forEach(p => addPairUI(p.find, p.replace));
+        #text-layer::-webkit-scrollbar, #highlight-layer::-webkit-scrollbar { 
+            width: 6px; 
         }
-    }
-    function addPairUI(find = '', replace = '', focus = true) {
-        if (!punctuationList) return;
-        const div = document.createElement('div');
-        div.className = 'punctuation-item';
-        div.innerHTML = `<input type="text" class="find" placeholder="Tìm" value="${find}">
-                         <input type="text" class="replace" placeholder="Thay bằng" value="${replace}">
-                         <button class="remove-pair" title="Xóa">×</button>`;
-        div.querySelector('.remove-pair').onclick = () => div.remove();
-        punctuationList.prepend(div);
-        if (focus) div.querySelector('.find').focus();
-    }
-    function saveCurrentMode() {
-        if (!punctuationList) return;
-        const pairs = Array.from(punctuationList.querySelectorAll('.punctuation-item')).map(el => ({
-            find: el.querySelector('.find').value.trim(),
-            replace: el.querySelector('.replace').value
-        })).filter(p => p.find);
-        replaceModes[activeModeName].pairs = pairs;
-        saveModes();
-        showNotification(`Đã lưu "${activeModeName}"`);
-        highlightKeywords();
-    }
+        #text-layer::-webkit-scrollbar-thumb, #highlight-layer::-webkit-scrollbar-thumb { 
+            background: rgba(0,0,0,0.3); 
+            border-radius: 3px; 
+        }
+    </style>
+</head>
+<body class="bg-gray-100 h-screen flex flex-col">
+    <div id="main-app" class="flex flex-1 overflow-hidden">
+        <!-- Panel Tìm kiếm -->
+        <div class="w-1/5 p-4 bg-white shadow-md overflow-y-auto text-sm">
+            <h2 class="text-xl font-bold mb-4">Tìm Kiếm</h2>
+            <div class="mb-4 grid grid-cols-2 gap-2">
+                <div><label class="block mb-1 text-xs">Font:</label>
+                    <select id="fontFamily" class="w-full p-1.5 border rounded text-xs">
+                        <option value="Arial">Arial</option>
+                        <option value="Calibri">Calibri</option>
+                        <option value="Montserrat" selected>Montserrat</option>
+                        <option value="Times New Roman">Times New Roman</option>
+                    </select>
+                </div>
+                <div><label class="block mb-1 text-xs">Cỡ chữ:</label>
+                    <select id="fontSize" class="w-full p-1.5 border rounded text-xs">
+                        <option value="14px">14</option>
+                        <option value="16px" selected>16</option>
+                        <option value="18px">18</option>
+                        <option value="20px">20</option>
+                    </select>
+                </div>
+            </div>
+            <div class="mb-4">
+                <label class="block mb-2"><input type="checkbox" id="matchCase" class="mr-2"> Phân biệt hoa/thường</label>
+                <label class="block mb-2"><input type="checkbox" id="wholeWords" class="mr-2"> Từ hoàn chỉnh</label>
+            </div>
+            <div class="mb-4">
+                <label class="block mb-2">Từ khóa:</label>
+                <input type="text" id="keywords-input" placeholder="Nhập, Enter, dấu phẩy..." class="w-full p-2 border rounded bg-gray-50 text-sm">
+            </div>
+            <div class="flex gap-2 mb-2">
+                <button id="search" class="flex-1 bg-green-500 text-white py-2 rounded hover:bg-green-600 text-xs font-medium">Tìm Kiếm</button>
+                <button id="clear" class="flex-1 bg-red-500 text-white py-2 rounded hover:bg-red-600 text-xs font-medium">Xóa Tất Cả</button>
+            </div>
+            <div id="keywords-tags" class="flex flex-wrap gap-1"></div>
+        </div>
 
-    if (searchBtn) searchBtn.onclick = () => { replacedRanges = []; highlightKeywords(); };
-    if (clearBtn) clearBtn.onclick = () => { currentKeywords = []; replacedRanges = []; keywordsTags.innerHTML = ''; highlightKeywords(); };
-    if (replaceAllBtn) replaceAllBtn.onclick = replaceAllSafe;
-    if (addPairBtn) addPairBtn.onclick = () => addPairUI('', '', true);
-    if (saveSettingsBtn) saveSettingsBtn.onclick = saveCurrentMode;
-    if (modeSelect) modeSelect.onchange = () => { activeModeName = modeSelect.value; saveModes(); replacedRanges = []; updateUI(); highlightKeywords(); };
-    if (addModeBtn) addModeBtn.onclick = () => {
-        const name = prompt('Tên chế độ mới:')?.trim();
-        if (!name || replaceModes[name]) { if (name) showNotification('Tên đã tồn tại!', 'error'); return; }
-        replaceModes[name] = {pairs: [], options: {matchCase: false}};
-        activeModeName = name; saveModes(); updateUI();
-    };
-    if (deleteModeBtn) deleteModeBtn.onclick = () => {
-        if (activeModeName === 'Mặc định' || !confirm(`Xóa "${activeModeName}"?`)) return;
-        delete replaceModes[activeModeName];
-        activeModeName = Object.keys(replaceModes)[0] || 'Mặc định';
-        if (!replaceModes[activeModeName]) replaceModes[activeModeName] = {pairs: [], options: {matchCase: false}};
-        saveModes(); updateUI();
-    };
-    if (renameModeBtn) renameModeBtn.onclick = () => {
-        if (activeModeName === 'Mặc định') return;
-        const newName = prompt(`Đổi tên "${activeModeName}" thành:`, activeModeName)?.trim();
-        if (!newName || newName === activeModeName || replaceModes[newName]) return;
-        replaceModes[newName] = replaceModes[activeModeName];
-        delete replaceModes[activeModeName];
-        activeModeName = newName; saveModes(); updateUI();
-    };
-    if (matchCaseReplaceBtn) matchCaseReplaceBtn.onclick = () => {
-        const opt = replaceModes[activeModeName].options ||= {};
-        opt.matchCase = !opt.matchCase;
-        saveModes(); updateUI();
-        highlightKeywords();
-    };
+        <!-- Editor -->
+        <div class="flex-1 p-6 bg-white shadow-md mx-4 flex flex-col overflow-hidden">
+            <div class="flex justify-between items-end mb-2">
+                <h2 class="text-xl font-bold">Nội Dung Chương</h2>
+                <div class="text-xs text-right space-y-0.5">
+                    <div class="text-red-600 font-bold">DON@TE: MB BANK - TRINH THI XUAN HUONG - 0917678211</div>
+                    <div class="text-gray-600">Góp ý: <a href="https://www.facebook.com/trinh.hg.57" target="_blank" class="underline text-blue-600">fb.com/trinh.hg.57</a></div>
+                </div>
+            </div>
+            <div id="editor-wrapper" class="relative flex-1 min-h-0 border-2 border-gray-300 rounded-lg overflow-hidden">
+                <div id="highlight-layer"></div>
+                <div id="text-layer" contenteditable="true"></div>
+            </div>
+        </div>
 
-    // Khởi động
-    syncFont();
-    loadModes();
-    if (textLayer) textLayer.textContent = '';
-    highlightKeywords();
-});
+        <!-- Panel Thay thế -->
+        <div class="w-1/5 p-4 bg-white shadow-md overflow-y-auto text-xs">
+            <h2 class="text-xl font-bold mb-4">Cấu hình Thay Thế</h2>
+            <div class="mb-3 space-y-1">
+                <label class="block mb-1 font-medium text-gray-700">Chế độ:</label>
+                <div class="flex gap-1 mb-1">
+                    <select id="mode-select" class="flex-1 p-1 border rounded text-xs"></select>
+                    <button id="add-mode" class="px-2 py-0.5 bg-blue-500 text-white rounded text-xs hover:bg-blue-600">Tạo Mới</button>
+                </div>
+                <div class="flex gap-1 mb-1">
+                    <button id="rename-mode" class="flex-1 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600 hidden">Đổi Tên</button>
+                </div>
+                <div class="flex gap-1">
+                    <button id="match-case" class="flex-1 py-1 bg-gray-500 text-white rounded text-xs">Case: TẮT</button>
+                    <button id="delete-mode-btn" class="flex-1 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600 hidden">Xóa</button>
+                </div>
+            </div>
+            <div class="mb-3 grid grid-cols-3 gap-1">
+                <button id="add-pair" class="px-1 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600">+ Cặp</button>
+                <button id="save-settings" class="px-1 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700">Lưu</button>
+                <button id="replace-all" class="px-1 py-1 bg-purple-600 text-white rounded text-xs hover:bg-purple-700">Thay Thế</button>
+            </div>
+            <div id="punctuation-list" class="space-y-2"></div>
+        </div>
+    </div>
+
+    <div id="notification-container"></div>
+    <script src="index.js"></script>
+</body>
+</html>
