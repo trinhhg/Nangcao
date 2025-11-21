@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // State
     let currentKeywords = [];
     let replacedRanges = []; // {start, end} cho highlight vàng
-    let isPasting = false; // Flag để tránh highlight trong paste
+    let isPasting = false; // Flag block highlight trong paste
     const HIGHLIGHT_CLASSES = ['hl-yellow','hl-pink','hl-blue','hl-green','hl-orange','hl-purple'];
 
     const REPLACE_MODES_KEY = 'replaceModes';
@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Utils
     const escapeRegex = str => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-    // Save/Restore cursor (fix đảo ngược)
+    // Save/Restore cursor
     let savedRange = null;
     function saveSelection() {
         const sel = window.getSelection();
@@ -66,12 +66,21 @@ document.addEventListener('DOMContentLoaded', () => {
         return new RegExp(pattern, flags);
     }
 
-    // Highlight với flag paste (fix flash trong paste)
+    // Fix highlight: Không clear DOM, dùng walker wrap marks (tránh xóa text)
     function highlightKeywords() {
-        if (isPasting) return; // Bỏ qua nếu đang paste
+        if (isPasting) return; // Strict block trong paste
         saveSelection();
         const text = textLayer.textContent || '';
-        textLayer.innerHTML = '';
+
+        // Remove old marks an toàn (không clear toàn bộ)
+        const walker = document.createTreeWalker(textLayer, NodeFilter.SHOW_ELEMENT, null, false);
+        let node;
+        while (node = walker.nextNode()) {
+            if (node.tagName === 'MARK' && node.getAttribute('data-hl')) {
+                node.replaceWith(...node.childNodes);
+            }
+        }
+        textLayer.normalize();
 
         const searchWholeWords = wholeWordsCb.checked;
         const searchMatchCase = matchCaseCb.checked;
@@ -114,28 +123,46 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        const frag = document.createDocumentFragment();
-        let pos = 0;
-        for (const m of finalMatches) {
-            if (m.start > pos) {
-                frag.appendChild(document.createTextNode(text.slice(pos, m.start)));
+        // Walker để wrap matches (không clear, chỉ insert marks)
+        const textWalker = document.createTreeWalker(textLayer, NodeFilter.SHOW_TEXT, null, false);
+        let currentNode;
+        let currentOffset = 0;
+        while (currentNode = textWalker.nextNode()) {
+            let nodeText = currentNode.nodeValue;
+            let nodeMatches = [];
+            finalMatches.forEach(match => {
+                if (match.start >= currentOffset && match.end <= currentOffset + nodeText.length) {
+                    nodeMatches.push({ ...match, localStart: match.start - currentOffset, localEnd: match.end - currentOffset });
+                }
+            });
+            if (nodeMatches.length > 0) {
+                nodeMatches.sort((a, b) => a.localStart - b.localStart);
+                const frag = document.createDocumentFragment();
+                let localPos = 0;
+                nodeMatches.forEach(match => {
+                    if (match.localStart > localPos) {
+                        frag.appendChild(document.createTextNode(nodeText.slice(localPos, match.localStart)));
+                    }
+                    const mark = document.createElement('mark');
+                    mark.className = match.cls;
+                    mark.setAttribute('data-hl', '1');
+                    mark.textContent = nodeText.slice(match.localStart, match.localEnd);
+                    frag.appendChild(mark);
+                    localPos = match.localEnd;
+                });
+                if (localPos < nodeText.length) {
+                    frag.appendChild(document.createTextNode(nodeText.slice(localPos)));
+                }
+                currentNode.parentNode.replaceChild(frag, currentNode);
+                currentOffset += frag.textContent.length - nodeText.length; // Adjust offset
             }
-            const mark = document.createElement('mark');
-            mark.className = m.cls;
-            mark.setAttribute('data-hl', '1');
-            mark.textContent = text.slice(m.start, m.end);
-            frag.appendChild(mark);
-            pos = m.end;
+            currentOffset += nodeText.length;
         }
-        if (pos < text.length) {
-            frag.appendChild(document.createTextNode(text.slice(pos)));
-        }
-        textLayer.appendChild(frag);
 
-        setTimeout(restoreSelection, 10); // Delay nhỏ để DOM ổn định
+        setTimeout(restoreSelection, 10);
     }
 
-    // Replace với log vị trí mới
+    // Replace (giữ nguyên)
     function replaceAllSafe() {
         saveSelection();
         const text = textLayer.textContent || '';
@@ -175,7 +202,7 @@ document.addEventListener('DOMContentLoaded', () => {
         restoreSelection();
     }
 
-    // Keywords (giữ fix Enter)
+    // Keywords (giữ nguyên)
     function addKeywords() {
         const vals = keywordsInput.value.split(',').map(s => s.trim()).filter(Boolean);
         let added = false;
@@ -211,15 +238,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (keywordsInput.value.trim()) addKeywords();
     });
 
-    // Paste fix: Plain text + flag + delay highlight (fix flash/biến mất)
+    // Paste fix: Plain text + long delay + no clear DOM (fix nháy/biến mất)
     textLayer.addEventListener('paste', e => {
         e.preventDefault();
-        isPasting = true; // Flag để bỏ qua highlight
+        isPasting = true;
         const pastedText = (e.clipboardData || window.clipboardData).getData('text/plain');
-        const lines = pastedText.split(/\r?\n/); // Giữ line breaks
+        const lines = pastedText.split(/\r?\n/g);
         const sel = window.getSelection();
         if (sel.rangeCount) {
-            saveSelection(); // Save trước insert
+            saveSelection();
             const range = sel.getRangeAt(0);
             range.deleteContents();
             lines.forEach((line, i) => {
@@ -229,13 +256,13 @@ document.addEventListener('DOMContentLoaded', () => {
             range.collapse(false);
             sel.removeAllRanges();
             sel.addRange(range);
-            restoreSelection(); // Restore ngay
+            restoreSelection();
         }
-        // Delay highlight sau paste để DOM ổn định (fix flash)
+        // Long delay để DOM ổn định, sau đó unblock highlight
         setTimeout(() => {
             isPasting = false;
             highlightKeywords();
-        }, 200); // Tăng delay từ 0 lên 200ms
+        }, 400); // Tăng lên 400ms từ search 
     });
 
     let highlightTimer;
@@ -255,7 +282,7 @@ document.addEventListener('DOMContentLoaded', () => {
     fontFamily.onchange = fontSize.onchange = syncFont;
     matchCaseCb.onchange = wholeWordsCb.onchange = highlightKeywords;
 
-    // Replace Mode Management (cập nhật addPairUI cho grid mới)
+    // Replace Mode Management (cập nhật UI cho nút xóa bên cạnh)
     function loadModes() {
         try {
             const data = localStorage.getItem(REPLACE_MODES_KEY);
@@ -308,7 +335,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <button class="remove-pair" title="Xóa">×</button>
         `;
         div.querySelector('.remove-pair').onclick = () => div.remove();
-        punctuationList.appendChild(div); // Append để không đảo
+        punctuationList.appendChild(div);
         if (focus) div.querySelector('.find').focus();
     }
 
