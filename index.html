@@ -23,9 +23,9 @@
             white-space: pre-wrap; word-wrap: break-word; padding: 24px; z-index: 1; color: transparent;
         }
         #text-layer {
-            position: relative; z-index: 2; background: transparent; color: transparent; /* Ẩn text, chỉ show cursor */
-            overflow-y: auto !important; overflow-x: hidden; padding: 24px; scrollbar-width: thin; caret-color: black;
-            contenteditable="plaintext-only"; /* Giữ format cơ bản, strip HTML thừa */
+            position: relative; z-index: 2; background: transparent; color: transparent; /* Ẩn text */
+            overflow-y: auto !important; overflow-x: hidden; padding: 24px; scrollbar-width: thin; 
+            caret-color: black; /* Fix cursor visible dù text transparent */
         }
         #text-layer::-webkit-scrollbar { width: 6px; }
         #text-layer::-webkit-scrollbar-track { background: transparent; }
