@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tìm Kiếm & Thay Thế Chương - Fixed Paste & Panel</title>
+    <title>Tìm Kiếm & Thay Thế Chương - Fixed Paste Flash</title>
     <link rel="icon" href="data:,">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="index.css">
@@ -17,7 +17,6 @@
         .hl-purple { background: #e6ccff; color: black; }
 
         #editor-wrapper { height: 100%; position: relative; background: white; }
-        #highlight-layer, #text-layer { box-sizing: border-box; height: 100%; }
         #text-layer {
             overflow-y: auto !important; overflow-x: hidden; padding-right: 8px;
             scrollbar-width: thin; caret-color: black; white-space: pre-wrap; word-break: break-word;
@@ -97,8 +96,10 @@
                 </div>
                 <div class="flex gap-1 mb-1">
                     <button id="rename-mode" class="flex-1 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600 hidden">Đổi Tên</button>
-                    <button id="delete-mode-btn" class="flex-1 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600 hidden">Xóa</button>
+                </div>
+                <div class="flex gap-1 mb-1"> <!-- Thêm nút xóa bên cạnh match-case -->
                     <button id="match-case" class="flex-1 py-1 bg-gray-500 text-white rounded text-xs">Case: TẮT</button>
+                    <button id="delete-mode-btn" class="flex-1 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600 hidden">Xóa</button>
                 </div>
             </div>
             <div class="action-buttons mb-3 grid grid-cols-3 gap-1">
