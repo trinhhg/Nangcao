@@ -49,16 +49,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const escRgx = str => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-    // REGEX TIẾNG VIỆT CHUẨN (Dùng cho cả highlight và thay thế)
-    // Bao gồm các ký tự tiếng Việt có dấu
-    const VIET_LETTERS = 'a-zA-Z0-9àáãạảăắằẳẵặâấầẩẫậèéẹẻẽêềếểễệìíĩỉịòóõọỏôốồổỗộơớờởỡợùúũụủưứừửữựỳỵỷỹýđÀÁÃẠẢĂẮẰẲẴẶÂẤẦẨẪẬÈÉẸẺẼÊỀẾỂỄỆÌÍĨỈỊÒÓÕỌỎÔỐỒỔỖỘƠỚỜỞỠỢÙÚŨỤỦƯỨỪỬỮỰỲỴỶỸÝĐ';
     
+    // REGEX: Luôn dùng Whole Word chuẩn tiếng Việt
+    const VIET_LETTERS = 'a-zA-Z0-9àáãạảăắằẳẵặâấầẩẫậèéẹẻẽêềếểễệìíĩỉịòóõọỏôốồổỗộơớờởỡợùúũụủưứừửữựỳỵỷỹýđÀÁÃẠẢĂẮẰẲẴẶÂẤẦẨẪẬÈÉẸẺẼÊỀẾỂỄỆÌÍĨỈỊÒÓÕỌỎÔỐỒỔỖỘƠỚỜỞỠỢÙÚŨỤỦƯỨỪỬỮỰỲỴỶỸÝĐ';
     function getRegex(kw, isWhole, isCase) {
         if (!kw) return null;
         const flags = isCase ? 'g' : 'gi';
-        // Logic: Nếu là Whole Word, dùng Lookbehind (?<!) và Lookahead (?!) để đảm bảo
-        // ký tự trước và sau nó KHÔNG PHẢI là chữ cái tiếng Việt hoặc số.
         const pattern = isWhole 
             ? `(?<![${VIET_LETTERS}])(${escRgx(kw)})(?![${VIET_LETTERS}])`
             : `(${escRgx(kw)})`;
@@ -69,23 +65,24 @@ document.addEventListener('DOMContentLoaded', () => {
         return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
     }
 
-    // === 4. RENDER HIGHLIGHTS ===
+    // === 4. RENDER HIGHLIGHTS (Logic mới: Opacity) ===
     function renderHighlights() {
-        const text = els.text.innerText;
+        const text = els.text.innerText; // innerText để lấy đúng xuống dòng
         els.hl.innerHTML = '';
-        if (!text) return;
+        
+        if (!text) {
+             els.hl.style.opacity = '1';
+             els.text.style.color = 'black';
+             return;
+        }
 
         const map = new Array(text.length).fill(null);
         const currentMode = state.modes[state.activeMode];
         const isReplaceCase = currentMode ? currentMode.case : false;
 
-        // 1. Highlight Replaced (Vàng) - QUAN TRỌNG: 
-        // Khi highlight kết quả, ta cũng dùng chế độ Whole Word (true) nếu cần chính xác,
-        // hoặc false nếu muốn highlight mọi chỗ. Theo logic editor, thường highlight kết quả là highlight chính xác từ đó.
+        // 1. Highlight Replaced (Vàng)
         state.replacedTargets.forEach(targetWord => {
-            // Highlight kết quả sau khi replace thì không cần whole word quá khắt khe, 
-            // nhưng để đẹp thì ta cứ tìm chính xác chuỗi đó.
-            const regex = getRegex(targetWord, false, isReplaceCase); 
+            const regex = getRegex(targetWord, false, isReplaceCase);
             if (!regex) return;
             let m;
             while ((m = regex.exec(text)) !== null) {
@@ -127,58 +124,52 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         if (buffer) html += currentClass ? `<mark class="${currentClass}">${escapeHtml(buffer)}</mark>` : escapeHtml(buffer);
+        // Fix xuống dòng cuối
         if (text.endsWith('\n')) html += '<br>';
 
         els.hl.innerHTML = html;
+        
+        // SYNC XONG MỚI CHUYỂN TRẠNG THÁI
         syncScroll();
         
-        // KẾT THÚC RENDER: Hiện highlight, ẩn text gốc (chế độ xem)
-        els.hl.style.visibility = 'visible';
+        // Hiện highlight, ẩn text
+        els.hl.style.opacity = '1';
         els.text.style.color = 'transparent';
     }
 
-    // === 5. EVENT HANDLERS (ZERO LATENCY) ===
+    // === 5. EVENT HANDLERS (ZERO LATENCY - NO JUMP) ===
     
-    // Paste
+    // Hàm chuyển sang chế độ gõ (Chữ đen, highlight mờ đi chứ không tắt hẳn)
+    function switchToEditMode() {
+        els.text.style.color = 'black';
+        els.hl.style.opacity = '0'; // Mờ đi để không bị double text gây nhòe
+    }
+
+    let inputTimer;
+    els.text.addEventListener('input', () => {
+        // 1. NGAY LẬP TỨC: Chữ đen
+        switchToEditMode();
+        
+        // 2. Reset highlight vàng nếu có sửa đổi
+        if (state.replacedTargets.length > 0) state.replacedTargets = [];
+        
+        // 3. Đợi user ngừng gõ 300ms mới render lại (Tránh giật lag)
+        clearTimeout(inputTimer);
+        inputTimer = setTimeout(renderHighlights, 300);
+    });
+
     els.text.addEventListener('paste', e => {
         e.preventDefault();
         const text = (e.clipboardData || window.clipboardData).getData('text/plain');
         document.execCommand('insertText', false, text);
-        // Khi paste: Chuyển ngay về chế độ Text đen để chỉnh sửa nếu cần
-        switchToEditingMode();
-        // Sau đó mới render
-        triggerRenderDebounce();
-    });
-
-    // --- LOGIC CHUYỂN ĐỔI CHẾ ĐỘ ---
-    let inputTimer;
-
-    function switchToEditingMode() {
-        // Chế độ gõ: Chữ đen, ẩn highlight đi để không bị bóng ma/delay
-        els.text.style.color = 'black';
-        els.hl.style.visibility = 'hidden'; 
-    }
-
-    function triggerRenderDebounce() {
+        switchToEditMode();
         clearTimeout(inputTimer);
-        // Chờ 300ms sau khi ngừng gõ mới tính toán highlight (Tối ưu hiệu năng)
-        inputTimer = setTimeout(renderHighlights, 300);
-    }
-
-    els.text.addEventListener('input', () => {
-        // 1. Ngay lập tức khi nhấn phím: Chuyển sang Text đen
-        switchToEditingMode();
-        
-        // 2. Reset highlight vàng nếu nội dung thay đổi (để tránh lệch)
-        if (state.replacedTargets.length > 0) state.replacedTargets = []; 
-
-        // 3. Đặt lịch render lại sau khi nghỉ tay
-        triggerRenderDebounce();
+        inputTimer = setTimeout(renderHighlights, 100);
     });
 
+    // SYNC SCROLL: Chỉ Text -> HL (vì HL đã hidden overflow)
     function syncScroll() {
         els.hl.scrollTop = els.text.scrollTop;
-        els.hl.scrollLeft = els.text.scrollLeft;
     }
     els.text.addEventListener('scroll', syncScroll, { passive: true });
     
@@ -187,7 +178,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const style = `font-family: ${els.font.value}; font-size: ${els.size.value};`;
         els.text.style = style;
         els.hl.style = style;
-        // Font đổi thì phải render lại vị trí
         renderHighlights();
     }
     els.font.addEventListener('change', updateFont);
@@ -245,7 +235,8 @@ document.addEventListener('DOMContentLoaded', () => {
     els.matchCase.onchange = renderHighlights;
     els.wholeWords.onchange = renderHighlights;
 
-    // --- REPLACE SETTINGS ---
+    // --- REPLACE LOGIC (FIXED WHOLE WORDS) ---
+    // Settings load/save
     function loadData() {
         try {
             const raw = localStorage.getItem('replace_data');
@@ -270,7 +261,6 @@ document.addEventListener('DOMContentLoaded', () => {
         state.modes[state.activeMode].pairs = pairs;
         localStorage.setItem('replace_data', JSON.stringify({ modes: state.modes, active: state.activeMode }));
     }
-
     function updateModeUI() {
         els.modeSel.innerHTML = '';
         Object.keys(state.modes).forEach(k => {
@@ -285,7 +275,6 @@ document.addEventListener('DOMContentLoaded', () => {
         els.puncList.innerHTML = '';
         mode.pairs.forEach(p => addPairUI(p.find, p.replace));
     }
-
     function addPairUI(f = '', r = '') {
         const div = document.createElement('div');
         div.className = 'punctuation-item';
@@ -293,7 +282,6 @@ document.addEventListener('DOMContentLoaded', () => {
         div.querySelector('.remove-pair').onclick = () => div.remove();
         els.puncList.prepend(div);
     }
-
     els.addPair.onclick = () => { addPairUI(); els.puncList.querySelector('input').focus(); };
     els.save.onclick = () => { saveData(); notify(`Đã lưu "${state.activeMode}"`); };
     els.modeSel.onchange = () => { saveData(); state.activeMode = els.modeSel.value; updateModeUI(); };
@@ -312,23 +300,20 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     els.caseMode.onclick = () => { state.modes[state.activeMode].case = !state.modes[state.activeMode].case; updateModeUI(); };
 
-    // --- LOGIC REPLACE (CẬP NHẬT: LUÔN LÀ TỪ HOÀN CHỈNH) ---
+    // REPLACE ALL
     els.replace.onclick = () => {
-        saveData(); 
+        saveData();
         const mode = state.modes[state.activeMode];
         if (!mode.pairs.length) return notify('Chưa có từ khóa để thay thế!', 'error');
-        
         const originalText = els.text.innerText;
         if (!originalText) return notify('Văn bản trống!', 'error');
 
         const pairs = [...mode.pairs].sort((a, b) => b.find.length - a.find.length);
-        
         let newText = originalText;
         let count = 0;
 
         pairs.forEach(p => {
-            // FIX: Tham số thứ 2 là 'true' -> BẮT BUỘC LÀ TỪ HOÀN CHỈNH
-            // Nghĩa là: tìm "ông" sẽ không match "công"
+            // FIX: Force Whole Word = true
             const regex = getRegex(p.find, true, mode.case);
             if (regex) {
                 const matches = newText.match(regex);
@@ -339,18 +324,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        if (count === 0) return notify('Không tìm thấy từ (hoàn chỉnh) nào để thay thế.', 'error');
+        if (count === 0) return notify('Không tìm thấy từ (hoàn chỉnh) nào.', 'error');
 
         els.text.innerText = newText;
         state.replacedTargets = pairs.map(p => p.replace).filter(str => str && str.length > 0);
-        
-        // Render lại sau khi thay thế
         renderHighlights();
-        
-        notify(`Đã thay thế ${count} từ hoàn chỉnh!`);
+        notify(`Đã thay thế ${count} từ!`);
     };
 
-    // Init
+    // INIT
     loadData();
     updateFont();
 });
