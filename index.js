@@ -30,10 +30,9 @@ document.addEventListener('DOMContentLoaded', () => {
         notify: document.getElementById('notification-container')
     };
 
-    // State quản lý
     let state = {
-        keywords: [],           // Từ khóa tìm kiếm (Tô màu sặc sỡ)
-        replacedTargets: [],    // DANH SÁCH TỪ VỪA THAY THẾ (Để tô màu vàng)
+        keywords: [],
+        replacedTargets: [],
         modes: {},
         activeMode: 'Mặc định'
     };
@@ -51,12 +50,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const escRgx = str => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-    // Regex tiếng Việt (Giữ nguyên độ chính xác)
+    // Regex tiếng Việt (Giữ nguyên)
     const VIET_LETTERS = 'a-zA-Z0-9àáãạảăắằẳẵặâấầẩẫậèéẹẻẽêềếểễệìíĩỉịòóõọỏôốồổỗộơớờởỡợùúũụủưứừửữựỳỵỷỹýđÀÁÃẠẢĂẮẰẲẴẶÂẤẦẨẪẬÈÉẸẺẼÊỀẾỂỄỆÌÍĨỈỊÒÓÕỌỎÔỐỒỔỖỘƠỚỜỞỠỢÙÚŨỤỦƯỨỪỬỮỰỲỴỶỸÝĐ';
     function getRegex(kw, isWhole, isCase) {
         if (!kw) return null;
         const flags = isCase ? 'g' : 'gi';
-        // Nếu là từ hoàn chỉnh: dùng Lookbehind/Lookahead để biên không phải là chữ cái
         const pattern = isWhole 
             ? `(?<![${VIET_LETTERS}])(${escRgx(kw)})(?![${VIET_LETTERS}])`
             : `(${escRgx(kw)})`;
@@ -67,55 +65,44 @@ document.addEventListener('DOMContentLoaded', () => {
         return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
     }
 
-    // === 4. RENDER HIGHLIGHTS (LOGIC MỚI) ===
+    // === 4. RENDER HIGHLIGHTS ===
     function renderHighlights() {
         const text = els.text.innerText;
         els.hl.innerHTML = '';
         if (!text) return;
 
-        // Map lưu class màu cho từng ký tự
         const map = new Array(text.length).fill(null);
-
-        // --- BƯỚC 1: HIGHLIGHT TỪ ĐÃ THAY THẾ (MÀU VÀNG - ƯU TIÊN 1) ---
-        // Logic: Lấy danh sách từ trong ô "Thay bằng", quét trong văn bản mới
         const currentMode = state.modes[state.activeMode];
         const isReplaceCase = currentMode ? currentMode.case : false;
 
+        // 1. Highlight Replaced (Vàng)
         state.replacedTargets.forEach(targetWord => {
-            // Lưu ý: Highlight kết quả thay thế ta không dùng "Whole Word" bắt buộc, 
-            // mà tìm chính xác chuỗi đó xuất hiện ở đâu.
             const regex = getRegex(targetWord, false, isReplaceCase);
             if (!regex) return;
-
             let m;
             while ((m = regex.exec(text)) !== null) {
                 const start = m.index;
                 const end = start + m[0].length;
-                // Tô màu vàng
                 for (let i = start; i < end; i++) map[i] = 'hl-yellow';
             }
         });
 
-        // --- BƯỚC 2: HIGHLIGHT TỪ KHÓA TÌM KIẾM (MÀU SẮC - ƯU TIÊN 2) ---
+        // 2. Highlight Search
         state.keywords.forEach((kw, idx) => {
             const regex = getRegex(kw, els.wholeWords.checked, els.matchCase.checked);
             if (!regex) return;
-            
             let m;
             while ((m = regex.exec(text)) !== null) {
                 const start = m.index;
                 const end = start + m[0].length;
                 const cls = COLORS[idx % COLORS.length];
-
                 for (let i = start; i < end; i++) {
-                    // Chỉ tô màu nếu vị trí đó CHƯA ĐƯỢC TÔ VÀNG
-                    // (Tức là ưu tiên hiển thị kết quả thay thế hơn kết quả tìm kiếm nếu trùng)
                     if (!map[i]) map[i] = cls; 
                 }
             }
         });
 
-        // --- BƯỚC 3: BUILD HTML ---
+        // 3. Build HTML
         let html = '';
         let currentClass = null;
         let buffer = '';
@@ -123,44 +110,50 @@ document.addEventListener('DOMContentLoaded', () => {
         for (let i = 0; i < text.length; i++) {
             const char = text[i];
             const cls = map[i];
-
             if (cls !== currentClass) {
-                if (buffer) {
-                    html += currentClass ? `<mark class="${currentClass}">${escapeHtml(buffer)}</mark>` : escapeHtml(buffer);
-                }
+                if (buffer) html += currentClass ? `<mark class="${currentClass}">${escapeHtml(buffer)}</mark>` : escapeHtml(buffer);
                 currentClass = cls;
                 buffer = char;
             } else {
                 buffer += char;
             }
         }
-        if (buffer) {
-            html += currentClass ? `<mark class="${currentClass}">${escapeHtml(buffer)}</mark>` : escapeHtml(buffer);
-        }
-        if (text.endsWith('\n')) html += '<br>'; // Fix hiển thị dòng cuối
+        if (buffer) html += currentClass ? `<mark class="${currentClass}">${escapeHtml(buffer)}</mark>` : escapeHtml(buffer);
+        if (text.endsWith('\n')) html += '<br>';
 
         els.hl.innerHTML = html;
         syncScroll();
+        
+        // FIX LAG QUAN TRỌNG: Sau khi highlight xong thì mới ẩn chữ đi
+        els.text.style.color = 'transparent';
     }
 
     // === 5. EVENT HANDLERS ===
     
-    // Paste giữ format
+    // Paste
     els.text.addEventListener('paste', e => {
         e.preventDefault();
         const text = (e.clipboardData || window.clipboardData).getData('text/plain');
         document.execCommand('insertText', false, text);
-        setTimeout(renderHighlights, 10); 
+        // Khi paste, cho hiện chữ đen luôn để đỡ lag
+        els.text.style.color = 'black'; 
+        setTimeout(renderHighlights, 50); 
     });
 
-    // Input debounce
+    // INPUT EVENT - FIX LAG (ZERO LATENCY TYPING)
     let inputTimer;
     els.text.addEventListener('input', () => {
+        // 1. NGAY LẬP TỨC: Hiện chữ màu đen (để user thấy mình đang gõ gì)
+        els.text.style.color = 'black';
+        
+        // 2. Clear timer cũ
         clearTimeout(inputTimer);
-        // Khi gõ tay sửa văn bản, ta tạm thời TẮT highlight vàng của lần replace trước
-        // Vì văn bản đã thay đổi, highlight cũ có thể gây rối.
+        
+        // 3. Tắt highlight vàng tạm thời nếu văn bản thay đổi
         if (state.replacedTargets.length > 0) state.replacedTargets = []; 
-        inputTimer = setTimeout(renderHighlights, 150);
+        
+        // 4. Chờ 250ms mới vẽ highlight (giảm tải CPU)
+        inputTimer = setTimeout(renderHighlights, 250);
     });
 
     function syncScroll() {
@@ -174,6 +167,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const style = `font-family: ${els.font.value}; font-size: ${els.size.value};`;
         els.text.style = style;
         els.hl.style = style;
+        // Reset về transparent, nhưng nhớ đảm bảo caret color
         els.text.style.color = 'transparent'; 
         els.text.style.caretColor = 'black';
         setTimeout(renderHighlights, 50);
@@ -181,7 +175,7 @@ document.addEventListener('DOMContentLoaded', () => {
     els.font.addEventListener('change', updateFont);
     els.size.addEventListener('change', updateFont);
 
-    // Keywords Logic
+    // Keywords
     function addKw() {
         const raw = els.input.value;
         if (!raw.trim()) return;
@@ -213,8 +207,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     els.search.onclick = () => {
         if (!state.keywords.length) return notify('Chưa nhập từ khóa!', 'error');
-        renderHighlights(); // Hàm render sẽ tự highlight dựa trên keywords hiện có
-        // Đếm số lượng để báo cáo
+        renderHighlights(); 
         const text = els.text.innerText;
         let count = 0;
         state.keywords.forEach(kw => {
@@ -301,22 +294,20 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     els.caseMode.onclick = () => { state.modes[state.activeMode].case = !state.modes[state.activeMode].case; updateModeUI(); };
 
-    // --- LOGIC REPLACE MỚI: QUÉT LẠI VĂN BẢN SAU KHI THAY ---
+    // --- REPLACE LOGIC ---
     els.replace.onclick = () => {
-        saveData(); // Lưu dữ liệu UI vào state
+        saveData(); 
         const mode = state.modes[state.activeMode];
         if (!mode.pairs.length) return notify('Chưa có từ khóa để thay thế!', 'error');
         
         const originalText = els.text.innerText;
         if (!originalText) return notify('Văn bản trống!', 'error');
 
-        // Sắp xếp: Từ dài thay trước để tránh lỗi chồng chéo
         const pairs = [...mode.pairs].sort((a, b) => b.find.length - a.find.length);
         
         let newText = originalText;
         let count = 0;
 
-        // 1. Thực hiện thay thế trên text
         pairs.forEach(p => {
             const regex = getRegex(p.find, false, mode.case);
             if (regex) {
@@ -330,15 +321,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (count === 0) return notify('Không tìm thấy từ nào để thay thế.', 'error');
 
-        // 2. Cập nhật văn bản
         els.text.innerText = newText;
-
-        // 3. Cập nhật danh sách "Replaced Targets"
-        // Lấy tất cả các từ ở ô "Thay bằng" (không rỗng)
-        // Đây sẽ là những từ khóa ta dùng để highlight vàng
         state.replacedTargets = pairs.map(p => p.replace).filter(str => str && str.length > 0);
-
-        // 4. Render lại highlight (Hàm render sẽ tự quét text mới tìm các từ trên)
         renderHighlights();
         
         notify(`Đã thay thế ${count} từ! Các từ mới được tô vàng.`);
