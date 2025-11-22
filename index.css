@@ -3,115 +3,103 @@
 body { font-family: 'Montserrat', sans-serif; margin: 0; height: 100vh; overflow: hidden; }
 
 /* SCROLLBAR */
-.custom-scrollbar::-webkit-scrollbar { width: 5px; }
+.custom-scrollbar::-webkit-scrollbar { width: 6px; }
 .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
-.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
 
-/* TAGS */
-#keywords-tags .tag {
-    background: linear-gradient(to bottom right, #eff6ff, #dbeafe);
-    color: #1e40af; padding: 4px 10px; border-radius: 20px;
-    font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;
-    border: 1px solid #93c5fd; box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-    transition: all 0.2s;
-}
-#keywords-tags .tag .remove-tag {
-    cursor: pointer; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center;
-    border-radius: 50%; background: rgba(255,255,255,0.5); font-size: 14px;
-}
-#keywords-tags .tag .remove-tag:hover { background: white; color: red; }
-
-/* PUNCTUATION */
-#punctuation-list .punctuation-item {
-    display: flex; gap: 4px; align-items: center; background: white; padding: 4px; border: 1px solid #eee; border-radius: 4px;
-}
-#punctuation-list .punctuation-item input {
-    flex: 1; min-width: 0; padding: 4px 8px; font-size: 11px; border: 1px solid #ddd; border-radius: 3px;
-    transition: border-color 0.2s;
-}
-#punctuation-list .punctuation-item input:focus { border-color: #3b82f6; outline: none; }
-#punctuation-list .punctuation-item button.remove-pair {
-    width: 24px; height: 24px; flex-shrink: 0; background: #fee2e2; color: #dc2626; border: none;
-    border-radius: 4px; font-size: 14px; cursor: pointer; display: flex; justify-content: center; align-items: center;
-}
-#punctuation-list .punctuation-item button.remove-pair:hover { background: #ef4444; color: white; }
-
-/* NOTIFICATIONS */
-#notification-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
-.notification {
-    padding: 12px 20px; border-radius: 8px; color: white; font-size: 13px; font-weight: 600;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15); animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    display: flex; align-items: center; min-width: 200px;
-}
-.notification.success { background: #10b981; border-left: 4px solid #065f46; }
-.notification.error { background: #ef4444; border-left: 4px solid #7f1d1d; }
-@keyframes slideIn { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-
-/* === CORE EDITOR STYLES (FIXED) === */
+/* EDITOR WRAPPER */
 #editor-wrapper {
     position: relative; 
     flex: 1; 
     background: white; 
     border: 1px solid #d1d5db; 
     border-radius: 0.5rem; 
-    overflow: hidden; 
+    overflow: hidden; /* Container không scroll, chỉ con scroll */
 }
 
-/* Cả 2 layer phải trùng khớp tuyệt đối */
+/* CẤU HÌNH 2 LỚP CHỒNG KHÍT 100% */
 #highlight-layer, #text-layer {
     position: absolute; top: 0; left: 0; right: 0; bottom: 0;
     padding: 24px; 
     box-sizing: border-box;
+    
+    /* FONT & TEXT - PHẢI GIỐNG HỆT NHAU */
     font-family: inherit; font-size: inherit; line-height: 1.6;
     white-space: pre-wrap; 
     word-wrap: break-word; overflow-wrap: break-word;
+    
     margin: 0; border: 0;
+    
+    /* FIX LỖI NHẢY DÒNG: Luôn hiện thanh cuộn để chiều rộng content không đổi */
+    overflow-y: scroll; 
+    overflow-x: hidden;
 }
 
-/* Lớp trên: Nhập liệu */
+/* LỚP TRÊN: NHẬP LIỆU (TEXT LAYER) */
 #text-layer {
     z-index: 2;
-    color: transparent; /* Mặc định là trong suốt để nhìn thấy lớp dưới */
     background: transparent;
-    caret-color: black; 
     outline: none;
-    overflow-y: auto; /* Chỉ lớp này được cuộn */
+    color: black; /* Mặc định là đen (chế độ gõ) */
+    caret-color: black;
 }
+
+/* Placeholder */
 #text-layer:empty::before {
     content: attr(placeholder); color: #9ca3af; pointer-events: none; display: block;
 }
 
-/* Lớp dưới: Highlight */
+/* LỚP DƯỚI: HIGHLIGHT LAYER */
 #highlight-layer {
     z-index: 1;
-    color: black; 
     background: white;
-    pointer-events: none; /* QUAN TRỌNG: Không chặn chuột */
-    user-select: none;
-    overflow: hidden; /* QUAN TRỌNG: Ẩn thanh cuộn để tránh lệch dòng, scroll bằng JS */
-    transition: opacity 0.1s ease; /* Hiệu ứng mờ dần thay vì tắt hẳn */
+    color: transparent; /* Chữ gốc tàng hình, chỉ hiện nền mark */
+    pointer-events: none; /* Cho phép chuột bấm xuyên qua xuống text-layer */
+    
+    /* Ẩn thanh cuộn của lớp highlight cho đẹp, nhưng vẫn giữ hành vi scroll */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none;  /* IE */
+}
+#highlight-layer::-webkit-scrollbar { 
+    width: 0; height: 0; display: none; /* Chrome/Safari */
 }
 
-/* Scrollbar */
-#text-layer::-webkit-scrollbar { width: 8px; }
-#text-layer::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); border-radius: 4px; }
+/* STYLE SCROLLBAR CHO TEXT LAYER (LỚP TRÊN) */
+#text-layer::-webkit-scrollbar { width: 6px; }
+#text-layer::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); border-radius: 3px; }
 
-/* HIGHLIGHT STYLES */
+/* HIGHLIGHT COLORS */
 mark {
-    color: white !important;
+    color: transparent !important; /* Chữ trong mark cũng tàng hình để không đè chữ đen */
+    background-color: transparent;
     border-radius: 4px;
-    padding: 0 1px; margin: 0 -1px;
-    font-weight: normal;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    padding: 0; margin: 0;
+    
+    /* Quan trọng: Trick để hiển thị màu highlight nhưng vẫn cho thấy chữ đen của layer trên */
+    box-shadow: inset 0 0 0 100px var(--hl-bg);
     border-bottom: 2px solid rgba(0,0,0,0.1);
 }
-.hl-yellow { background-color: #eab308 !important; color: black !important; font-weight: bold !important; border-bottom: none; box-shadow: 0 0 0 2px #fde047; } 
-.hl-pink   { background-color: #ec4899; }
-.hl-blue   { background-color: #3b82f6; }
-.hl-green  { background-color: #10b981; }
-.hl-orange { background-color: #f97316; }
-.hl-purple { background-color: #8b5cf6; }
-.hl-red    { background-color: #ef4444; }
 
+/* Định nghĩa biến màu cho mark */
+.hl-yellow { --hl-bg: #eab308; border-bottom: none; box-shadow: inset 0 0 0 100px #fde047, 0 0 0 2px #fde047; } 
+.hl-pink   { --hl-bg: #ec4899; }
+.hl-blue   { --hl-bg: #3b82f6; }
+.hl-green  { --hl-bg: #10b981; }
+.hl-orange { --hl-bg: #f97316; }
+.hl-purple { --hl-bg: #8b5cf6; }
+.hl-red    { --hl-bg: #ef4444; }
+
+/* TAGS & UI KHÁC (Giữ nguyên) */
+#keywords-tags .tag {
+    background: #eff6ff; color: #1e40af; padding: 4px 10px; border-radius: 20px;
+    font-size: 11px; display: inline-flex; align-items: center; gap: 6px;
+    border: 1px solid #93c5fd; margin: 2px;
+}
+#keywords-tags .tag .remove-tag { cursor: pointer; font-weight: bold; }
+#punctuation-list .punctuation-item { display: flex; gap: 4px; padding: 4px; border-bottom: 1px solid #eee; }
+#punctuation-list input { flex: 1; padding: 4px; border: 1px solid #ddd; font-size: 11px; }
+#notification-container { position: fixed; top: 20px; right: 20px; z-index: 9999; }
+.notification { padding: 10px 20px; color: white; border-radius: 5px; margin-bottom: 5px; font-size: 13px; }
+.notification.success { background: #10b981; }
+.notification.error { background: #ef4444; }
 .hidden { display: none !important; }
