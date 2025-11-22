@@ -2,311 +2,118 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
+    <!-- CHẶN EXTENSION GÂY LỖI (Google Translate, etc.) -->
     <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline'; object-src 'none'; child-src 'none'; frame-src 'none'">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tìm & Thay Thế Chương - Đẹp Như Word 2025</title>
+    <title>Tìm Kiếm & Thay Thế Chương - Fixed Whole Word & Style</title>
     <link rel="icon" href="data:,">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
-
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="index.css">
     <style>
-        body { font-family: 'Montserrat', sans-serif; margin: 0; height: 100vh; background: #f3f4f6; }
-        #main-app { height: 100vh; display: flex; }
+        /* ẨN EXTENSION DỊCH (nếu CSP chưa đủ) */
+        iframe, div[id*="goog"], div[class*="translate"], .skiptranslate, .goog-te-banner-frame { display: none !important; }
 
-        /* HIGHLIGHT SIÊU NỔI – ĐẬM + VIỀN + BÓNG + CHỮ TRẮNG */
-        .hl-yellow { background: #FFB800 !important; color: white !important; font-weight: 700; padding: 3px 6px !important; border-radius: 6px !important; box-shadow: 0 2px 5px rgba(0,0,0,0.3) !important; }
-        .hl-pink   { background: #FF4D82 !important; color: white !important; font-weight: 700; padding: 3px 6px !important; border-radius: 6px !important; box-shadow: 0 2px 5px rgba(0,0,0,0.3) !important; }
-        .hl-blue   { background: #3399FF !important; color: white !important; font-weight: 700; padding: 3px 6px !important; border-radius: 6px !important; box-shadow: 0 2px 5px rgba(0,0,0,0.3) !important; }
-        .hl-green  { background: #00C48C !important; color: white !important; font-weight: 700; padding: 3px 6px !important; border-radius: 6px !important; box-shadow: 0 2px 5px rgba(0,0,0,0.3) !important; }
-        .hl-orange { background: #FF785A !important; color: white !important; font-weight: 700; padding: 3px 6px !important; border-radius: 6px !important; box-shadow: 0 2px 5px rgba(0,0,0,0.3) !important; }
-        .hl-purple { background: #9D4EDD !important; color: white !important; font-weight: 700; padding: 3px 6px !important; border-radius: 6px !important; box-shadow: 0 2px 5px rgba(0,0,0,0.3) !important; }
+        .hl-yellow { background: #ffff99 !important; color: white !important; padding: 2px 4px !important; border-radius: 4px !important; box-decoration-break: clone; }
+        .hl-pink   { background: #ffcccc !important; color: white !important; padding: 2px 4px !important; border-radius: 4px !important; box-decoration-break: clone; }
+        .hl-blue   { background: #99ccff !important; color: white !important; padding: 2px 4px !important; border-radius: 4px !important; box-decoration-break: clone; }
+        .hl-green  { background: #ccffcc !important; color: white !important; padding: 2px 4px !important; border-radius: 4px !important; box-decoration-break: clone; }
+        .hl-orange { background: #ffcc99 !important; color: white !important; padding: 2px 4px !important; border-radius: 4px !important; box-decoration-break: clone; }
+        .hl-purple { background: #e6ccff !important; color: white !important; padding: 2px 4px !important; border-radius: 4px !important; box-decoration-break: clone; }
 
-        #editor-wrapper { position: relative; background: white; overflow: hidden; height: 100%; border: 2px solid #d1d5db; border-radius: 12px; }
+        #editor-wrapper { position: relative; background: white; overflow: hidden; height: 100%; }
         #highlight-layer, #text-layer {
-            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-            padding: 28px; box-sizing: border-box;
-            font-family: inherit; font-size: 16px; line-height: 1.7;
-            white-space: pre-wrap; word-wrap: break-word;
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0; padding: 24px; box-sizing: border-box;
+            font-family: inherit; font-size: inherit; line-height: 1.6; white-space: pre-wrap; word-wrap: break-word;
             overflow-y: auto; scrollbar-width: thin;
         }
-        #text-layer {
-            z-index: 2; background: transparent; color: transparent; caret-color: black !important;
-            outline: none; -webkit-user-modify: read-write-plaintext-only;
-        }
-        #highlight-layer { z-index: 1; pointer-events: none; color: black; }
-
-        /* Tag từ khóa */
-        #keywords-tags .tag {
-            background: #dbeafe; color: #1e40af; padding: 6px 10px; border-radius: 20px;
-            font-size: 13px; display: inline-flex; align-items: center; gap: 6px; margin: 4px;
-            border: 1px solid #93c5fd;
-        }
-        #keywords-tags .tag .remove-tag { cursor: pointer; font-weight: bold; font-size: 16px; }
-
-        /* Notification */
-        #notification-container { position: fixed; top: 20px; right: 20px; z-index: 9999; }
-        .notification { padding: 12px 20px; border-radius: 8px; color: white; font-weight: 600; margin-bottom: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); animation: slide 0.4s ease; }
-        .notification.success { background: #10b981; }
-        .notification.error { background: #ef4444; }
-        @keyframes slide { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-
-        /* Chặn hết extension dịch */
-        iframe, .skiptranslate, .goog-te-banner-frame, div[id*="goog"], div[class*="translate"] { display: none !important; height: 0 !important; width: 0 !important; }
+        #text-layer { z-index: 2; background: transparent; color: transparent; caret-color: black; outline: none; -webkit-overflow-scrolling: touch; }
+        #highlight-layer { z-index: 1; pointer-events: none; color: black; -webkit-overflow-scrolling: touch; }
+        #highlight-layer mark { display: inline; }
+        #text-layer::-webkit-scrollbar, #highlight-layer::-webkit-scrollbar { width: 6px; }
+        #text-layer::-webkit-scrollbar-thumb, #highlight-layer::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.3); border-radius: 3px; }
     </style>
 </head>
-<body class="bg-gray-100">
-    <div id="main-app" class="flex">
+<body class="bg-gray-100 h-screen flex flex-col">
+    <div id="main-app" class="flex flex-1 overflow-hidden">
         <!-- Panel Tìm kiếm -->
-        <div class="w-80 bg-white shadow-xl p-6 overflow-y-auto">
-            <h2 class="text-2xl font-bold mb-6 text-gray-800">Tìm Kiếm & Highlight</h2>
-
-            <div class="mb-5">
-                <label class="block mb-3"><input type="checkbox" id="matchCase" class="mr-2"> Phân biệt hoa/thường</label>
-                <label class="block mb-4"><input type="checkbox" id="wholeWords" class="mr-2"> Từ hoàn chỉnh (như Word)</label>
-            </div>
-
-            <div class="mb-4">
-                <input type="text" id="keywords-input" placeholder="Nhập từ khóa, Enter hoặc dấu phẩy..." 
-                       class="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 outline-none text-sm">
-            </div>
-
-            <div class="flex gap-3 mb-4">
-                <button id="search" class="flex-1 bg-gradient-to-r from-green-500 to-green-600 text-white py-3 rounded-lg font-bold hover:from-green-600 hover:to-green-700 shadow-md">TÌM KIẾM</button>
-                <button id="clear" class="flex-1 bg-gradient-to-r from-red-500 to-red-600 text-white py-3 rounded-lg font-bold hover:from-red-600 hover:to-red-700 shadow-md">XÓA TẤT CẢ</button>
-            </div>
-
-            <div id="keywords-tags" class="flex flex-wrap"></div>
-        </div>
-
-        <!-- Editor Chính -->
-        <div class="flex-1 p-8 flex flex-col">
-            <div class="text-right mb-3 text-xs text-gray-600">
-                <div class="text-red-600 font-bold">DONATE: MB BANK - TRINH THI XUAN HUONG - 0917678211</div>
-                <div>Góp ý: <a href="https://fb.com/trinh.hg.57" target="_blank" class="text-blue-600 underline">fb.com/trinh.hg.57</a></div>
-            </div>
-
-            <div id="editor-wrapper" class="flex-1">
-                <div id="highlight-layer"></div>
-                <div id="text-layer" contenteditable="plaintext-only"></div>
-            </div>
-        </div>
-
-        <!-- Panel Thay Thế -->
-        <div class="w-80 bg-white shadow-xl p-6 overflow-y-auto">
-            <h2 class="text-2xl font-bold mb-6 text-gray-800">Thay Thế Tự Động</h2>
-
-            <div class="mb-4">
-                <button id="replace-all" class="w-full bg-gradient-to-r from-purple-600 to-purple-700 text-white py-4 rounded-lg font-bold text-lg hover:from-purple-700 hover:to-purple-800 shadow-lg">
-                    THAY THẾ TẤT CẢ
-                </button>
-            </div>
-
-            <div id="punctuation-list" class="space-y-3">
-                <!-- Thêm cặp: Tìm → Thay bằng -->
-                <div class="grid grid-cols-2 gap-2 border-b pb-3">
-                    <input type="text" placeholder="Tìm" class="p-2 border rounded text-sm find">
-                    <input type="text" placeholder="Thay bằng" class="p-2 border rounded text-sm replace">
+        <div class="w-1/5 p-4 bg-white shadow-md overflow-y-auto text-sm">
+            <h2 class="text-xl font-bold mb-4">Tìm Kiếm</h2>
+            <div class="mb-4 grid grid-cols-2 gap-2">
+                <div><label class="block mb-1 text-xs">Font:</label>
+                    <select id="fontFamily" class="w-full p-1.5 border rounded text-xs">
+                        <option value="Arial">Arial</option>
+                        <option value="Calibri">Calibri</option>
+                        <option value="Montserrat" selected>Montserrat</option>
+                        <option value="Times New Roman">Times New Roman</option>
+                    </select>
+                </div>
+                <div><label class="block mb-1 text-xs">Cỡ chữ:</label>
+                    <select id="fontSize" class="w-full p-1.5 border rounded text-xs">
+                        <option value="14px">14</option>
+                        <option value="16px" selected>16</option>
+                        <option value="18px">18</option>
+                        <option value="20px">20</option>
+                    </select>
                 </div>
             </div>
+            <div class="mb-4">
+                <label class="block mb-2"><input type="checkbox" id="matchCase" class="mr-2"> Phân biệt hoa/thường</label>
+                <label class="block mb-2"><input type="checkbox" id="wholeWords" class="mr-2"> Từ hoàn chỉnh</label>
+            </div>
+            <div class="mb-4">
+                <label class="block mb-2">Từ khóa:</label>
+                <input type="text" id="keywords-input" placeholder="Nhập, Enter, dấu phẩy..." class="w-full p-2 border rounded bg-gray-50 text-sm">
+            </div>
+            <div class="flex gap-2 mb-2">
+                <button id="search" class="flex-1 bg-green-500 text-white py-2 rounded hover:bg-green-600 text-xs font-medium">Tìm Kiếm</button>
+                <button id="clear" class="flex-1 bg-red-500 text-white py-2 rounded hover:bg-red-600 text-xs font-medium">Xóa Tất Cả</button>
+            </div>
+            <div id="keywords-tags" class="flex flex-wrap gap-1"></div>
+        </div>
 
-            <button id="add-pair" class="w-full mt-4 bg-blue-600 text-white py-2 rounded hover:bg-blue-700 text-sm">+ Thêm cặp mới</button>
+        <!-- Editor -->
+        <div class="flex-1 p-6 bg-white shadow-md mx-4 flex flex-col overflow-hidden">
+            <div class="flex justify-between items-end mb-2">
+                <h2 class="text-xl font-bold">Nội Dung Chương</h2>
+                <div class="text-xs text-right space-y-0.5">
+                    <div class="text-red-600 font-bold">DON@TE: MB BANK - TRINH THI XUAN HUONG - 0917678211</div>
+                    <div class="text-gray-600">Góp ý: <a href="https://www.facebook.com/trinh.hg.57" target="_blank" class="underline text-blue-600">fb.com/trinh.hg.57</a></div>
+                </div>
+            </div>
+            <div id="editor-wrapper" class="relative flex-1 min-h-0 border-2 border-gray-300 rounded-lg overflow-hidden">
+                <div id="highlight-layer"></div>
+                <div id="text-layer" contenteditable="true"></div>
+            </div>
+        </div>
+
+        <!-- Panel Thay thế -->
+        <div class="w-1/5 p-4 bg-white shadow-md overflow-y-auto text-xs">
+            <h2 class="text-xl font-bold mb-4">Cấu hình Thay Thế</h2>
+            <div class="mb-3 space-y-1">
+                <label class="block mb-1 font-medium text-gray-700">Chế độ:</label>
+                <div class="flex gap-1 mb-1">
+                    <select id="mode-select" class="flex-1 p-1 border rounded text-xs"></select>
+                    <button id="add-mode" class="px-2 py-0.5 bg-blue-500 text-white rounded text-xs hover:bg-blue-600">Tạo Mới</button>
+                </div>
+                <div class="flex gap-1 mb-1">
+                    <button id="rename-mode" class="flex-1 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600 hidden">Đổi Tên</button>
+                </div>
+                <div class="flex gap-1">
+                    <button id="match-case" class="flex-1 py-1 bg-gray-500 text-white rounded text-xs">Case: TẮT</button>
+                    <button id="delete-mode-btn" class="flex-1 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600 hidden">Xóa</button>
+                </div>
+            </div>
+            <div class="mb-3 grid grid-cols-3 gap-1">
+                <button id="add-pair" class="px-1 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600">+ Cặp</button>
+                <button id="save-settings" class="px-1 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700">Lưu</button>
+                <button id="replace-all" class="px-1 py-1 bg-purple-600 text-white rounded text-xs hover:bg-purple-700">Thay Thế</button>
+            </div>
+            <div id="punctuation-list" class="space-y-2"></div>
         </div>
     </div>
 
     <div id="notification-container"></div>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const textLayer = document.getElementById('text-layer');
-            const highlightLayer = document.getElementById('highlight-layer');
-            const keywordsInput = document.getElementById('keywords-input');
-            const keywordsTags = document.getElementById('keywords-tags');
-            const searchBtn = document.getElementById('search');
-            const clearBtn = document.getElementById('clear');
-            const wholeWordsCb = document.getElementById('wholeWords');
-            const matchCaseCb = document.getElementById('matchCase');
-            const replaceAllBtn = document.getElementById('replace-all');
-            const punctuationList = document.getElementById('punctuation-list');
-
-            let currentKeywords = [];
-            let replacedWords = new Set();
-            let highlightTimer;
-
-            const escapeRegex = str => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-            function saveSelection() {
-                const sel = window.getSelection();
-                window.savedRange = sel.rangeCount > 0 ? sel.getRangeAt(0).cloneRange() : null;
-            }
-            function restoreSelection() {
-                if (!window.savedRange) return;
-                const sel = window.getSelection();
-                sel.removeAllRanges();
-                sel.addRange(window.savedRange);
-            }
-
-            function highlightAll() {
-                clearTimeout(highlightTimer);
-                highlightTimer = setTimeout(() => {
-                    const text = textLayer.textContent || '';
-                    if (!text) { highlightLayer.innerHTML = ''; return; }
-                    saveSelection();
-                    highlightLayer.innerHTML = '';
-
-                    const matches = [];
-
-                    // Từ đã replace → vàng đậm
-                    if (replacedWords.size > 0) {
-                        const regex = new RegExp(Array.from(replacedWords).map(escapeRegex).join('|'), 'gi');
-                        let m; while ((m = regex.exec(text)) !== null) {
-                            matches.push({ start: m.index, end: m.index + m[0].length, cls: 'hl-yellow', priority: 999 });
-                        }
-                    }
-
-                    // Keywords thường
-                    currentKeywords.forEach((kw, i) => {
-                        let regex;
-                        if (wholeWordsCb.checked) {
-                            const bound = '(^|[^\\p{L}\\p{N}àáảãạăắằẳẵặâấầẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôốồổỗộơớờởỡợùúủũụưứừửữựỳýỷỹỵđ])';
-                            regex = new RegExp(`\( {bound}( \){escapeRegex(kw)})(\( {bound}| \))`, 'gu' + (matchCaseCb.checked ? '' : 'i'));
-                        } else {
-                            regex = new RegExp(escapeRegex(kw), 'gu' + (matchCaseCb.checked ? '' : 'i'));
-                        }
-                        let m; while ((m = regex.exec(text)) !== null) {
-                            const start = wholeWordsCb.checked ? m.index + m[1].length : m.index;
-                            const end = start + kw.length;
-                            matches.push({ start, end, cls: ['hl-pink','hl-blue','hl-green','hl-orange','hl-purple'][i % 5], priority: 100 });
-                        }
-                    });
-
-                    matches.sort((a, b) => a.start - b.start || b.priority - a.priority);
-                    const final = []; let last = 0;
-                    for (const m of matches) {
-                        if (m.start >= last) { final.push(m); last = m.end; }
-                    }
-
-                    const frag = document.createDocumentFragment();
-                    let pos = 0;
-                    for (const m of final) {
-                        if (m.start > pos) frag.appendChild(document.createTextNode(text.slice(pos, m.start)));
-                        const span = document.createElement('span');
-                        span.className = m.cls;
-                        span.textContent = text.slice(m.start, m.end);
-                        frag.appendChild(span);
-                        pos = m.end;
-                    }
-                    if (pos < text.length) frag.appendChild(document.createTextNode(text.slice(pos)));
-                    highlightLayer.appendChild(frag);
-                    restoreSelection();
-                }, 80);
-            }
-
-            // Paste mượt như Word
-            textLayer.addEventListener('paste', e => {
-                e.preventDefault();
-                const text = (e.clipboardData || window.clipboardData).getData('text/plain');
-                document.execCommand('insertText', false, text);
-                highlightAll();
-            });
-
-            // Sửa không nhảy con trỏ
-            textLayer.addEventListener('input', () => {
-                requestAnimationFrame(() => {
-                    const walker = document.createTreeWalker(textLayer, NodeFilter.SHOW_ELEMENT);
-                    let node;
-                    while (node = walker.nextNode()) {
-                        if (node.tagName !== 'BR') {
-                            while (node.firstChild) node.parentNode.insertBefore(node.firstChild, node);
-                            node.parentNode.removeChild(node);
-                        }
-                    }
-                    highlightAll();
-                });
-            });
-
-            // Thay thế + tự động highlight vàng
-            replaceAllBtn.onclick = () => {
-                replacedWords.clear();
-                const pairs = Array.from(punctuationList.querySelectorAll('.grid')).map(div => ({
-                    find: div.querySelector('.find').value.trim(),
-                    replace: div.querySelector('.replace').value
-                })).filter(p => p.find);
-
-                let text = textLayer.textContent;
-                pairs.forEach(p => {
-                    const regex = new RegExp(escapeRegex(p.find), 'gi');
-                    text = text.replace(regex, match => {
-                        replacedWords.add(p.replace);
-                        return p.replace;
-                    });
-                });
-                textLayer.textContent = text;
-                highlightAll();
-                showNotification(`Đã thay thế xong! Highlight vàng ${replacedWords.size} từ mới`, 'success');
-            };
-
-            // Nút Tìm kiếm + đếm
-            searchBtn.onclick = () => {
-                currentKeywords = Array.from(keywordsTags.children).map(t => t.textContent.replace('×', '').trim());
-                const count = currentKeywords.reduce((sum, kw) => sum + (textLayer.textContent.match(new RegExp(escapeRegex(kw), 'gi')) || []).length, 0);
-                highlightAll();
-                showNotification(count ? `Tìm thấy ${count} kết quả!` : 'Không tìm thấy!', count ? 'success' : 'error');
-            };
-
-            clearBtn.onclick = () => {
-                currentKeywords = []; replacedWords.clear();
-                keywordsTags.innerHTML = ''; highlightAll();
-            };
-
-            // Thêm từ khóa
-            keywordsInput.addEventListener('keydown', e => {
-                if (e.key === 'Enter' || e.key === ',') {
-                    e.preventDefault();
-                    const val = keywordsInput.value.trim();
-                    if (val && !currentKeywords.includes(val)) {
-                        currentKeywords.push(val);
-                        const tag = document.createElement('div');
-                        tag.className = 'tag';
-                        tag.innerHTML = `${val} <span class="remove-tag">×</span>`;
-                        tag.querySelector('.remove-tag').onclick = () => { tag.remove(); currentKeywords = currentKeywords.filter(x => x !== val); highlightAll(); };
-                        keywordsTags.appendChild(tag);
-                    }
-                    keywordsInput.value = '';
-                    highlightAll();
-                }
-            });
-
-            // Thêm cặp thay thế
-            document.getElementById('add-pair').onclick = () => {
-                const div = document.createElement('div');
-                div.className = 'grid grid-cols-2 gap-2 border-b pb-3';
-                div.innerHTML = `<input type="text" placeholder="Tìm" class="p-2 border rounded text-sm find">
-                                 <input type="text" placeholder="Thay bằng" class="p-2 border rounded text-sm replace">`;
-                punctuationList.appendChild(div);
-            };
-
-            function showNotification(msg, type = 'success') {
-                const n = document.createElement('div');
-                n.className = `notification ${type}`;
-                n.textContent = msg;
-                document.getElementById('notification-container').prepend(n);
-                setTimeout(() => n.remove(), 3000);
-            }
-
-            // Sync scroll
-            let raf;
-            textLayer.addEventListener('scroll', () => {
-                cancelAnimationFrame(raf);
-                raf = requestAnimationFrame(() => {
-                    highlightLayer.scrollTop = textLayer.scrollTop;
-                    highlightLayer.scrollLeft = textLayer.scrollLeft;
-                });
-            }, { passive: true });
-
-            // Khởi động
-            textLayer.focus();
-            highlightAll();
-        });
-    </script>
+    <script src="index.js"></script>
 </body>
 </html>
