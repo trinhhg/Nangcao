@@ -68,8 +68,11 @@
           </div>
           
           <div id="editor-wrapper" class="relative flex-1 bg-white border border-gray-300 shadow-inner rounded-lg overflow-hidden cursor-text">
-              <div id="highlight-layer" aria-hidden="true"></div>
-              <div id="text-layer" contenteditable="true" spellcheck="false" placeholder="Dán văn bản vào đây..."></div>
+              <div id="editor" 
+                   contenteditable="true" 
+                   spellcheck="false" 
+                   class="w-full h-full p-6 outline-none overflow-y-auto custom-scrollbar"
+                   data-placeholder="Dán văn bản vào đây..."></div>
           </div>
       </div>
 
