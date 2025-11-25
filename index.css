@@ -2,11 +2,47 @@
 * { box-sizing: border-box; }
 body { font-family: 'Montserrat', sans-serif; margin: 0; height: 100vh; overflow: hidden; }
 
-/* SCROLLBAR TÙY CHỈNH (Cho đẹp & gọn) */
+/* SCROLLBAR */
 .custom-scrollbar::-webkit-scrollbar { width: 5px; }
 .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
 .custom-scrollbar::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+
+/* EDITOR STYLES - SINGLE LAYER */
+#editor {
+    font-size: 16px;
+    line-height: 1.6;
+    color: #333;
+    white-space: pre-wrap; /* Giữ xuống dòng */
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+/* Placeholder giả lập cho ContentEditable */
+#editor:empty::before {
+    content: attr(data-placeholder);
+    color: #9ca3af;
+    pointer-events: none;
+    display: block;
+}
+
+/* HIGHLIGHT COLORS */
+.highlight-replaced {
+    background-color: #eab308; /* Vàng đậm */
+    color: black;
+    font-weight: bold;
+    border-radius: 3px;
+    padding: 0 2px;
+    box-shadow: 0 0 0 1px #ca8a04;
+}
+
+/* Màu cho từ khóa tìm kiếm */
+.hl-pink   { background-color: #fce7f3; border-bottom: 2px solid #db2777; }
+.hl-blue   { background-color: #dbeafe; border-bottom: 2px solid #2563eb; }
+.hl-green  { background-color: #dcfce7; border-bottom: 2px solid #16a34a; }
+.hl-orange { background-color: #ffedd5; border-bottom: 2px solid #ea580c; }
+.hl-purple { background-color: #f3e8ff; border-bottom: 2px solid #9333ea; }
+.hl-red    { background-color: #fee2e2; border-bottom: 2px solid #dc2626; }
 
 /* KEYWORD TAGS */
 #keywords-tags .tag {
@@ -48,73 +84,6 @@ body { font-family: 'Montserrat', sans-serif; margin: 0; height: 100vh; overflow
 .notification.success { background: #10b981; border-left: 4px solid #065f46; }
 .notification.error { background: #ef4444; border-left: 4px solid #7f1d1d; }
 @keyframes slideIn { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-
-/* === CORE EDITOR STYLES === */
-/* Cực kỳ quan trọng: 2 layer phải có style y hệt nhau để khớp vị trí */
-#highlight-layer, #text-layer {
-    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-    padding: 24px; /* Padding giống hệt nhau */
-    box-sizing: border-box;
-    font-family: inherit; font-size: inherit; line-height: 1.6;
-    white-space: pre-wrap; /* Quan trọng: Giữ xuống dòng đúng chuẩn */
-    word-wrap: break-word; overflow-wrap: break-word;
-    overflow-y: auto; overflow-x: hidden; /* Chỉ scroll dọc */
-    margin: 0; border: 0;
-}
-
-/* Lớp trên: Nhập liệu */
-#text-layer {
-    z-index: 2;
-    color: transparent; /* Chữ trong suốt */
-    background: transparent;
-    caret-color: black; /* QUAN TRỌNG: Để nhìn thấy con trỏ */
-    outline: none;
-}
-/* Placeholder giả cho text-layer */
-#text-layer:empty::before {
-    content: attr(placeholder);
-    color: #9ca3af;
-    pointer-events: none;
-    display: block; /* Hiện placeholder */
-}
-
-/* Lớp dưới: Highlight */
-#highlight-layer {
-    z-index: 1;
-    color: black; /* Màu chữ gốc (hiển thị khi không highlight) */
-    background: white;
-    pointer-events: none; /* Không chặn chuột */
-    user-select: none;
-}
-
-/* Scrollbar cho editor */
-#text-layer::-webkit-scrollbar, #highlight-layer::-webkit-scrollbar { width: 8px; }
-#text-layer::-webkit-scrollbar-thumb, #highlight-layer::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); border-radius: 4px; }
-/* Ẩn scrollbar của highlight layer để tránh hiển thị 2 thanh cuộn chồng nhau nhưng vẫn giữ logic layout */
-#highlight-layer::-webkit-scrollbar { width: 8px; background: transparent; }
-#highlight-layer::-webkit-scrollbar-thumb { background: transparent; }
-
-/* HIGHLIGHT COLORS - VIBRANT & HIGH CONTRAST */
-/* Sử dụng box-shadow để tạo viền màu cho chữ mà không thay đổi kích thước box model */
-mark {
-    color: white !important;
-    border-radius: 4px;
-    padding: 0 1px;
-    margin: 0 -1px; /* Bù lại padding để không đẩy chữ */
-    font-weight: normal;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.3);
-    border-bottom: 2px solid rgba(0,0,0,0.1);
-}
-
-.hl-yellow { background-color: #eab308 !important; color: black !important; font-weight: bold !important; border-bottom: none; box-shadow: 0 0 0 2px #fde047; z-index: 10; position: relative;} 
-/* hl-yellow (Thay thế) phải cực nổi: chữ đen nền vàng đậm, có viền sáng */
-
-.hl-pink   { background-color: #ec4899; }
-.hl-blue   { background-color: #3b82f6; }
-.hl-green  { background-color: #10b981; }
-.hl-orange { background-color: #f97316; }
-.hl-purple { background-color: #8b5cf6; }
-.hl-red    { background-color: #ef4444; }
 
 /* Tiện ích */
 .hidden { display: none !important; }
