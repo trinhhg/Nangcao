@@ -1,12 +1,12 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // === 1. BLOCK EXTENSION ERRORS ===
+    // 1. BLOCK EXTENSIONS
     window.addEventListener('error', e => {
         if (e.filename && (e.filename.includes('contentScript') || e.message.includes('extension'))) {
             e.stopImmediatePropagation(); e.preventDefault(); return false;
         }
     });
 
-    // === 2. DOM ELEMENTS ===
+    // 2. DOM ELEMENTS
     const els = {
         input: document.getElementById('keywords-input'),
         tags: document.getElementById('keywords-tags'),
@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
         size: document.getElementById('fontSize'),
         matchCase: document.getElementById('matchCase'),
         wholeWords: document.getElementById('wholeWords'),
-        editor: document.getElementById('editor'), // DIV ContentEditable
+        editor: document.getElementById('editor'),
         modeSel: document.getElementById('mode-select'),
         addMode: document.getElementById('add-mode'),
         delMode: document.getElementById('delete-mode-btn'),
@@ -34,15 +34,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let state = {
         keywords: [],
-        replacedTargets: [],
         modes: {},
         activeMode: 'Mặc định'
     };
 
     const KW_COLORS = ['hl-pink', 'hl-blue', 'hl-green', 'hl-orange', 'hl-purple', 'hl-red'];
-    const VIET_LETTERS = 'a-zA-Z0-9àáãạảăắằẳẵặâấầẩẫậèéẹẻẽêềếểễệìíĩỉịòóõọỏôốồổỗộơớờởỡợùúũụủưứừửữựỳỵỷỹýđÀÁÃẠẢĂẮẰẲẴẶÂẤẦẨẪẬÈÉẸẺẼÊỀẾỂỄỆÌÍĨỈỊÒÓÕỌỎÔỐỒỔỖỘƠỚỜỞỠỢÙÚŨỤỦƯỨỪỬỮỰỲỴỶỸÝĐ_';
 
-    // === 3. CORE UTILS ===
+    // 3. UTILS
     function notify(msg, type = 'success') {
         const div = document.createElement('div');
         div.className = `notification ${type}`;
@@ -51,236 +49,212 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => { div.style.opacity = '0'; setTimeout(() => div.remove(), 300); }, 3000);
     }
 
-    const escRgx = str => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-    // === 4. HIGHLIGHT ENGINE (DOM BASED) ===
-    
-    // Hàm tạo Regex
-    function getRegex(kw, isWhole, isCase) {
-        if (!kw) return null;
-        const flags = isCase ? 'g' : 'gi';
-        // Logic Whole Words cho Tiếng Việt
-        const pattern = isWhole 
-            ? `(?<![${VIET_LETTERS}])(${escRgx(kw)})(?![${VIET_LETTERS}])`
-            : `(${escRgx(kw)})`;
-        try { return new RegExp(pattern, flags); } catch { return null; }
-    }
-
-    // Xóa toàn bộ highlight, đưa về text thuần trong DOM nhưng giữ cấu trúc dòng
-    function stripHighlights() {
-        const spans = els.editor.querySelectorAll('span[class^="hl-"], span.highlight-replaced');
-        spans.forEach(span => {
-            const parent = span.parentNode;
-            while(span.firstChild) parent.insertBefore(span.firstChild, span);
-            parent.removeChild(span);
-        });
-        // Normalize để gộp các text node bị rời rạc
-        els.editor.normalize();
-    }
-
-    // Quản lý con trỏ chuột (Caret) để không bị nhảy khi highlight
-    function saveCaret() {
-        const sel = window.getSelection();
-        if (!sel.rangeCount) return null;
-        const range = sel.getRangeAt(0);
-        const preCaretRange = range.cloneRange();
-        preCaretRange.selectNodeContents(els.editor);
-        preCaretRange.setEnd(range.endContainer, range.endOffset);
-        return preCaretRange.toString().length;
-    }
-
-    function restoreCaret(charIndex) {
-        if (charIndex === null) return;
-        const sel = window.getSelection();
-        const range = document.createRange();
-        let current = 0;
-        
-        // Hàm đệ quy tìm vị trí caret
-        function traverse(node) {
-            if (node.nodeType === 3) { // Text node
-                const next = current + node.length;
-                if (charIndex >= current && charIndex <= next) {
-                    range.setStart(node, charIndex - current);
-                    range.collapse(true);
-                    return true;
+    // --- DOM HELPER: Lấy danh sách text nodes (có lọc) ---
+    function getTextNodesSnapshot(root, opts = {}) {
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false);
+        const nodes = [];
+        let node;
+        while ((node = walker.nextNode())) {
+            if (!node.nodeValue) continue;
+            // Bỏ qua node nếu nằm trong class cấm (ví dụ: .replaced)
+            let p = node.parentElement;
+            let skip = false;
+            while (p && p !== root) {
+                if (p.classList && (
+                    (opts.skipClass1 && p.classList.contains(opts.skipClass1)) || 
+                    (opts.skipClass2 && p.classList.contains(opts.skipClass2))
+                )) {
+                    skip = true; break;
                 }
-                current = next;
-            } else {
-                for (let i = 0; i < node.childNodes.length; i++) {
-                    if (traverse(node.childNodes[i])) return true;
-                }
+                p = p.parentElement;
             }
-            return false;
+            if (!skip) nodes.push(node);
         }
-
-        traverse(els.editor);
-        sel.removeAllRanges();
-        sel.addRange(range);
+        return nodes;
     }
 
-    // MAIN HIGHLIGHT FUNCTION
-    function applyHighlights() {
-        // 1. Lưu vị trí con trỏ
-        const caretPos = saveCaret();
+    // --- FEATURE: THAY THẾ (DOM-Based) ---
+    function performReplace() {
+        saveData();
+        const mode = state.modes[state.activeMode];
+        if (!mode.pairs.length) return notify('Chưa có từ khóa để thay thế!', 'error');
+        if (!els.editor.textContent.trim()) return notify('Văn bản trống!', 'error');
 
-        // 2. Xóa highlight cũ
-        stripHighlights();
+        // Xóa highlight keyword cũ để tránh lỗi node, nhưng GIỮ LẠI các thẻ .replaced cũ (nếu muốn replace tiếp)
+        // Trong case này, ta sẽ unwrap keyword highlights trước
+        unwrapClasses(['keyword']); 
 
-        // 3. Chuẩn bị danh sách từ cần tìm
-        // Gộp keyword và replaced word. 
-        // Replaced words: Luôn highlight vàng (.highlight-replaced).
-        // Keywords: Màu theo index.
-        const tasks = [];
+        const caseSensitive = mode.case;
+        // Sắp xếp ưu tiên từ dài trước để tránh lỗi chồng
+        const pairs = [...mode.pairs].sort((a, b) => b.find.length - a.find.length);
+        let count = 0;
 
-        // Thêm replaced words (Ưu tiên highlight vàng)
-        // Yêu cầu: Highlight từ đã replace chỉ tìm từ hoàn chỉnh
-        state.replacedTargets.forEach(word => {
-            if(word && word.trim()) {
-                tasks.push({ 
-                    regex: getRegex(word, true, state.modes[state.activeMode].case), // true = Whole Word
-                    className: 'highlight-replaced' 
-                });
+        pairs.forEach(pair => {
+            const fromWord = pair.find;
+            const toWord = pair.replace;
+            if(!fromWord) return;
+
+            // Snapshot nodes để tránh vòng lặp vô hạn khi DOM thay đổi
+            // Skip .replaced để không thay thế lại từ đã thay
+            const nodes = getTextNodesSnapshot(els.editor, { skipClass1: 'replaced' });
+
+            for (const textNode of nodes) {
+                if (!textNode.parentNode) continue;
+                let node = textNode;
+                while (node && node.nodeValue) {
+                    const nodeText = caseSensitive ? node.nodeValue : node.nodeValue.toLowerCase();
+                    const searchFor = caseSensitive ? fromWord : fromWord.toLowerCase();
+                    const idx = nodeText.indexOf(searchFor);
+
+                    if (idx === -1) break;
+
+                    // Tìm thấy -> Tách node
+                    const matchNode = node.splitText(idx);
+                    const afterNode = matchNode.splitText(fromWord.length);
+
+                    // Tạo thẻ wrap
+                    const span = document.createElement('span');
+                    span.className = 'replaced';
+                    span.setAttribute('data-original', matchNode.nodeValue); // Lưu gốc
+                    span.textContent = toWord; // Hiển thị từ mới
+
+                    matchNode.parentNode.replaceChild(span, matchNode);
+                    
+                    count++;
+                    node = afterNode; // Tiếp tục tìm ở phần sau
+                }
             }
         });
 
-        // Thêm keywords
-        state.keywords.forEach((kw, idx) => {
-            if(kw && kw.trim()) {
-                tasks.push({
-                    regex: getRegex(kw, els.wholeWords.checked, els.matchCase.checked),
-                    className: KW_COLORS[idx % KW_COLORS.length]
-                });
-            }
-        });
-
-        if (tasks.length === 0) {
-            restoreCaret(caretPos);
-            return;
+        if (count > 0) {
+            notify(`Đã thay thế ${count} từ!`, 'success');
+            // Sau khi replace xong, chạy lại highlight keyword (nếu có)
+            if(state.keywords.length > 0) highlightKeywords();
+        } else {
+            notify('Không tìm thấy từ nào.', 'error');
         }
+    }
 
-        // 4. Duyệt cây DOM (TreeWalker) để tìm và wrap text
-        const walker = document.createTreeWalker(els.editor, NodeFilter.SHOW_TEXT, null, false);
-        const textNodes = [];
-        while(walker.nextNode()) textNodes.push(walker.currentNode);
-
-        // Duyệt từng text node
-        textNodes.forEach(node => {
-            if (!node.nodeValue.trim()) return;
-
-            // Tìm match đầu tiên tốt nhất trong node này
-            // Lưu ý: Chỉ xử lý text thuần, không chèn HTML string
-            let content = node.nodeValue;
-            let bestMatch = null;
-            let bestTask = null;
-
-            // Đơn giản hóa: Duyệt qua các task, tìm task nào match sớm nhất trong node này
-            // (Thực tế để tối ưu hoàn hảo cần tách node đệ quy, nhưng ở mức độ này ta ưu tiên replaced word trước)
-            
-            // Cách làm an toàn: Quét text, tìm tất cả match, sort theo vị trí, split và wrap
-            // Nhưng để tránh phức tạp, ta sẽ wrap lần lượt. 
-            // Do đã stripHighlights, ta chỉ việc xử lý trên text node.
-            
-            // Chiến lược: Replace nội dung text node bằng fragment chứa span
-            let fragment = document.createDocumentFragment();
-            let lastIdx = 0;
-            
-            // Gộp tất cả regex thành 1 master regex hoặc quét lần lượt?
-            // Để đơn giản và hiệu quả: Ta dùng regex exec loop cho từng task, sau đó merge ranges.
-            // Nhưng merge ranges phức tạp. 
-            // Cách tốt nhất cho Editor đơn giản: Dùng Highlight đè (cái nào tìm thấy trước thì ăn).
-            
-            // Logic đơn giản hóa cho performance: 
-            // Tìm tất cả occurrences của tất cả từ, sort theo index, sau đó build fragment.
-            
-            let matches = [];
-            tasks.forEach(task => {
-                if(!task.regex) return;
-                let m;
-                // Reset lastIndex nếu global
-                task.regex.lastIndex = 0; 
-                // Regex exec loop
-                while ((m = task.regex.exec(content)) !== null) {
-                    matches.push({
-                        start: m.index,
-                        end: m.index + m[0].length,
-                        text: m[0],
-                        cls: task.className
-                    });
-                    if(!task.regex.global) break; // Safety
-                }
+    // --- FEATURE: HIGHLIGHT KEYWORDS ---
+    function unwrapClasses(classesToRemove) {
+        // Gỡ bỏ các span có class nằm trong danh sách
+        classesToRemove.forEach(cls => {
+            const spans = els.editor.querySelectorAll(`span.${cls}`);
+            spans.forEach(span => {
+                const parent = span.parentNode;
+                while(span.firstChild) parent.insertBefore(span.firstChild, span);
+                parent.removeChild(span);
             });
+        });
+        els.editor.normalize(); // Gộp text node lại
+    }
 
-            if (matches.length === 0) return; // Next node
+    function highlightKeywords() {
+        // 1. Xóa highlight keyword cũ
+        unwrapClasses(['keyword']); 
 
-            // Sort matches: Tăng dần theo start. Nếu trùng start, ưu tiên dài hơn (để không bị lồng)
-            matches.sort((a, b) => a.start - b.start || b.end - a.end);
+        if (!state.keywords.length) return;
 
-            // Filter overlaps (Loại bỏ các match bị chồng lấn)
-            const filtered = [];
-            let lastEnd = 0;
-            matches.forEach(m => {
-                if (m.start >= lastEnd) {
-                    filtered.push(m);
-                    lastEnd = m.end;
+        // 2. Lấy nodes, SKIP .replaced -> Đây là logic quan trọng bạn cần
+        const nodes = getTextNodesSnapshot(els.editor, { skipClass1: 'replaced', skipClass2: 'keyword' });
+        const caseSensitive = els.matchCase.checked;
+        const isWholeWord = els.wholeWords.checked;
+
+        // Sort keywords dài trước
+        const sortedKws = [...state.keywords].sort((a,b) => b.length - a.length);
+
+        for (const textNode of nodes) {
+            if (!textNode.parentNode) continue;
+            let node = textNode;
+
+            outer: while (node && node.nodeValue) {
+                const nodeText = caseSensitive ? node.nodeValue : node.nodeValue.toLowerCase();
+                let foundIdx = -1, foundWord = null, colorIdx = 0;
+
+                for (let i = 0; i < sortedKws.length; i++) {
+                    const w = sortedKws[i];
+                    const mw = caseSensitive ? w : w.toLowerCase();
+                    const idx = nodeText.indexOf(mw);
+                    
+                    // Logic check Whole Word thủ công vì đang duyệt string
+                    if (idx !== -1) {
+                        if (isWholeWord) {
+                            // Check ký tự trước và sau
+                            const charBefore = idx > 0 ? nodeText[idx-1] : '';
+                            const charAfter = idx + mw.length < nodeText.length ? nodeText[idx+mw.length] : '';
+                            const isWordChar = /[\wàáãạảăắằẳẵặâấầẩẫậèéẹẻẽêềếểễệìíĩỉịòóõọỏôốồổỗộơớờởỡợùúũụủưứừửữựỳỵỷỹýđ]/i;
+                            
+                            if (isWordChar.test(charBefore) || isWordChar.test(charAfter)) {
+                                continue; // Bỏ qua nếu dính chữ
+                            }
+                        }
+
+                        if (foundIdx === -1 || idx < foundIdx) {
+                            foundIdx = idx; 
+                            foundWord = w;
+                            colorIdx = i;
+                        }
+                    }
                 }
-            });
 
-            // Build Fragment
-            lastIdx = 0;
-            filtered.forEach(m => {
-                // Text trước match
-                if (m.start > lastIdx) {
-                    fragment.appendChild(document.createTextNode(content.slice(lastIdx, m.start)));
-                }
-                // Match -> Span
+                if (foundIdx === -1) break;
+
+                // Tách và wrap
+                const matchNode = node.splitText(foundIdx);
+                const afterNode = matchNode.splitText(foundWord.length);
+
                 const span = document.createElement('span');
-                span.className = m.cls;
-                span.textContent = m.text;
-                fragment.appendChild(span);
-                lastIdx = m.end;
-            });
-            // Text còn lại
-            if (lastIdx < content.length) {
-                fragment.appendChild(document.createTextNode(content.slice(lastIdx)));
+                span.className = `keyword ${KW_COLORS[colorIdx % KW_COLORS.length]}`;
+                span.textContent = matchNode.nodeValue;
+
+                matchNode.parentNode.replaceChild(span, matchNode);
+                node = afterNode;
+                continue outer;
             }
-
-            // Replace text node bằng fragment
-            node.parentNode.replaceChild(fragment, node);
-        });
-
-        // 5. Restore Caret
-        restoreCaret(caretPos);
+        }
     }
 
-    // Debounce cho input event đỡ lag
-    let debounceTimer;
-    els.editor.addEventListener('input', () => {
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => {
-            applyHighlights();
-        }, 300); // Delay 300ms sau khi gõ xong mới highlight
-    });
+    // --- EVENT HANDLERS ---
 
-    // === 5. PASTE HANDLING (SANITIZE) ===
+    // 1. PASTE - Giữ format xuống dòng nhưng bỏ HTML rác
     els.editor.addEventListener('paste', e => {
         e.preventDefault();
         const text = (e.clipboardData || window.clipboardData).getData('text/plain');
         document.execCommand('insertText', false, text);
-        // Sau khi paste, trigger highlight ngay
-        setTimeout(applyHighlights, 50);
     });
 
-    // === 6. EVENT HANDLERS KHÁC ===
-    
-    // Copy
+    // 2. UNWRAP khi user sửa nội dung trong thẻ highlight (Optional UX fix)
+    els.editor.addEventListener('input', () => {
+        // Đơn giản: nếu user sửa thì kệ, nhưng nếu muốn tốt hơn có thể check span bị vỡ
+    });
+
+    // 3. COPY - Sửa lỗi copy làm trống
     els.copyContent.onclick = () => {
+        // Dùng innerText để lấy nội dung đã format (xuống dòng chuẩn)
         const text = els.editor.innerText;
         if (!text.trim()) return notify('Không có nội dung!', 'error');
         navigator.clipboard.writeText(text);
-        notify('Đã copy nội dung (Plain Text)!', 'success');
+        notify('Đã copy nội dung!', 'success');
     };
 
-    // Font update
+    // 4. CLEAR & SEARCH
+    els.clear.onclick = () => {
+        els.editor.innerHTML = ''; // Xóa sạch
+        state.keywords = [];
+        els.tags.innerHTML = '';
+        notify('Đã xóa tất cả.');
+    };
+
+    els.search.onclick = () => {
+        if (!state.keywords.length) return notify('Chưa nhập từ khóa!', 'error');
+        highlightKeywords();
+        notify('Đã highlight từ khóa.');
+    };
+
+    // 5. REPLACE BUTTON
+    els.replace.onclick = performReplace;
+
+    // --- OTHER UI LOGIC (Font, CSV, Keyword Input) ---
     function updateFont() {
         els.editor.style.fontFamily = els.font.value;
         els.editor.style.fontSize = els.size.value;
@@ -288,105 +262,34 @@ document.addEventListener('DOMContentLoaded', () => {
     els.font.addEventListener('change', updateFont);
     els.size.addEventListener('change', updateFont);
 
-    // Keywords Logic
     function addKw() {
         const raw = els.input.value;
         if (!raw.trim()) return;
         const newKws = raw.split(/[,;\n]/).map(s => s.trim()).filter(Boolean);
-        let changed = false;
         newKws.forEach(k => {
             if (!state.keywords.includes(k)) {
                 state.keywords.push(k);
                 renderTag(k);
-                changed = true;
             }
         });
         els.input.value = '';
-        if (changed) applyHighlights();
+        highlightKeywords(); // Auto highlight khi thêm
     }
     function renderTag(txt) {
         const tag = document.createElement('div');
         tag.className = 'tag';
-        tag.innerHTML = `<span>${txt.replace(/</g, "&lt;")}</span><span class="remove-tag">×</span>`;
+        tag.innerHTML = `<span>${txt}</span><span class="remove-tag">×</span>`;
         tag.querySelector('.remove-tag').onclick = () => {
             state.keywords = state.keywords.filter(k => k !== txt);
             tag.remove();
-            applyHighlights();
+            highlightKeywords(); // Re-highlight khi xóa
         };
         els.tags.appendChild(tag);
     }
     els.input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addKw(); } });
     els.input.addEventListener('blur', addKw);
 
-    // Search & Clear
-    els.search.onclick = () => {
-        if (!state.keywords.length) return notify('Chưa nhập từ khóa!', 'error');
-        applyHighlights();
-        // Đếm sơ bộ
-        const text = els.editor.innerText;
-        let count = 0;
-        state.keywords.forEach(kw => {
-            const regex = getRegex(kw, els.wholeWords.checked, els.matchCase.checked);
-            const m = text.match(regex);
-            if(m) count += m.length;
-        });
-        notify(count > 0 ? `Tìm thấy ~${count} kết quả!` : 'Không tìm thấy kết quả.', count > 0 ? 'success' : 'error');
-    };
-    els.clear.onclick = () => {
-        state.keywords = [];
-        state.replacedTargets = [];
-        els.tags.innerHTML = '';
-        els.editor.innerText = els.editor.innerText; // Xóa sạch HTML span
-        notify('Đã xóa dữ liệu.');
-    };
-    
-    // Checkbox triggers
-    els.matchCase.onchange = applyHighlights;
-    els.wholeWords.onchange = applyHighlights;
-
-    // --- REPLACE LOGIC ---
-    els.replace.onclick = () => {
-        saveData();
-        const mode = state.modes[state.activeMode];
-        if (!mode.pairs.length) return notify('Chưa có từ khóa để thay thế!', 'error');
-        
-        let content = els.editor.innerText; // Lấy text thuần
-        if (!content.trim()) return notify('Văn bản trống!', 'error');
-
-        const pairs = [...mode.pairs].sort((a, b) => b.find.length - a.find.length);
-        let count = 0;
-        state.replacedTargets = [];
-
-        pairs.forEach(p => {
-            // Khi replace thực tế, ta dùng regex thường (không nhất thiết whole word trừ khi user muốn strict mode cho replace - ở đây user chỉ yêu cầu highlight whole word cho từ đã replace)
-            // Tuy nhiên để an toàn, replace cứ theo logic case của mode.
-            const regex = getRegex(p.find, false, mode.case); 
-            if (regex) {
-                const matches = content.match(regex);
-                if (matches) {
-                    count += matches.length;
-                    content = content.replace(regex, p.replace);
-                    // Lưu target để highlight (chỉ lưu nếu có replace text)
-                    if (p.replace && p.replace.trim()) {
-                        if (!state.replacedTargets.includes(p.replace)) {
-                            state.replacedTargets.push(p.replace);
-                        }
-                    }
-                }
-            }
-        });
-
-        if (count === 0) return notify('Không tìm thấy từ nào.', 'error');
-
-        // Cập nhật nội dung editor
-        els.editor.innerText = content;
-        
-        // Trigger highlight
-        applyHighlights();
-        notify(`Đã thay thế ${count} vị trí!`, 'success');
-    };
-
-    // --- DATA & MODE & CSV (Giữ nguyên logic cũ nhưng cập nhật UI) ---
+    // CSV & DATA Logic
     function loadData() {
         try {
             const raw = localStorage.getItem('replace_data');
@@ -394,10 +297,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data && data.modes) {
                 state.modes = data.modes;
                 state.activeMode = data.active || 'Mặc định';
-            } else throw 1;
+            }
         } catch {
             state.modes = { 'Mặc định': { pairs: [], case: false } };
-            state.activeMode = 'Mặc định';
         }
         updateModeUI();
     }
@@ -413,9 +315,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     function updateModeUI() {
         els.modeSel.innerHTML = '';
-        Object.keys(state.modes).forEach(k => {
-            els.modeSel.add(new Option(k, k, false, k === state.activeMode));
-        });
+        Object.keys(state.modes).forEach(k => els.modeSel.add(new Option(k, k, false, k === state.activeMode)));
         const isDef = state.activeMode === 'Mặc định';
         els.delMode.classList.toggle('hidden', isDef);
         els.renameMode.classList.toggle('hidden', isDef);
@@ -433,7 +333,7 @@ document.addEventListener('DOMContentLoaded', () => {
         els.puncList.prepend(div);
     }
 
-    // CSV logic
+    // CSV Buttons
     els.exportBtn.onclick = () => {
         saveData();
         let csvContent = "\uFEFFfind,replace,mode\n"; 
@@ -476,7 +376,6 @@ document.addEventListener('DOMContentLoaded', () => {
         input.click();
     };
 
-    // Mode Buttons Events
     els.addPair.onclick = () => { addPairUI(); els.puncList.querySelector('input').focus(); };
     els.save.onclick = () => { saveData(); notify(`Đã lưu "${state.activeMode}"`); };
     els.modeSel.onchange = () => { saveData(); state.activeMode = els.modeSel.value; updateModeUI(); };
@@ -496,7 +395,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     els.caseMode.onclick = () => { state.modes[state.activeMode].case = !state.modes[state.activeMode].case; updateModeUI(); };
 
-    // Init
     loadData();
     updateFont();
 });
