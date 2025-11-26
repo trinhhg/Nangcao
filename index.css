@@ -8,14 +8,16 @@ body { font-family: 'Montserrat', sans-serif; margin: 0; height: 100vh; overflow
 .custom-scrollbar::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
 
-/* EDITOR STYLES */
+/* EDITOR STYLES - FIX LINE BREAKS */
 #editor {
     font-size: 16px;
     line-height: 1.6;
     color: #333;
-    white-space: pre-wrap; /* QUAN TRỌNG: Giữ format xuống dòng */
+    /* !important để đè mọi style reset của tailwind */
+    white-space: pre-wrap !important; 
     word-wrap: break-word;
     overflow-wrap: break-word;
+    display: block;
 }
 
 #editor:empty::before {
@@ -26,8 +28,6 @@ body { font-family: 'Montserrat', sans-serif; margin: 0; height: 100vh; overflow
 }
 
 /* HIGHLIGHT STYLES - ĐẬM HƠN */
-
-/* Từ đã được thay thế (Vàng đậm) */
 .replaced {
     background-color: #fde047; /* Yellow-300 */
     color: black;
@@ -36,20 +36,18 @@ body { font-family: 'Montserrat', sans-serif; margin: 0; height: 100vh; overflow
     border-bottom: 2px solid #ca8a04;
 }
 
-/* Keyword Highlights (Chung) */
 .keyword {
     border-radius: 3px;
     padding: 0 2px;
-    font-weight: 600; /* Chữ đậm hơn chút */
+    font-weight: 600;
 }
 
-/* Màu cụ thể cho Keyword (Đậm hơn bản cũ) */
-.hl-pink   { background-color: #f9a8d4; border-bottom: 2px solid #db2777; } /* Pink-300 */
-.hl-blue   { background-color: #93c5fd; border-bottom: 2px solid #2563eb; } /* Blue-300 */
-.hl-green  { background-color: #86efac; border-bottom: 2px solid #16a34a; } /* Green-300 */
-.hl-orange { background-color: #fdba74; border-bottom: 2px solid #ea580c; } /* Orange-300 */
-.hl-purple { background-color: #d8b4fe; border-bottom: 2px solid #9333ea; } /* Purple-300 */
-.hl-red    { background-color: #fca5a5; border-bottom: 2px solid #dc2626; } /* Red-300 */
+.hl-pink   { background-color: #f9a8d4; border-bottom: 2px solid #db2777; }
+.hl-blue   { background-color: #93c5fd; border-bottom: 2px solid #2563eb; }
+.hl-green  { background-color: #86efac; border-bottom: 2px solid #16a34a; }
+.hl-orange { background-color: #fdba74; border-bottom: 2px solid #ea580c; }
+.hl-purple { background-color: #d8b4fe; border-bottom: 2px solid #9333ea; }
+.hl-red    { background-color: #fca5a5; border-bottom: 2px solid #dc2626; }
 
 /* TAGS & UI */
 #keywords-tags .tag {
