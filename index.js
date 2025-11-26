@@ -89,7 +89,6 @@ document.addEventListener('DOMContentLoaded', () => {
         els.editor.normalize();
     }
 
-    // HIGHLIGHT KEYWORDS (Có trả về số lượng match)
     function highlightKeywords() {
         unwrapClasses(['keyword']); 
         let totalMatches = 0;
@@ -143,7 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 span.textContent = matchNode.nodeValue;
 
                 matchNode.parentNode.replaceChild(span, matchNode);
-                totalMatches++; // Đếm
+                totalMatches++; 
 
                 node = afterNode;
                 continue outer;
@@ -152,7 +151,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return totalMatches;
     }
 
-    // REPLACE
     function performReplace() {
         saveData();
         const mode = state.modes[state.activeMode];
@@ -206,9 +204,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- EVENT HANDLERS ---
 
+    // PASTE: Xử lý quan trọng để giữ dòng
     els.editor.addEventListener('paste', e => {
         e.preventDefault();
-        const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+        let text = (e.clipboardData || window.clipboardData).getData('text/plain');
+        // Chuẩn hóa dòng cho mọi OS
+        text = text.replace(/\r\n/g, '\n'); 
         document.execCommand('insertText', false, text);
     });
 
@@ -218,16 +219,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!text.trim()) return notify('Không có nội dung!', 'error');
         navigator.clipboard.writeText(text);
         
-        // Xóa nội dung sau khi copy
         els.editor.innerHTML = ''; 
         notify('Đã copy và xóa nội dung!', 'success');
-    };
-
-    // 2. SEARCH (Có thông báo số lượng)
-    els.search.onclick = () => {
-        if (!state.keywords.length) return notify('Chưa nhập từ khóa!', 'error');
-        const count = highlightKeywords();
-        notify(`Đã highlight ${count} từ khóa!`, 'success');
     };
 
     els.clear.onclick = () => {
@@ -235,6 +228,13 @@ document.addEventListener('DOMContentLoaded', () => {
         state.keywords = [];
         els.tags.innerHTML = '';
         notify('Đã xóa tất cả.');
+    };
+
+    // 2. SEARCH
+    els.search.onclick = () => {
+        if (!state.keywords.length) return notify('Chưa nhập từ khóa!', 'error');
+        const count = highlightKeywords();
+        notify(`Đã highlight ${count} từ khóa!`, 'success');
     };
 
     els.replace.onclick = performReplace;
