@@ -8,17 +8,16 @@ body { font-family: 'Montserrat', sans-serif; margin: 0; height: 100vh; overflow
 .custom-scrollbar::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
 
-/* EDITOR STYLES - SINGLE LAYER */
+/* EDITOR STYLES */
 #editor {
     font-size: 16px;
     line-height: 1.6;
     color: #333;
-    white-space: pre-wrap; /* Giữ xuống dòng */
+    white-space: pre-wrap; /* QUAN TRỌNG: Giữ format xuống dòng */
     word-wrap: break-word;
     overflow-wrap: break-word;
 }
 
-/* Placeholder giả lập cho ContentEditable */
 #editor:empty::before {
     content: attr(data-placeholder);
     color: #9ca3af;
@@ -26,17 +25,25 @@ body { font-family: 'Montserrat', sans-serif; margin: 0; height: 100vh; overflow
     display: block;
 }
 
-/* HIGHLIGHT COLORS */
-.highlight-replaced {
-    background-color: #eab308; /* Vàng đậm */
+/* HIGHLIGHT STYLES */
+
+/* Từ đã được thay thế (Có data-original) */
+.replaced {
+    background-color: #fff1a8; /* Vàng nhạt */
     color: black;
-    font-weight: bold;
     border-radius: 3px;
     padding: 0 2px;
-    box-shadow: 0 0 0 1px #ca8a04;
+    border-bottom: 2px solid #f59e0b;
 }
 
-/* Màu cho từ khóa tìm kiếm */
+/* Keyword Highlights (Chung) */
+.keyword {
+    border-radius: 3px;
+    padding: 0 2px;
+    font-weight: 500;
+}
+
+/* Màu cụ thể cho Keyword */
 .hl-pink   { background-color: #fce7f3; border-bottom: 2px solid #db2777; }
 .hl-blue   { background-color: #dbeafe; border-bottom: 2px solid #2563eb; }
 .hl-green  { background-color: #dcfce7; border-bottom: 2px solid #16a34a; }
@@ -44,7 +51,7 @@ body { font-family: 'Montserrat', sans-serif; margin: 0; height: 100vh; overflow
 .hl-purple { background-color: #f3e8ff; border-bottom: 2px solid #9333ea; }
 .hl-red    { background-color: #fee2e2; border-bottom: 2px solid #dc2626; }
 
-/* KEYWORD TAGS */
+/* TAGS & UI */
 #keywords-tags .tag {
     background: linear-gradient(to bottom right, #eff6ff, #dbeafe);
     color: #1e40af; padding: 4px 10px; border-radius: 20px;
@@ -59,7 +66,6 @@ body { font-family: 'Montserrat', sans-serif; margin: 0; height: 100vh; overflow
 }
 #keywords-tags .tag .remove-tag:hover { background: white; color: red; }
 
-/* PUNCTUATION ITEMS */
 #punctuation-list .punctuation-item {
     display: flex; gap: 4px; align-items: center; background: white; padding: 4px; border: 1px solid #eee; border-radius: 4px;
 }
@@ -85,5 +91,4 @@ body { font-family: 'Montserrat', sans-serif; margin: 0; height: 100vh; overflow
 .notification.error { background: #ef4444; border-left: 4px solid #7f1d1d; }
 @keyframes slideIn { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
-/* Tiện ích */
 .hidden { display: none !important; }
