@@ -25,31 +25,31 @@ body { font-family: 'Montserrat', sans-serif; margin: 0; height: 100vh; overflow
     display: block;
 }
 
-/* HIGHLIGHT STYLES */
+/* HIGHLIGHT STYLES - ĐẬM HƠN */
 
-/* Từ đã được thay thế (Có data-original) */
+/* Từ đã được thay thế (Vàng đậm) */
 .replaced {
-    background-color: #fff1a8; /* Vàng nhạt */
+    background-color: #fde047; /* Yellow-300 */
     color: black;
     border-radius: 3px;
     padding: 0 2px;
-    border-bottom: 2px solid #f59e0b;
+    border-bottom: 2px solid #ca8a04;
 }
 
 /* Keyword Highlights (Chung) */
 .keyword {
     border-radius: 3px;
     padding: 0 2px;
-    font-weight: 500;
+    font-weight: 600; /* Chữ đậm hơn chút */
 }
 
-/* Màu cụ thể cho Keyword */
-.hl-pink   { background-color: #fce7f3; border-bottom: 2px solid #db2777; }
-.hl-blue   { background-color: #dbeafe; border-bottom: 2px solid #2563eb; }
-.hl-green  { background-color: #dcfce7; border-bottom: 2px solid #16a34a; }
-.hl-orange { background-color: #ffedd5; border-bottom: 2px solid #ea580c; }
-.hl-purple { background-color: #f3e8ff; border-bottom: 2px solid #9333ea; }
-.hl-red    { background-color: #fee2e2; border-bottom: 2px solid #dc2626; }
+/* Màu cụ thể cho Keyword (Đậm hơn bản cũ) */
+.hl-pink   { background-color: #f9a8d4; border-bottom: 2px solid #db2777; } /* Pink-300 */
+.hl-blue   { background-color: #93c5fd; border-bottom: 2px solid #2563eb; } /* Blue-300 */
+.hl-green  { background-color: #86efac; border-bottom: 2px solid #16a34a; } /* Green-300 */
+.hl-orange { background-color: #fdba74; border-bottom: 2px solid #ea580c; } /* Orange-300 */
+.hl-purple { background-color: #d8b4fe; border-bottom: 2px solid #9333ea; } /* Purple-300 */
+.hl-red    { background-color: #fca5a5; border-bottom: 2px solid #dc2626; } /* Red-300 */
 
 /* TAGS & UI */
 #keywords-tags .tag {
