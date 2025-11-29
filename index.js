@@ -1,442 +1,526 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. BLOCK EXTENSIONS
-    window.addEventListener('error', e => {
-        if (e.filename && (e.filename.includes('contentScript') || e.message.includes('extension'))) {
-            e.stopImmediatePropagation(); e.preventDefault(); return false;
+  // === CONFIG & STATE ===
+  const STORAGE_KEY = 'trinh_hg_settings_v5';
+  const INPUT_STATE_KEY = 'trinh_hg_input_state_v5';
+
+  const defaultState = {
+    currentMode: 'default',
+    modes: {
+      default: { pairs: [], matchCase: false, wholeWord: false }
+    }
+  };
+
+  let state = JSON.parse(localStorage.getItem(STORAGE_KEY)) || defaultState;
+  let currentSplitMode = 2;
+  let saveTimeout;
+
+  // DOM ELEMENTS
+  const els = {
+    modeSelect: document.getElementById('mode-select'),
+    list: document.getElementById('punctuation-list'),
+    inputText: document.getElementById('input-text'),
+    outputText: document.getElementById('output-text'),
+    splitInput: document.getElementById('split-input-text'),
+    splitWrapper: document.getElementById('split-outputs-wrapper'),
+    matchCaseBtn: document.getElementById('match-case'),
+    wholeWordBtn: document.getElementById('whole-word'),
+    renameBtn: document.getElementById('rename-mode'),
+    deleteBtn: document.getElementById('delete-mode'),
+    emptyState: document.getElementById('empty-state')
+  };
+
+  // === CORE FUNCTIONS ===
+
+  function saveState() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+
+  function showNotification(msg, type = 'success') {
+    const container = document.getElementById('notification-container');
+    const note = document.createElement('div');
+    note.className = `notification ${type}`;
+    note.textContent = msg;
+    container.appendChild(note);
+    setTimeout(() => {
+      note.style.opacity = '0';
+      setTimeout(() => note.remove(), 300);
+    }, 3000);
+  }
+
+  function escapeRegExp(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); 
+  }
+
+  function escapeHtml(text) {
+    return text.replace(/&/g, "&amp;")
+               .replace(/</g, "&lt;")
+               .replace(/>/g, "&gt;")
+               .replace(/"/g, "&quot;")
+               .replace(/'/g, "&#039;");
+  }
+
+  // --- LOGIC TÌM VÀ THAY THẾ CHÍNH ---
+  function performReplace(text) {
+    if (!text) return { text: '', count: 0 };
+    const mode = state.modes[state.currentMode];
+    const rules = mode.pairs.filter(p => p.find && p.find.length > 0);
+
+    let result = text;
+    let totalCount = 0;
+
+    for (const rule of rules) {
+      try {
+        let patternStr = escapeRegExp(rule.find);
+        
+        // Whole Word Logic
+        if (mode.wholeWord) {
+             patternStr = `(?<![\\p{L}\\p{N}_])${patternStr}(?![\\p{L}\\p{N}_])`;
         }
-    });
 
-    // 2. DOM ELEMENTS
-    const els = {
-        input: document.getElementById('keywords-input'),
-        tags: document.getElementById('keywords-tags'),
-        search: document.getElementById('search'),
-        clear: document.getElementById('clear'),
-        copyContent: document.getElementById('copy-editor-content'),
-        font: document.getElementById('fontFamily'),
-        size: document.getElementById('fontSize'),
-        matchCase: document.getElementById('matchCase'),
-        wholeWords: document.getElementById('wholeWords'),
-        editor: document.getElementById('editor'),
-        modeSel: document.getElementById('mode-select'),
-        addMode: document.getElementById('add-mode'),
-        delMode: document.getElementById('delete-mode-btn'),
-        renameMode: document.getElementById('rename-mode'),
-        caseMode: document.getElementById('match-case-replace'),
-        puncList: document.getElementById('punctuation-list'),
-        addPair: document.getElementById('add-pair'),
-        save: document.getElementById('save-settings'),
-        replace: document.getElementById('replace-all'),
-        notify: document.getElementById('notification-container'),
-        exportBtn: document.getElementById('export-csv'),
-        importBtn: document.getElementById('import-csv')
-    };
+        const flags = 'g' + 'u' + (mode.matchCase ? '' : 'i');
+        const regex = new RegExp(patternStr, flags);
+        const replaceVal = rule.replace; 
 
-    let state = {
-        keywords: [],
-        modes: {},
-        activeMode: 'Mặc định'
-    };
+        result = result.replace(regex, (match, ...args) => {
+          totalCount++; 
+          const offset = args[args.length - 2];
+          const wholeString = args[args.length - 1];
+          let finalReplace = replaceVal;
 
-    const KW_COLORS = ['hl-pink', 'hl-blue', 'hl-green', 'hl-orange', 'hl-purple', 'hl-red'];
-    const VIET_LETTERS = 'a-zA-Z0-9àáãạảăắằẳẵặâấầẩẫậèéẹẻẽêềếểễệìíĩỉịòóõọỏôốồổỗộơớờởỡợùúũụủưứừửữựỳỵỷỹýđÀÁÃẠẢĂẮẰẲẴẶÂẤẦẨẪẬÈÉẸẺẼÊỀẾỂỄỆÌÍĨỈỊÒÓÕỌỎÔỐỒỔỖỘƠỚỜỞỠỢÙÚŨỤỦƯỨỪỬỮỰỲỴỶỸÝĐ_';
+          // Match Case Logic
+          if (!mode.matchCase) {
+             if (match === match.toUpperCase()) finalReplace = replaceVal.toUpperCase();
+             else if (match === match.toLowerCase()) finalReplace = replaceVal.toLowerCase();
+             else if (match[0] === match[0].toUpperCase() && replaceVal.length > 0) {
+                finalReplace = replaceVal.charAt(0).toUpperCase() + replaceVal.slice(1);
+             }
+          }
 
-    // 3. UTILS
-    function notify(msg, type = 'success') {
-        const div = document.createElement('div');
-        div.className = `notification ${type}`;
-        div.innerHTML = type === 'success' ? `✓ ${msg}` : `⚠️ ${msg}`;
-        els.notify.prepend(div);
-        setTimeout(() => { div.style.opacity = '0'; setTimeout(() => div.remove(), 300); }, 3000);
-    }
-
-    // --- DOM HELPER ---
-    function getTextNodesSnapshot(root, opts = {}) {
-        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false);
-        const nodes = [];
-        let node;
-        while ((node = walker.nextNode())) {
-            if (!node.nodeValue) continue;
-            let p = node.parentElement;
-            let skip = false;
-            while (p && p !== root) {
-                if (p.classList && (
-                    (opts.skipClass1 && p.classList.contains(opts.skipClass1)) || 
-                    (opts.skipClass2 && p.classList.contains(opts.skipClass2))
-                )) {
-                    skip = true; break;
-                }
-                p = p.parentElement;
-            }
-            if (!skip) nodes.push(node);
-        }
-        return nodes;
-    }
-
-    // === 4. LOGIC CHÍNH ===
-
-    function unwrapClasses(classesToRemove) {
-        classesToRemove.forEach(cls => {
-            const spans = els.editor.querySelectorAll(`span.${cls}`);
-            spans.forEach(span => {
-                const parent = span.parentNode;
-                while(span.firstChild) parent.insertBefore(span.firstChild, span);
-                parent.removeChild(span);
-            });
-        });
-        els.editor.normalize();
-    }
-
-    function highlightKeywords() {
-        unwrapClasses(['keyword']); 
-        let totalMatches = 0;
-        if (!state.keywords.length) return 0;
-
-        const nodes = getTextNodesSnapshot(els.editor, { skipClass1: 'replaced', skipClass2: 'keyword' });
-        const caseSensitive = els.matchCase.checked;
-        const isWholeWord = els.wholeWords.checked;
-        const sortedKws = [...state.keywords].sort((a,b) => b.length - a.length);
-
-        for (const textNode of nodes) {
-            if (!textNode.parentNode) continue;
-            let node = textNode;
-
-            outer: while (node && node.nodeValue) {
-                const nodeText = caseSensitive ? node.nodeValue : node.nodeValue.toLowerCase();
-                let foundIdx = -1, foundWord = null, colorIdx = 0;
-
-                for (let i = 0; i < sortedKws.length; i++) {
-                    const w = sortedKws[i];
-                    const mw = caseSensitive ? w : w.toLowerCase();
-                    const idx = nodeText.indexOf(mw);
-                    
-                    if (idx !== -1) {
-                        if (isWholeWord) {
-                            const charBefore = idx > 0 ? nodeText[idx-1] : '';
-                            const charAfter = idx + mw.length < nodeText.length ? nodeText[idx+mw.length] : '';
-                            const isWordChar = new RegExp(`[${VIET_LETTERS}]`, 'i');
-                            
-                            if (isWordChar.test(charBefore) || isWordChar.test(charAfter)) {
-                                continue; 
-                            }
-                        }
-                        if (foundIdx === -1 || idx < foundIdx) {
-                            foundIdx = idx; foundWord = w; colorIdx = i;
-                        }
-                    }
-                }
-
-                if (foundIdx === -1) break;
-
-                const matchNode = node.splitText(foundIdx);
-                const afterNode = matchNode.splitText(foundWord.length);
-
-                const span = document.createElement('span');
-                span.className = `keyword ${KW_COLORS[colorIdx % KW_COLORS.length]}`;
-                span.textContent = matchNode.nodeValue;
-
-                matchNode.parentNode.replaceChild(span, matchNode);
-                totalMatches++; 
-
-                node = afterNode;
-                continue outer;
-            }
-        }
-        return totalMatches;
-    }
-
-    // --- FIX: REPLACE WITH CONTEXT-AWARE CAPITALIZATION ---
-    function performReplace() {
-        saveData(); // Lưu dữ liệu hiện tại trước khi thực hiện
-        const mode = state.modes[state.activeMode];
-        if (!mode.pairs.length) return notify('Chưa có từ khóa để thay thế!', 'error');
-        if (!els.editor.textContent.trim()) return notify('Văn bản trống!', 'error');
-
-        unwrapClasses(['keyword']); 
-        const caseSensitive = mode.case;
-        // Sort từ dài đến ngắn để tránh thay thế chồng chéo
-        const pairs = [...mode.pairs].sort((a, b) => b.find.length - a.find.length);
-        let count = 0;
-
-        pairs.forEach(pair => {
-            const fromWord = pair.find;
-            const toWord = pair.replace;
-            if(!fromWord) return;
-
-            const nodes = getTextNodesSnapshot(els.editor, { skipClass1: 'replaced' });
-
-            for (const textNode of nodes) {
-                if (!textNode.parentNode) continue;
-                let node = textNode;
-                
-                while (node && node.nodeValue) {
-                    const nodeText = caseSensitive ? node.nodeValue : node.nodeValue.toLowerCase();
-                    const searchFor = caseSensitive ? fromWord : fromWord.toLowerCase();
-                    const idx = nodeText.indexOf(searchFor);
-
-                    if (idx === -1) break;
-
-                    // Tách node: [Phần trước] [Từ tìm thấy] [Phần sau]
-                    const matchNode = node.splitText(idx);
-                    const afterNode = matchNode.splitText(fromWord.length);
-                    
-                    // Logic tự động viết hoa (Fix #4)
-                    let finalReplace = toWord;
-                    // 'node' lúc này là phần text ngay trước từ tìm thấy (prefix)
-                    const prefix = node.nodeValue;
-                    
-                    // Kiểm tra: Nếu là đầu dòng hoặc sau dấu chấm/hỏi/chấm than + khoảng trắng
-                    const isStartOfLine = /^\s*$/.test(prefix) || /\n\s*$/.test(prefix);
-                    const isAfterPunctuation = /([\.\?\!])\s*$/.test(prefix);
-
-                    if (isStartOfLine || isAfterPunctuation) {
-                         if (finalReplace.length > 0) {
-                             finalReplace = finalReplace.charAt(0).toUpperCase() + finalReplace.slice(1);
-                         }
-                    }
-
-                    // Tạo span thay thế
-                    const span = document.createElement('span');
-                    span.className = 'replaced';
-                    span.setAttribute('data-original', matchNode.nodeValue);
-                    span.textContent = finalReplace; 
-
-                    matchNode.parentNode.replaceChild(span, matchNode);
-                    count++;
-                    
-                    node = afterNode; 
-                }
-            }
+          // Context-Aware Capitalization
+          if (finalReplace.length > 0) {
+              const textBefore = wholeString.slice(0, offset);
+              const isStartOfLine = /^\s*$/.test(textBefore) || /\n\s*$/.test(textBefore);
+              const isAfterPunctuation = /(\.|\?|!)\s*$/.test(textBefore);
+              if (isStartOfLine || isAfterPunctuation) {
+                  finalReplace = finalReplace.charAt(0).toUpperCase() + finalReplace.slice(1);
+              }
+          }
+          return finalReplace;
         });
 
-        if (count > 0) {
-            notify(`Đã thay thế ${count} từ!`, 'success');
-            if(state.keywords.length > 0) highlightKeywords();
-        } else {
-            notify('Không tìm thấy từ nào.', 'error');
-        }
+      } catch (e) {
+        console.warn('Regex Error:', rule.find, e);
+      }
     }
 
-    // --- EVENT HANDLERS ---
-    els.editor.addEventListener('paste', e => {
-        e.preventDefault();
-        let text = (e.clipboardData || window.clipboardData).getData('text/plain');
-        text = text.replace(/\r\n/g, '\n'); 
-        document.execCommand('insertText', false, text);
-    });
+    const formatted = result.split(/\n/).map(l => l.trim()).filter(l => l).join('\n\n');
+    return { text: formatted, count: totalCount };
+  }
 
-    els.copyContent.onclick = () => {
-        const text = els.editor.innerText;
-        if (!text.trim()) return notify('Không có nội dung!', 'error');
-        navigator.clipboard.writeText(text);
-        els.editor.innerHTML = ''; 
-        notify('Đã copy và xóa nội dung!', 'success');
-    };
-
-    els.clear.onclick = () => {
-        els.editor.innerHTML = ''; state.keywords = []; els.tags.innerHTML = '';
-        notify('Đã xóa tất cả.');
-    };
-
-    els.search.onclick = () => {
-        if (!state.keywords.length) return notify('Chưa nhập từ khóa!', 'error');
-        const count = highlightKeywords();
-        notify(`Đã highlight ${count} từ khóa!`, 'success');
-    };
-
-    els.replace.onclick = performReplace;
-
-    // --- UI/UX & DATA ---
-    function updateFont() {
-        els.editor.style.fontFamily = els.font.value;
-        els.editor.style.fontSize = els.size.value;
-    }
-    els.font.addEventListener('change', updateFont);
-    els.size.addEventListener('change', updateFont);
-
-    function addKw() {
-        const raw = els.input.value;
-        if (!raw.trim()) return;
-        const newKws = raw.split(/[,;\n]/).map(s => s.trim()).filter(Boolean);
-        newKws.forEach(k => {
-            if (!state.keywords.includes(k)) {
-                state.keywords.push(k);
-                renderTag(k);
-            }
-        });
-        els.input.value = '';
-        highlightKeywords(); 
-    }
-    function renderTag(txt) {
-        const tag = document.createElement('div');
-        tag.className = 'tag';
-        tag.innerHTML = `<span>${txt.replace(/</g, "&lt;")}</span><span class="remove-tag">×</span>`;
-        tag.querySelector('.remove-tag').onclick = () => {
-            state.keywords = state.keywords.filter(k => k !== txt);
-            tag.remove();
-            highlightKeywords(); 
-        };
-        els.tags.appendChild(tag);
-    }
-    els.input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addKw(); } });
-    els.input.addEventListener('blur', addKw);
-    els.matchCase.onchange = highlightKeywords;
-    els.wholeWords.onchange = highlightKeywords;
-
-    // --- DATA MANAGEMENT & FIX ORDER ---
-    function loadData() {
-        try {
-            const raw = localStorage.getItem('replace_data');
-            const data = JSON.parse(raw);
-            if (data && data.modes) {
-                state.modes = data.modes;
-                state.activeMode = data.active || 'Mặc định';
-            }
-        } catch {
-            state.modes = { 'Mặc định': { pairs: [], case: false } };
-        }
-        updateModeUI();
+  // === RENDER HIGHLIGHTS (NEW) ===
+  // Hàm này sẽ lấy kết quả, tìm các từ nằm trong cột Replace và tô màu
+  function renderHighlightedOutput(plainText) {
+    if (!plainText) {
+        els.outputText.innerHTML = '';
+        return;
     }
 
-    // Fix #3: Lưu data theo đúng thứ tự hiển thị trên giao diện (từ trên xuống dưới)
-    function saveData() {
-        const pairs = [];
-        // QuerySelectorAll trả về NodeList theo thứ tự DOM (trên xuống dưới)
-        els.puncList.querySelectorAll('.punctuation-item').forEach(div => {
-            const find = div.querySelector('.find').value;
-            const rep = div.querySelector('.replace').value;
-            if (find) pairs.push({ find, replace: rep });
-        });
-        state.modes[state.activeMode].pairs = pairs;
-        localStorage.setItem('replace_data', JSON.stringify({ modes: state.modes, active: state.activeMode }));
-    }
-
-    function updateModeUI() {
-        els.modeSel.innerHTML = '';
-        Object.keys(state.modes).forEach(k => els.modeSel.add(new Option(k, k, false, k === state.activeMode)));
-        
-        const isDef = state.activeMode === 'Mặc định';
-        els.delMode.classList.toggle('hidden', isDef);
-        els.renameMode.classList.toggle('hidden', isDef);
-        
-        const mode = state.modes[state.activeMode];
-        els.caseMode.textContent = mode.case ? 'Case Sensitive: BẬT' : 'Case Sensitive: TẮT';
-        els.caseMode.className = mode.case ? 'w-full py-1.5 mt-1 rounded text-xs font-bold bg-green-200 text-green-800' : 'w-full py-1.5 mt-1 rounded text-xs font-bold bg-gray-200 text-gray-600';
-        
-        els.puncList.innerHTML = '';
-        // Fix #3: Khi load data, dùng append để giữ đúng thứ tự đã lưu (Cũ trên, Mới dưới)
-        if (mode.pairs) {
-            mode.pairs.forEach(p => addPairUI(p.find, p.replace, true)); 
-        }
-    }
-
-    // Fix #3: Thêm tham số append để kiểm soát vị trí thêm (đầu hay cuối)
-    function addPairUI(f = '', r = '', append = false) {
-        const div = document.createElement('div');
-        div.className = 'punctuation-item';
-        div.innerHTML = `<input type="text" class="find" placeholder="Tìm" value="${f.replace(/"/g, '&quot;')}"><span class="text-gray-400">→</span><input type="text" class="replace" placeholder="Thay" value="${r.replace(/"/g, '&quot;')}"><button class="remove-pair" tabindex="-1">×</button>`;
-        div.querySelector('.remove-pair').onclick = () => div.remove();
-        
-        if (append) {
-            els.puncList.appendChild(div); // Load dữ liệu: Thêm vào cuối
-        } else {
-            els.puncList.prepend(div); // Thêm thủ công: Thêm vào đầu (mới nhất)
-        }
-    }
-
-    // --- FIX: CSV EXPORT & IMPORT ---
+    const mode = state.modes[state.currentMode];
+    // Lấy danh sách các từ dùng để thay thế (để highlight)
+    const replaceTerms = mode.pairs
+        .map(p => p.replace)
+        .filter(r => r && r.trim().length > 0); // Loại bỏ thay thế rỗng
     
-    // Fix #1: Xuất 3 cột rõ ràng (Find, Replace, Mode)
-    els.exportBtn.onclick = () => {
-        saveData();
-        // Thêm BOM \uFEFF để Excel nhận diện tiếng Việt
-        let csvContent = "\uFEFFfind,replace,mode\n"; 
-        Object.keys(state.modes).forEach(modeName => {
-            const mode = state.modes[modeName];
-            if (mode.pairs) {
-                mode.pairs.forEach(p => {
-                    // Escape dấu ngoặc kép bằng 2 dấu ngoặc kép ""
-                    const safeFind = p.find.replace(/"/g, '""');
-                    const safeReplace = p.replace.replace(/"/g, '""');
-                    csvContent += `"${safeFind}","${safeReplace}","${modeName}"\n`;
-                });
+    // Nếu không có gì để highlight
+    if (replaceTerms.length === 0) {
+        els.outputText.innerText = plainText;
+        return;
+    }
+
+    // Sort theo độ dài giảm dần để match từ dài trước
+    replaceTerms.sort((a, b) => b.length - a.length);
+
+    // Escape HTML text gốc trước khi xử lý highlight để tránh lỗi XSS
+    let safeText = escapeHtml(plainText);
+    
+    replaceTerms.forEach(term => {
+        // Escape term để dùng trong regex
+        const safeTerm = escapeRegExp(escapeHtml(term));
+        const regex = new RegExp(`(${safeTerm})`, 'g');
+        // Wrap bằng thẻ mark
+        safeText = safeText.replace(regex, '<mark class="hl-yellow">$1</mark>');
+    });
+
+    els.outputText.innerHTML = safeText;
+  }
+
+  // === UI MANIPULATION ===
+
+  function renderModeSelect() {
+    els.modeSelect.innerHTML = '';
+    Object.keys(state.modes).sort().forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m;
+      opt.textContent = m;
+      els.modeSelect.appendChild(opt);
+    });
+    els.modeSelect.value = state.currentMode;
+    updateModeButtons();
+  }
+
+  function updateModeButtons() {
+    const isDefault = state.currentMode === 'default';
+    els.renameBtn.classList.toggle('hidden', isDefault);
+    els.deleteBtn.classList.toggle('hidden', isDefault);
+    const mode = state.modes[state.currentMode];
+    els.matchCaseBtn.textContent = `Match Case: ${mode.matchCase ? 'BẬT' : 'Tắt'}`;
+    els.matchCaseBtn.classList.toggle('active', mode.matchCase);
+    els.wholeWordBtn.textContent = `Whole Word: ${mode.wholeWord ? 'BẬT' : 'Tắt'}`;
+    els.wholeWordBtn.classList.toggle('active', mode.wholeWord);
+  }
+
+  function addPairToUI(find = '', replace = '', append = false) {
+    const item = document.createElement('div');
+    item.className = 'punctuation-item';
+    const safeFind = find.replace(/"/g, '&quot;');
+    const safeReplace = replace.replace(/"/g, '&quot;');
+
+    item.innerHTML = `
+      <input type="text" class="find" placeholder="Tìm" value="${safeFind}">
+      <input type="text" class="replace" placeholder="Thay thế" value="${safeReplace}">
+      <button class="remove" tabindex="-1">×</button>
+    `;
+
+    item.querySelector('.remove').onclick = () => {
+      item.remove();
+      checkEmptyState();
+      saveTempInput(); 
+    };
+    item.querySelectorAll('input').forEach(inp => inp.addEventListener('input', saveTempInputDebounced));
+
+    if (append) els.list.appendChild(item);
+    else els.list.insertBefore(item, els.list.firstChild);
+    checkEmptyState();
+  }
+
+  function loadSettingsToUI() {
+    els.list.innerHTML = '';
+    const mode = state.modes[state.currentMode];
+    if (mode.pairs && mode.pairs.length > 0) {
+      mode.pairs.forEach(p => addPairToUI(p.find, p.replace, true));
+    }
+    updateModeButtons();
+    checkEmptyState();
+  }
+
+  function checkEmptyState() {
+    els.emptyState.classList.toggle('hidden', els.list.children.length > 0);
+  }
+
+  function saveCurrentPairsToState(silent = false) {
+    const items = Array.from(els.list.children);
+    const newPairs = items.map(item => ({
+      find: item.querySelector('.find').value,
+      replace: item.querySelector('.replace').value 
+    })).filter(p => p.find !== '');
+
+    state.modes[state.currentMode].pairs = newPairs;
+    saveState();
+    if (!silent) showNotification('Đã lưu cài đặt!', 'success');
+  }
+
+  // === SPLIT LOGIC ===
+  function renderSplitOutputs(count) {
+    els.splitWrapper.innerHTML = '';
+    for(let i = 1; i <= count; i++) {
+        const div = document.createElement('div');
+        div.className = 'split-box';
+        div.innerHTML = `
+            <div class="split-header">
+                <span>Phần ${i}</span>
+                <span id="out-${i}-count" class="badge">Words: 0</span>
+            </div>
+            <textarea id="out-${i}-text" class="custom-scrollbar" readonly></textarea>
+            <div class="split-footer">
+              <button class="btn btn-secondary full-width copy-btn" data-target="out-${i}-text">Sao chép phần ${i}</button>
+            </div>
+        `;
+        els.splitWrapper.appendChild(div);
+    }
+    els.splitWrapper.querySelectorAll('.copy-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const id = e.target.dataset.target;
+            const el = document.getElementById(id);
+            if(el.value) {
+                navigator.clipboard.writeText(el.value);
+                showNotification(`Đã sao chép Phần ${id.split('-')[1]}`, 'success');
             }
         });
-        const url = URL.createObjectURL(new Blob([csvContent], { type: 'text/csv;charset=utf-8;' }));
-        const link = document.createElement("a");
-        link.href = url; link.download = "data_thay_the.csv";
-        link.click();
-        notify('Đã xuất file CSV (3 cột)!');
+    });
+  }
+
+  function performSplit() {
+    const text = els.splitInput.value;
+    if(!text.trim()) return showNotification('Chưa có nội dung để chia!', 'error');
+
+    const lines = text.split('\n');
+    const firstLine = lines[0].trim();
+    let chapterHeader = '';
+    let contentBody = text;
+    
+    if (/^(Chương|Chapter)\s+\d+/.test(firstLine)) {
+        chapterHeader = firstLine;
+        contentBody = lines.slice(1).join('\n');
+    }
+
+    const paragraphs = contentBody.split('\n').filter(p => p.trim());
+    const totalWords = countWords(contentBody);
+    const targetWords = Math.ceil(totalWords / currentSplitMode);
+    
+    let parts = [];
+    let currentPart = [];
+    let currentCount = 0;
+
+    for (let p of paragraphs) {
+        const wCount = countWords(p);
+        if (currentCount + wCount > targetWords && parts.length < currentSplitMode - 1) {
+            parts.push(currentPart.join('\n\n'));
+            currentPart = [p];
+            currentCount = wCount;
+        } else {
+            currentPart.push(p);
+            currentCount += wCount;
+        }
+    }
+    if (currentPart.length) parts.push(currentPart.join('\n\n'));
+
+    for(let i = 0; i < currentSplitMode; i++) {
+        const el = document.getElementById(`out-${i+1}-text`);
+        const countEl = document.getElementById(`out-${i+1}-count`);
+        if(el) {
+            let partHeader = '';
+            if (chapterHeader) {
+                partHeader = chapterHeader.replace(/(\d+)/, `$1.${i+1}`) + '\n\n';
+            }
+            el.value = (parts[i] ? partHeader + parts[i] : '');
+            if(countEl) countEl.textContent = 'Words: ' + countWords(el.value);
+        }
+    }
+    els.splitInput.value = '';
+    updateCounters();
+    saveTempInput();
+    showNotification('Đã chia thành công!', 'success');
+  }
+
+  // === CSV EXPORT & IMPORT (FIXED BOM) ===
+  function exportCSV() {
+    let csvContent = "\uFEFFfind,replace,mode\n"; 
+    Object.keys(state.modes).forEach(modeName => {
+        const mode = state.modes[modeName];
+        if (mode.pairs && mode.pairs.length > 0) {
+            mode.pairs.forEach(p => {
+                const safeFind = p.find ? p.find.replace(/"/g, '""') : '';
+                const safeReplace = p.replace ? p.replace.replace(/"/g, '""') : '';
+                csvContent += `"${safeFind}","${safeReplace}","${modeName}"\n`;
+            });
+        }
+    });
+    const blob = new Blob([csvContent], {type: 'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'settings_trinh_hg.csv';
+    a.click();
+  }
+
+  function importCSV(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        let text = e.target.result;
+        const lines = text.split(/\r?\n/);
+        if (!lines[0].toLowerCase().includes('find,replace,mode')) {
+            return showNotification('File không đúng định dạng!', 'error');
+        }
+        let count = 0;
+        for (let i = 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line) continue;
+            const match = line.match(/^"(.*)","(.*)","(.*)"$/);
+            if (match) {
+                const find = match[1].replace(/""/g, '"');
+                const replace = match[2].replace(/""/g, '"');
+                const modeName = match[3];
+                if (!state.modes[modeName]) {
+                    state.modes[modeName] = { pairs: [], matchCase: false, wholeWord: false };
+                }
+                state.modes[modeName].pairs.push({ find, replace });
+                count++;
+            }
+        }
+        saveState();
+        renderModeSelect();
+        loadSettingsToUI();
+        if (count > 0) showNotification(`Đã nhập thành công ${count} cặp từ!`, 'success');
+        else showNotification('Không tìm thấy dữ liệu hợp lệ!', 'error');
+    };
+    reader.readAsText(file);
+  }
+
+  // === UTILS & EVENTS ===
+  function countWords(str) {
+    return str.trim() ? str.trim().split(/\s+/).length : 0;
+  }
+  
+  function updateCounters() {
+    document.getElementById('input-word-count').textContent = 'Words: ' + countWords(els.inputText.value);
+    // innerText để lấy nội dung trong div
+    document.getElementById('output-word-count').textContent = 'Words: ' + countWords(els.outputText.innerText);
+    document.getElementById('split-input-word-count').textContent = 'Words: ' + countWords(els.splitInput.value);
+  }
+
+  function saveTempInputDebounced() {
+    clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(saveTempInput, 500);
+  }
+
+  function saveTempInput() {
+    const inputState = {
+      inputText: els.inputText.value,
+      splitInput: els.splitInput.value,
+      tempPairs: Array.from(els.list.children).map(item => ({
+          find: item.querySelector('.find').value,
+          replace: item.querySelector('.replace').value
+      }))
+    };
+    localStorage.setItem(INPUT_STATE_KEY, JSON.stringify(inputState));
+  }
+
+  function loadTempInput() {
+    const saved = JSON.parse(localStorage.getItem(INPUT_STATE_KEY));
+    if(saved) {
+        if(saved.inputText) els.inputText.value = saved.inputText;
+        if(saved.splitInput) els.splitInput.value = saved.splitInput;
+    }
+    updateCounters();
+  }
+
+  function initEvents() {
+    document.querySelectorAll('.tab-button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(btn.dataset.tab).classList.add('active');
+      });
+    });
+
+    els.matchCaseBtn.onclick = () => {
+      state.modes[state.currentMode].matchCase = !state.modes[state.currentMode].matchCase;
+      saveState(); updateModeButtons();
+    };
+    els.wholeWordBtn.onclick = () => {
+      state.modes[state.currentMode].wholeWord = !state.modes[state.currentMode].wholeWord;
+      saveState(); updateModeButtons();
     };
 
-    // Fix #2: Nhập CSV hỗ trợ định dạng 3 cột
-    els.importBtn.onclick = () => {
+    els.modeSelect.onchange = (e) => {
+      state.currentMode = e.target.value;
+      saveState(); loadSettingsToUI();
+      showNotification(`Chuyển sang: ${state.currentMode}`);
+    };
+    
+    document.getElementById('add-mode').onclick = () => {
+      const name = prompt('Tên chế độ mới:');
+      if(name && !state.modes[name]) {
+        state.modes[name] = { pairs: [], matchCase: false, wholeWord: false };
+        state.currentMode = name;
+        saveState(); renderModeSelect(); loadSettingsToUI();
+      }
+    };
+
+    document.getElementById('copy-mode').onclick = () => {
+      const name = prompt('Tên chế độ sao chép:');
+      if(name && !state.modes[name]) {
+        state.modes[name] = JSON.parse(JSON.stringify(state.modes[state.currentMode]));
+        state.currentMode = name;
+        saveState(); renderModeSelect(); loadSettingsToUI();
+      }
+    };
+    
+    els.renameBtn.onclick = () => {
+      const newName = prompt('Tên mới:', state.currentMode);
+      if(newName && newName !== state.currentMode && !state.modes[newName]) {
+        state.modes[newName] = state.modes[state.currentMode];
+        delete state.modes[state.currentMode];
+        state.currentMode = newName;
+        saveState(); renderModeSelect();
+      }
+    };
+
+    els.deleteBtn.onclick = () => {
+      if(confirm(`Xóa chế độ ${state.currentMode}?`)) {
+        delete state.modes[state.currentMode];
+        state.currentMode = 'default';
+        saveState(); renderModeSelect(); loadSettingsToUI();
+      }
+    };
+
+    document.getElementById('add-pair').onclick = () => addPairToUI('', '', false); 
+    document.getElementById('save-settings').onclick = () => saveCurrentPairsToState(false);
+
+    document.getElementById('replace-button').onclick = () => {
+        saveCurrentPairsToState(true);
+        const result = performReplace(els.inputText.value);
+        
+        // Render kết quả có highlight vào DIV
+        renderHighlightedOutput(result.text);
+
+        els.inputText.value = '';
+        updateCounters();
+        saveTempInput();
+        showNotification(`Đã thay thế ${result.count} vị trí!`, 'info');
+    };
+
+    document.getElementById('copy-button').onclick = () => {
+        // Với DIV, ta lấy innerText để copy text thuần
+        if(!els.outputText.innerText) return;
+        navigator.clipboard.writeText(els.outputText.innerText);
+        showNotification('Đã sao chép kết quả!', 'success');
+    };
+
+    document.querySelectorAll('.split-mode-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.split-mode-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentSplitMode = parseInt(btn.dataset.split);
+            renderSplitOutputs(currentSplitMode);
+        });
+    });
+
+    document.getElementById('split-action-btn').onclick = performSplit;
+    document.getElementById('export-settings').onclick = exportCSV;
+    document.getElementById('import-settings').onclick = () => {
         const input = document.createElement('input');
-        input.type = 'file'; input.accept = '.csv';
+        input.type = 'file';
+        input.accept = '.csv';
         input.onchange = e => {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (evt) => {
-                const text = evt.target.result;
-                const lines = text.split(/\r?\n/);
-                
-                // Kiểm tra header đơn giản
-                if (!lines[0].toLowerCase().includes('find,replace,mode')) {
-                    return notify('File CSV sai định dạng header!', 'error');
-                }
-
-                let count = 0;
-                for (let i = 1; i < lines.length; i++) {
-                    const line = lines[i].trim();
-                    if (!line) continue;
-                    
-                    // Regex parse CSV line: "val1","val2","val3"
-                    const match = line.match(/^"(.*)","(.*)","(.*)"$/);
-                    if (match) {
-                        const find = match[1].replace(/""/g, '"');
-                        const replace = match[2].replace(/""/g, '"');
-                        const modeName = match[3];
-
-                        if (!state.modes[modeName]) {
-                            state.modes[modeName] = { pairs: [], case: false };
-                        }
-                        // Thêm vào mảng pairs
-                        state.modes[modeName].pairs.push({ find, replace });
-                        count++;
-                    }
-                }
-                saveData(); 
-                updateModeUI(); 
-                if (count > 0) notify(`Đã nhập ${count} dòng thành công!`);
-                else notify('Không tìm thấy dữ liệu hợp lệ', 'error');
-            };
-            reader.readAsText(file);
+            if(e.target.files.length > 0) importCSV(e.target.files[0]);
         };
         input.click();
     };
 
-    // --- OTHER EVENTS ---
-    els.addPair.onclick = () => { addPairUI('', '', false); els.puncList.querySelector('input').focus(); };
-    els.save.onclick = () => { saveData(); notify(`Đã lưu "${state.activeMode}"`); };
-    els.modeSel.onchange = () => { saveData(); state.activeMode = els.modeSel.value; updateModeUI(); };
-    els.addMode.onclick = () => {
-        const name = prompt('Tên chế độ mới:');
-        if (name && !state.modes[name]) {
-            saveData(); state.modes[name] = { pairs: [], case: false }; state.activeMode = name; updateModeUI();
-        }
-    };
-    els.delMode.onclick = () => { if (confirm('Xóa?')) { delete state.modes[state.activeMode]; state.activeMode = 'Mặc định'; updateModeUI(); saveData(); } };
-    els.renameMode.onclick = () => {
-        const newName = prompt('Tên mới:', state.activeMode);
-        if (newName && !state.modes[newName]) {
-            state.modes[newName] = state.modes[state.activeMode]; delete state.modes[state.activeMode];
-            state.activeMode = newName; updateModeUI(); saveData();
-        }
-    };
-    els.caseMode.onclick = () => { state.modes[state.activeMode].case = !state.modes[state.activeMode].case; updateModeUI(); };
+    [els.inputText, els.splitInput].forEach(el => {
+        el.addEventListener('input', () => {
+            updateCounters();
+            saveTempInputDebounced();
+        });
+    });
+  }
 
-    // INIT
-    loadData();
-    updateFont();
+  // === INIT ===
+  renderModeSelect();
+  loadSettingsToUI();
+  loadTempInput();
+  renderSplitOutputs(2); 
+  initEvents();
 });
