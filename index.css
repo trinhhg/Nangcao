@@ -8,12 +8,11 @@ body { font-family: 'Montserrat', sans-serif; margin: 0; height: 100vh; overflow
 .custom-scrollbar::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
 
-/* EDITOR STYLES - FIX LINE BREAKS */
+/* EDITOR STYLES */
 #editor {
     font-size: 16px;
     line-height: 1.6;
     color: #333;
-    /* !important để đè mọi style reset của tailwind */
     white-space: pre-wrap !important; 
     word-wrap: break-word;
     overflow-wrap: break-word;
@@ -27,13 +26,14 @@ body { font-family: 'Montserrat', sans-serif; margin: 0; height: 100vh; overflow
     display: block;
 }
 
-/* HIGHLIGHT STYLES - ĐẬM HƠN */
+/* HIGHLIGHT STYLES */
 .replaced {
     background-color: #fde047; /* Yellow-300 */
     color: black;
     border-radius: 3px;
     padding: 0 2px;
     border-bottom: 2px solid #ca8a04;
+    transition: background-color 0.3s;
 }
 
 .keyword {
