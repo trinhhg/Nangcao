@@ -95,8 +95,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const nodes = getTextNodesSnapshot(els.editor, { skipClass1: 'replaced', skipClass2: 'keyword' });
             const caseSensitive = els.matchCase.checked;
             const isWholeWord = els.wholeWords.checked;
-            // Dùng RegExp Unicode Property Escapes (\p{L}) thay vì chuỗi cứng để hỗ trợ mọi tiếng Việt
-            const wordCharRegex = /[\p{L}\p{N}_]/u; 
+
+            // Dùng RegExp chuẩn Unicode cho tiếng Việt
+            let wordCharRegex;
+            try {
+                wordCharRegex = /[\p{L}\p{N}_]/u; 
+            } catch (e) {
+                // Fallback nếu browser quá cũ
+                wordCharRegex = /[a-zA-Z0-9àáãạảăắằẳẵặâấầẩẫậèéẹẻẽêềếểễệìíĩỉịòóõọỏôốồổỗộơớờởỡợùúũụủưứừửữựỳỵỷỹýđ_]/i;
+            }
 
             const sortedKws = [...state.keywords].sort((a,b) => b.length - a.length);
 
@@ -118,7 +125,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                 const charBefore = idx > 0 ? nodeText[idx-1] : '';
                                 const charAfter = idx + mw.length < nodeText.length ? nodeText[idx+mw.length] : '';
                                 
-                                // Kiểm tra ký tự trước và sau có phải là ký tự từ không
                                 if (wordCharRegex.test(charBefore) || wordCharRegex.test(charAfter)) {
                                     continue; 
                                 }
@@ -147,7 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             return totalMatches;
         } catch (e) {
-            console.error("Lỗi highlight:", e);
+            console.error(e);
             return 0;
         }
     }
@@ -187,7 +193,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     let finalReplace = toWord;
                     const prefix = node.nodeValue;
                     
-                    // Auto Capitalize Logic
                     const isStartOfLine = /^\s*$/.test(prefix) || /\n\s*$/.test(prefix);
                     const isAfterPunctuation = /([\.\?\!])\s*$/.test(prefix);
 
@@ -219,6 +224,58 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- EVENT HANDLERS ---
+    
+    // 1. ADD KEYWORDS LOGIC (Fix lỗi Enter/Blur)
+    function addKw() {
+        const raw = els.input.value;
+        if (!raw.trim()) return;
+        
+        const newKws = raw.split(/[,;\n]/).map(s => s.trim()).filter(Boolean);
+        let addedCount = 0;
+        
+        newKws.forEach(k => {
+            if (!state.keywords.includes(k)) {
+                state.keywords.push(k);
+                renderTag(k);
+                addedCount++;
+            }
+        });
+        
+        els.input.value = '';
+        if (addedCount > 0) highlightKeywords();
+    }
+
+    // Fix: Xử lý phím Enter thủ công hơn để tránh lỗi bộ gõ
+    els.input.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.keyCode === 13) {
+            e.preventDefault(); // Ngăn xuống dòng
+            addKw();
+        }
+    });
+
+    // Fix: Ấn ra ngoài (Blur) cũng thêm từ
+    els.input.addEventListener('blur', addKw);
+
+    function renderTag(txt) {
+        const tag = document.createElement('div');
+        tag.className = 'tag';
+        tag.innerHTML = `<span>${txt.replace(/</g, "&lt;")}</span><span class="remove-tag">×</span>`;
+        tag.querySelector('.remove-tag').onclick = () => {
+            state.keywords = state.keywords.filter(k => k !== txt);
+            tag.remove();
+            highlightKeywords(); 
+        };
+        els.tags.appendChild(tag);
+    }
+
+    // Fix: Nút Search tự động thêm từ đang nhập dở
+    els.search.onclick = () => {
+        addKw(); // Thêm từ đang nằm trong ô input trước
+        if (!state.keywords.length) return notify('Chưa nhập từ khóa!', 'error');
+        const count = highlightKeywords();
+        notify(`Đã highlight ${count} từ khóa!`, 'success');
+    };
+
     els.editor.addEventListener('paste', e => {
         e.preventDefault();
         let text = (e.clipboardData || window.clipboardData).getData('text/plain');
@@ -239,12 +296,6 @@ document.addEventListener('DOMContentLoaded', () => {
         notify('Đã xóa tất cả.');
     };
 
-    els.search.onclick = () => {
-        if (!state.keywords.length) return notify('Chưa nhập từ khóa!', 'error');
-        const count = highlightKeywords();
-        notify(`Đã highlight ${count} từ khóa!`, 'success');
-    };
-
     els.replace.onclick = performReplace;
 
     // --- UI/UX & DATA ---
@@ -254,45 +305,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     els.font.addEventListener('change', updateFont);
     els.size.addEventListener('change', updateFont);
-
-    function addKw() {
-        const raw = els.input.value;
-        if (!raw.trim()) return;
-        const newKws = raw.split(/[,;\n]/).map(s => s.trim()).filter(Boolean);
-        newKws.forEach(k => {
-            // Chỉ thêm nếu chưa có
-            if (!state.keywords.includes(k)) {
-                state.keywords.push(k);
-                renderTag(k);
-            }
-        });
-        els.input.value = '';
-        highlightKeywords(); 
-    }
-
-    function renderTag(txt) {
-        const tag = document.createElement('div');
-        tag.className = 'tag';
-        tag.innerHTML = `<span>${txt.replace(/</g, "&lt;")}</span><span class="remove-tag">×</span>`;
-        tag.querySelector('.remove-tag').onclick = () => {
-            state.keywords = state.keywords.filter(k => k !== txt);
-            tag.remove();
-            highlightKeywords(); 
-        };
-        els.tags.appendChild(tag);
-    }
-
-    // Fix: Xử lý sự kiện nhập từ khóa (tránh lỗi IME tiếng Việt khi nhấn Enter)
-    els.input.addEventListener('keydown', e => { 
-        if (e.key === 'Enter') { 
-            // Nếu đang gõ tiếng Việt (IME composing), không add ngay
-            if (e.isComposing) return;
-            e.preventDefault(); 
-            addKw(); 
-        } 
-    });
-    // Bỏ sự kiện blur để tránh conflict hoặc thêm nhầm khi click ra ngoài
-    // els.input.addEventListener('blur', addKw); 
 
     els.matchCase.onchange = highlightKeywords;
     els.wholeWords.onchange = highlightKeywords;
@@ -337,7 +349,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         els.puncList.innerHTML = '';
         if (mode.pairs) {
-            // Load từ data: Append (giữ thứ tự lưu)
             mode.pairs.forEach(p => addPairUI(p.find, p.replace, true)); 
         }
     }
@@ -351,7 +362,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (append) {
             els.puncList.appendChild(div);
         } else {
-            els.puncList.prepend(div); // Thêm mới thì lên đầu
+            els.puncList.prepend(div);
         }
     }
 
@@ -410,7 +421,6 @@ document.addEventListener('DOMContentLoaded', () => {
         input.click();
     };
 
-    // --- OTHER EVENTS ---
     els.addPair.onclick = () => { addPairUI('', '', false); els.puncList.querySelector('input').focus(); };
     els.save.onclick = () => { saveData(); notify(`Đã lưu "${state.activeMode}"`); };
     els.modeSel.onchange = () => { saveData(); state.activeMode = els.modeSel.value; updateModeUI(); };
