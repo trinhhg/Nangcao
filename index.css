@@ -177,13 +177,12 @@ body {
 }
 .btn-action:hover { background: #e9d5ff; color: #581c87; border-color: #c084fc; }
 
-/* Nút Copy Keywords mới */
-.btn-secondary-action {
-    background: #ffe4e6; color: #9d174d; /* Hồng/Đỏ nhạt */
+.btn-copy { /* Nút Copy Keywords */
+    background: #ffecb3; color: #9c27b0; /* Vàng/Tím */
     padding: 8px 15px; border-radius: 6px; font-size: 12px; font-weight: 700;
-    border: 1px solid #fecdd3;
+    border: 1px solid #ffcc80;
 }
-.btn-secondary-action:hover { background: #fce7f6; color: #be185d; border-color: #fce7f3; }
+.btn-copy:hover { background: #ffe082; color: #7b1fa2; border-color: #ffb74d; }
 
 /* Teal Buttons (Editor Actions) */
 .btn-teal {
@@ -202,118 +201,88 @@ body {
 .empty-message { text-align: center; color: #9ca3af; padding: 20px; font-size: 13px; }
 
 .tag {
-    background: #eff6ff; color: #1e40af; padding: 4px 10px; border-radius: 20px;
+    /* Đã bỏ màu mặc định, sẽ dùng class màu động */
+    padding: 4px 10px; border-radius: 20px;
     font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;
-    border: 1px solid #93c5fd;
+    /* Dùng màu tag đồng nhất với màu highlight, nhưng border tối hơn */
 }
+/* Style chung cho tag */
+.tag span:first-child { color: #1f2937; } 
 .tag .remove-tag { cursor: pointer; width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
-.tag .remove-tag:hover { background: #dbeafe; color: red; }
+.tag .remove-tag:hover { opacity: 0.8; }
+
 
 /* HIGHLIGHT COLORS (REPLACE & AUTOCAPS) */
-.hl-yellow { background-color: #fde047; color: #000; border-radius: 2px; padding: 0 1px; }
-.hl-blue { background-color: #93c5fd; color: #000; border-radius: 2px; padding: 0 1px; }
+.hl { border-radius: 3px; padding: 0 2px; font-weight: 600; }
+.hl-yellow { background-color: #fde047; color: #000; } /* Replace Result */
+.hl-blue { background-color: #93c5fd; color: #000; }  /* AutoCaps Result */
 
-/* HIGHLIGHT KEYWORDS - NEW SYSTEM */
-.hl {
-   padding: 0 2px;
-   border-radius: 4px;
-   font-weight: 600;
-   color: #333; /* Giữ màu chữ đen */
-}
+/* HỆ THỐNG MÀU PASTEL MỚI CHO KEYWORDS */
+.hl-keyword-1 { background-color: #FFB3BA; border: 1px solid rgba(255, 179, 186, 0.7); }
+.hl-keyword-2 { background-color: #FFDFBA; border: 1px solid rgba(255, 223, 186, 0.7); }
+.hl-keyword-3 { background-color: #FFFFBA; border: 1px solid rgba(255, 255, 186, 0.7); }
+.hl-keyword-4 { background-color: #BAFFC9; border: 1px solid rgba(186, 255, 201, 0.7); }
+.hl-keyword-5 { background-color: #BAE1FF; border: 1px solid rgba(186, 225, 255, 0.7); }
+.hl-keyword-6 { background-color: #C9BAFF; border: 1px solid rgba(201, 186, 255, 0.7); }
+.hl-keyword-7 { background-color: #FFBAE1; border: 1px solid rgba(255, 186, 225, 0.7); }
+.hl-keyword-8 { background-color: #FFBAC9; border: 1px solid rgba(255, 186, 201, 0.7); }
+.hl-keyword-9 { background-color: #B8D3F3; border: 1px solid rgba(184, 211, 243, 0.7); }
+.hl-keyword-10 { background-color: #B3FFF8; border: 1px solid rgba(179, 255, 248, 0.7); }
+.hl-keyword-11 { background-color: #B5FFB3; border: 1px solid rgba(181, 255, 179, 0.7); }
+.hl-keyword-12 { background-color: #F3FFB3; border: 1px solid rgba(243, 255, 179, 0.7); }
+.hl-keyword-13 { background-color: #FFF8B3; border: 1px solid rgba(255, 248, 179, 0.7); }
+.hl-keyword-14 { background-color: #FFC5B3; border: 1px solid rgba(255, 197, 179, 0.7); }
+.hl-keyword-15 { background-color: #F4B3FF; border: 1px solid rgba(244, 179, 255, 0.7); }
+.hl-keyword-16 { background-color: #B3FFC5; border: 1px solid rgba(179, 255, 197, 0.7); }
+.hl-keyword-17 { background-color: #7FFFD4; border: 1px solid rgba(127, 255, 212, 0.7); }
+.hl-keyword-18 { background-color: #E0BBE4; border: 1px solid rgba(224, 187, 228, 0.7); }
+.hl-keyword-19 { background-color: #957DAD; border: 1px solid rgba(149, 125, 173, 0.7); }
+.hl-keyword-20 { background-color: #D291BC; border: 1px solid rgba(210, 145, 188, 0.7); }
+.hl-keyword-21 { background-color: #FEC8D8; border: 1px solid rgba(254, 200, 216, 0.7); }
+.hl-keyword-22 { background-color: #FFEDAE; border: 1px solid rgba(255, 237, 174, 0.7); }
+.hl-keyword-23 { background-color: #A4F0B7; border: 1px solid rgba(164, 240, 183, 0.7); }
+.hl-keyword-24 { background-color: #C9F7F5; border: 1px solid rgba(201, 247, 245, 0.7); }
+.hl-keyword-25 { background-color: #ADD8E6; border: 1px solid rgba(173, 216, 230, 0.7); }
+.hl-keyword-26 { background-color: #F08080; border: 1px solid rgba(240, 128, 128, 0.7); }
+.hl-keyword-27 { background-color: #E6E6FA; border: 1px solid rgba(230, 230, 250, 0.7); }
+.hl-keyword-28 { background-color: #FFDEAD; border: 1px solid rgba(255, 222, 173, 0.7); }
+.hl-keyword-29 { background-color: #F0FFF0; border: 1px solid rgba(240, 255, 240, 0.7); }
+.hl-keyword-30 { background-color: #AFEEEE; border: 1px solid rgba(175, 238, 238, 0.7); }
 
-/* Base Pastel Colors */
-.kw-color-0 { background-color: #FFB3BA; } /* Reddish Pink */
-.kw-color-1 { background-color: #FFDFBA; } /* Peach */
-.kw-color-2 { background-color: #FFFFBA; } /* Light Yellow */
-.kw-color-3 { background-color: #BAFFC9; } /* Light Mint */
-.kw-color-4 { background-color: #BAE1FF; } /* Light Blue */
-.kw-color-5 { background-color: #E0BBE4; } /* Lavender */
-.kw-color-6 { background-color: #957DAD; } /* Mauve */
-.kw-color-7 { background-color: #D291BC; } /* Thistle */
-.kw-color-8 { background-color: #FFC72C; } /* Gold */
-.kw-color-9 { background-color: #C5E3BF; } /* Pistachio */
-.kw-color-10 { background-color: #8D9440; } /* Olive */
-.kw-color-11 { background-color: #FEC8D8; } /* Light Rose */
-.kw-color-12 { background-color: #D9E3F0; } /* Pale Cornflower Blue */
-.kw-color-13 { background-color: #FFD6A5; } /* Orange Pastel */
-.kw-color-14 { background-color: #ADF7F9; } /* Cyan Pastel */
-.kw-color-15 { background-color: #FEEAFA; } /* Very Light Pink */
-.kw-color-16 { background-color: #C1E0D1; } /* Greyish Green */
-.kw-color-17 { background-color: #F7B801; } /* Darker Yellow */
-.kw-color-18 { background-color: #98DBC6; } /* Seafoam Green */
-.kw-color-19 { background-color: #5BC8AC; } /* Darker Mint */
-
-
-/* Generated Pastel Color Classes (20 colors x 3 shades = 60 classes) */
-
-/* Shade 'a' (Opacity ~0.4) */
-.hl-keyword-0-a { background-color: rgba(255, 179, 186, 0.4); }
-.hl-keyword-1-a { background-color: rgba(255, 223, 186, 0.4); }
-.hl-keyword-2-a { background-color: rgba(255, 255, 186, 0.4); }
-.hl-keyword-3-a { background-color: rgba(186, 255, 201, 0.4); }
-.hl-keyword-4-a { background-color: rgba(186, 225, 255, 0.4); }
-.hl-keyword-5-a { background-color: rgba(224, 187, 228, 0.4); }
-.hl-keyword-6-a { background-color: rgba(149, 125, 173, 0.4); }
-.hl-keyword-7-a { background-color: rgba(210, 145, 188, 0.4); }
-.hl-keyword-8-a { background-color: rgba(255, 199, 44, 0.4); }
-.hl-keyword-9-a { background-color: rgba(197, 227, 191, 0.4); }
-.hl-keyword-10-a { background-color: rgba(141, 148, 64, 0.4); }
-.hl-keyword-11-a { background-color: rgba(254, 200, 216, 0.4); }
-.hl-keyword-12-a { background-color: rgba(217, 227, 240, 0.4); }
-.hl-keyword-13-a { background-color: rgba(255, 214, 165, 0.4); }
-.hl-keyword-14-a { background-color: rgba(173, 247, 249, 0.4); }
-.hl-keyword-15-a { background-color: rgba(254, 234, 250, 0.4); }
-.hl-keyword-16-a { background-color: rgba(193, 224, 209, 0.4); }
-.hl-keyword-17-a { background-color: rgba(247, 184, 1, 0.4); }
-.hl-keyword-18-a { background-color: rgba(152, 219, 198, 0.4); }
-.hl-keyword-19-a { background-color: rgba(91, 200, 172, 0.4); }
-
-/* Shade 'b' (Opacity ~0.7) */
-.hl-keyword-0-b { background-color: rgba(255, 179, 186, 0.7); }
-.hl-keyword-1-b { background-color: rgba(255, 223, 186, 0.7); }
-.hl-keyword-2-b { background-color: rgba(255, 255, 186, 0.7); }
-.hl-keyword-3-b { background-color: rgba(186, 255, 201, 0.7); }
-.hl-keyword-4-b { background-color: rgba(186, 225, 255, 0.7); }
-.hl-keyword-5-b { background-color: rgba(224, 187, 228, 0.7); }
-.hl-keyword-6-b { background-color: rgba(149, 125, 173, 0.7); }
-.hl-keyword-7-b { background-color: rgba(210, 145, 188, 0.7); }
-.hl-keyword-8-b { background-color: rgba(255, 199, 44, 0.7); }
-.hl-keyword-9-b { background-color: rgba(197, 227, 191, 0.7); }
-.hl-keyword-10-b { background-color: rgba(141, 148, 64, 0.7); }
-.hl-keyword-11-b { background-color: rgba(254, 200, 216, 0.7); }
-.hl-keyword-12-b { background-color: rgba(217, 227, 240, 0.7); }
-.hl-keyword-13-b { background-color: rgba(255, 214, 165, 0.7); }
-.hl-keyword-14-b { background-color: rgba(173, 247, 249, 0.7); }
-.hl-keyword-15-b { background-color: rgba(254, 234, 250, 0.7); }
-.hl-keyword-16-b { background-color: rgba(193, 224, 209, 0.7); }
-.hl-keyword-17-b { background-color: rgba(247, 184, 1, 0.7); }
-.hl-keyword-18-b { background-color: rgba(152, 219, 198, 0.7); }
-.hl-keyword-19-b { background-color: rgba(91, 200, 172, 0.7); }
-
-/* Shade 'c' (Opacity ~1.0 - Màu gốc) */
-.hl-keyword-0-c { background-color: #FFB3BA; }
-.hl-keyword-1-c { background-color: #FFDFBA; }
-.hl-keyword-2-c { background-color: #FFFFBA; }
-.hl-keyword-3-c { background-color: #BAFFC9; }
-.hl-keyword-4-c { background-color: #BAE1FF; }
-.hl-keyword-5-c { background-color: #E0BBE4; }
-.hl-keyword-6-c { background-color: #957DAD; }
-.hl-keyword-7-c { background-color: #D291BC; }
-.hl-keyword-8-c { background-color: #FFC72C; }
-.hl-keyword-9-c { background-color: #C5E3BF; }
-.hl-keyword-10-c { background-color: #8D9440; }
-.hl-keyword-11-c { background-color: #FEC8D8; }
-.hl-keyword-12-c { background-color: #D9E3F0; }
-.hl-keyword-13-c { background-color: #FFD6A5; }
-.hl-keyword-14-c { background-color: #ADF7F9; }
-.hl-keyword-15-c { background-color: #FEEAFA; }
-.hl-keyword-16-c { background-color: #C1E0D1; }
-.hl-keyword-17-c { background-color: #F7B801; }
-.hl-keyword-18-c { background-color: #98DBC6; }
-.hl-keyword-19-c { background-color: #5BC8AC; }
+/* Điều chỉnh màu border và tag text để dễ đọc hơn */
+.tag.hl-keyword-1 { background-color: #FFB3BA; border: 1px solid #e0999f; }
+.tag.hl-keyword-2 { background-color: #FFDFBA; border: 1px solid #e0c59f; }
+.tag.hl-keyword-3 { background-color: #FFFFBA; border: 1px solid #e0e09f; }
+.tag.hl-keyword-4 { background-color: #BAFFC9; border: 1px solid #99e0a7; }
+.tag.hl-keyword-5 { background-color: #BAE1FF; border: 1px solid #99c7e0; }
+.tag.hl-keyword-6 { background-color: #C9BAFF; border: 1px solid #a799e0; }
+.tag.hl-keyword-7 { background-color: #FFBAE1; border: 1px solid #e099c7; }
+.tag.hl-keyword-8 { background-color: #FFBAC9; border: 1px solid #e099a7; }
+.tag.hl-keyword-9 { background-color: #B8D3F3; border: 1px solid #9eb9d9; }
+.tag.hl-keyword-10 { background-color: #B3FFF8; border: 1px solid #99e0db; }
+.tag.hl-keyword-11 { background-color: #B5FFB3; border: 1px solid #99e099; }
+.tag.hl-keyword-12 { background-color: #F3FFB3; border: 1px solid #d9e099; }
+.tag.hl-keyword-13 { background-color: #FFF8B3; border: 1px solid #e0db99; }
+.tag.hl-keyword-14 { background-color: #FFC5B3; border: 1px solid #e0a799; }
+.tag.hl-keyword-15 { background-color: #F4B3FF; border: 1px solid #d999e0; }
+.tag.hl-keyword-16 { background-color: #B3FFC5; border: 1px solid #99e0a7; }
+.tag.hl-keyword-17 { background-color: #7FFFD4; border: 1px solid #5fb39c; }
+.tag.hl-keyword-18 { background-color: #E0BBE4; border: 1px solid #c7a1cb; }
+.tag.hl-keyword-19 { background-color: #957DAD; border: 1px solid #77628b; }
+.tag.hl-keyword-20 { background-color: #D291BC; border: 1px solid #b37fa0; }
+.tag.hl-keyword-21 { background-color: #FEC8D8; border: 1px solid #dfacbd; }
+.tag.hl-keyword-22 { background-color: #FFEDAE; border: 1px solid #e0d08e; }
+.tag.hl-keyword-23 { background-color: #A4F0B7; border: 1px solid #82d094; }
+.tag.hl-keyword-24 { background-color: #C9F7F5; border: 1px solid #a7d9d7; }
+.tag.hl-keyword-25 { background-color: #ADD8E6; border: 1px solid #91b5c0; }
+.tag.hl-keyword-26 { background-color: #F08080; border: 1px solid #d36969; }
+.tag.hl-keyword-27 { background-color: #E6E6FA; border: 1px solid #c9c9df; }
+.tag.hl-keyword-28 { background-color: #FFDEAD; border: 1px solid #e0c295; }
+.tag.hl-keyword-29 { background-color: #F0FFF0; border: 1px solid #d3e0d3; }
+.tag.hl-keyword-30 { background-color: #AFEEEE; border: 1px solid #93c0c0; }
 
 
-/* === NOTIFICATION === */
+/* === NOTIFICATION (GIỮ NGUYÊN) === */
 #notification-container { 
     position: fixed; top: 70px; right: 20px; 
     z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; 
@@ -321,7 +290,6 @@ body {
 .notification {
     padding: 12px 20px; border-radius: 6px; color: white; font-size: 13px; font-weight: 600;
     box-shadow: 0 4px 12px rgba(0,0,0,0.2); animation: slideIn 0.3s ease-out; display: flex; align-items: center;
-    opacity: 1; transition: opacity 0.3s ease-in-out;
 }
 .notification.success { background: #10b981; border-left: 4px solid #047857; }
 .notification.error { background: #ef4444; border-left: 4px solid #7f1d1d; }
