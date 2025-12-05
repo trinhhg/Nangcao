@@ -1,8 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
     // === CONFIG & STATE ===
-    const STORAGE_KEY = 'trinh_hg_pro_v20_final_patched';
+    const STORAGE_KEY = 'trinh_hg_pro_mobile_v1';
     
-    // Ký tự Private Use Area để đánh dấu
+    // Markers (Private Use Area)
     const MARK_REP_START = '\uE000';
     const MARK_REP_END = '\uE001';
     const MARK_CAP_START = '\uE002';
@@ -38,13 +38,16 @@ document.addEventListener('DOMContentLoaded', () => {
         copyBtn: document.getElementById('copy-editor-content'),
         replaceBtn: document.getElementById('replace-all'),
 
-        // Sidebar
+        // Sidebar Elements (Desktop & Mobile)
         sidebar: document.getElementById('keywords-sidebar'),
-        sidebarToggle: document.getElementById('header-sidebar-toggle'),
+        headerSidebarToggle: document.getElementById('header-sidebar-toggle'), // Desktop
+        mobileSidebarToggle: document.getElementById('mobile-sidebar-toggle'), // Mobile
+        closeSidebarMobile: document.getElementById('close-sidebar-mobile'), // Mobile Close
+        sidebarOverlay: document.getElementById('sidebar-overlay'), // Mobile Overlay
         sidebarInput: document.getElementById('sidebar-input'),
         sidebarTags: document.getElementById('sidebar-tags'),
         
-        // Settings Tab (Replace)
+        // Settings Tab
         modeSelect: document.getElementById('mode-select'),
         addModeBtn: document.getElementById('add-mode'),
         renameModeBtn: document.getElementById('rename-mode'),
@@ -61,7 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
         importReplaceBtn: document.getElementById('import-replace-csv'),
         exportReplaceBtn: document.getElementById('export-replace-csv'),
         
-        // Keywords Tab Controls
+        // Keywords Settings
         fontFamily: document.getElementById('fontFamily'),
         fontSize: document.getElementById('fontSize'),
         kwMatchCaseBtn: document.getElementById('kw-match-case-btn'),
@@ -76,7 +79,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // === CORE FUNCTIONS ===
-
     function saveState() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     }
@@ -89,7 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => { div.style.opacity = '0'; setTimeout(() => div.remove(), 300); }, 3000);
     }
 
-    // Fix Lỗi 1: Paste Text Only (Giữ cấu trúc dòng nhưng bỏ font/size)
+    // Paste handler: Text only
     if (els.editor) {
         els.editor.addEventListener('paste', (e) => {
             e.preventDefault();
@@ -98,7 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- UTILS (Từ mã tham khảo) ---
+    // --- UTILS ---
     function normalizeText(text) {
         if (!text) return '';
         return text
@@ -123,44 +125,35 @@ document.addEventListener('DOMContentLoaded', () => {
         return replacement;
     }
 
-    // === FIX LỖI 2 & 7: LOGIC REPLACE MỚI ===
+    // === REPLACEMENT LOGIC ===
     function performReplaceAll() {
         if (!els.editor) return notify('Lỗi editor!', 'error');
 
         const mode = state.modes[state.activeMode];
-        // Sử dụng innerText để lấy text cùng dấu xuống dòng (\n)
         let rawText = els.editor.innerText; 
         if (!rawText.trim()) return notify('Editor trống!', 'error');
 
-        // UI Feedback
         const originalTextBtn = els.replaceBtn.textContent;
-        els.replaceBtn.textContent = 'Đang xử lý...';
+        els.replaceBtn.textContent = '...';
         els.replaceBtn.disabled = true;
 
         setTimeout(() => {
             try {
-                // 1. Chuẩn hóa Smart Quotes
                 let processedText = normalizeText(rawText);
                 let replaceCount = 0;
 
-                // 2. Phase 1: User Replace
                 if (mode.pairs.length > 0) {
                     const rules = mode.pairs
                         .filter(p => p.find && p.find.trim())
                         .map(p => ({ find: normalizeText(p.find), replace: normalizeText(p.replace || '') }))
-                        .sort((a,b) => b.find.length - a.find.length); // Ưu tiên chuỗi dài
+                        .sort((a,b) => b.find.length - a.find.length);
 
                     rules.forEach(rule => {
                         const pattern = escapeRegExp(rule.find);
                         const flags = mode.matchCase ? 'g' : 'gi';
-                        let regex;
-                        
-                        // Logic Whole Word chuẩn Google
-                        if (mode.wholeWord) {
-                            regex = new RegExp(`(?<![\\p{L}\\p{N}_])${pattern}(?![\\p{L}\\p{N}_])`, flags + 'u');
-                        } else {
-                            regex = new RegExp(pattern, flags);
-                        }
+                        let regex = mode.wholeWord 
+                            ? new RegExp(`(?<![\\p{L}\\p{N}_])${pattern}(?![\\p{L}\\p{N}_])`, flags + 'u')
+                            : new RegExp(pattern, flags);
 
                         processedText = processedText.replace(regex, (match) => {
                             replaceCount++;
@@ -171,7 +164,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 }
 
-                // 3. Phase 2: Auto Caps
                 if (mode.autoCaps) {
                     const autoCapsRegex = /(^|[\.?!\n]\s*)(?:\uE000|\uE001|\uE002|\uE003)*([\p{Ll}])/gmu;
                     processedText = processedText.replace(autoCapsRegex, (fullMatch, prefix, char) => {
@@ -179,42 +171,26 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 }
 
-                // 4. Phase 3: Rebuild HTML (Fix lỗi vỡ layout)
-                // Vì chúng ta dùng innerText, các dòng mới là \n. Khi đưa vào innerHTML, ta giữ nguyên \n vì CSS đã có white-space: pre-wrap
                 let finalHTML = '';
                 let buffer = '';
                 
                 for (let i = 0; i < processedText.length; i++) {
                     const c = processedText[i];
-                    if (c === MARK_REP_START) {
-                        finalHTML += escapeHTML(buffer) + '<span class="hl-yellow">';
-                        buffer = '';
-                    } else if (c === MARK_REP_END) {
-                        finalHTML += escapeHTML(buffer) + '</span>';
-                        buffer = '';
-                    } else if (c === MARK_CAP_START) {
-                        finalHTML += escapeHTML(buffer) + '<span class="hl-blue">';
-                        buffer = '';
-                    } else if (c === MARK_CAP_END) {
-                        finalHTML += escapeHTML(buffer) + '</span>';
-                        buffer = '';
-                    } else {
-                        buffer += c;
-                    }
+                    if (c === MARK_REP_START) { finalHTML += escapeHTML(buffer) + '<span class="hl-yellow">'; buffer = ''; }
+                    else if (c === MARK_REP_END) { finalHTML += escapeHTML(buffer) + '</span>'; buffer = ''; }
+                    else if (c === MARK_CAP_START) { finalHTML += escapeHTML(buffer) + '<span class="hl-blue">'; buffer = ''; }
+                    else if (c === MARK_CAP_END) { finalHTML += escapeHTML(buffer) + '</span>'; buffer = ''; }
+                    else { buffer += c; }
                 }
                 finalHTML += escapeHTML(buffer);
 
-                // Cập nhật DOM
                 els.editor.innerHTML = finalHTML;
                 
-                // Cập nhật lại keywords highlight nếu có
+                // Nếu đang có keywords list thì highlight lại (silent)
                 if (state.keywords.length > 0) highlightKeywordsDOM(true);
 
                 updateWordCount();
-                
-                if (replaceCount > 0) notify(`Thay thế ${replaceCount} cụm từ!`);
-                else if (mode.autoCaps) notify('Đã chạy Auto Caps!');
-                else notify('Không tìm thấy gì để thay thế.', 'warning');
+                notify(replaceCount > 0 || mode.autoCaps ? `Đã thay thế/AutoCaps xong!` : 'Không tìm thấy gì.');
 
             } catch (e) {
                 console.error(e);
@@ -226,24 +202,27 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 50);
     }
 
-    // === HIGHLIGHT KEYWORDS ===
+    // === FIX LOGIC 1: HIGHLIGHT KEYWORDS ===
     function highlightKeywordsDOM(silent = false) {
         if (!els.editor) return 0;
         
-        // Remove old keyword highlights (keep replace/autocaps spans)
-        const oldKws = els.editor.querySelectorAll('.keyword');
-        oldKws.forEach(span => {
-            const parent = span.parentNode;
-            while(span.firstChild) parent.insertBefore(span.firstChild, span);
-            parent.removeChild(span);
+        // BƯỚC 1: REMOVE OLD KEYWORDS (Chỉ xóa keywords, giữ Replace/AutoCaps)
+        const existingKeywords = els.editor.querySelectorAll('.keyword');
+        existingKeywords.forEach(el => {
+            const parent = el.parentNode;
+            while (el.firstChild) parent.insertBefore(el.firstChild, el);
+            parent.removeChild(el);
         });
+        // Quan trọng: Normalize để nối lại các text node bị đứt
         els.editor.normalize();
 
         if (!state.keywords.length) return 0;
 
+        // BƯỚC 2: QUÉT VÀ HIGHLIGHT MỚI
         const walker = document.createTreeWalker(els.editor, NodeFilter.SHOW_TEXT, null, false);
         const textNodes = [];
         let node;
+        // Bỏ qua nội dung trong thẻ hl-yellow/hl-blue để tránh lỗi nested spans
         while(node = walker.nextNode()) {
             if (node.parentElement && (node.parentElement.classList.contains('hl-yellow') || node.parentElement.classList.contains('hl-blue'))) continue;
             textNodes.push(node);
@@ -291,8 +270,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 span.contentEditable = "false"; 
 
                 matchNode.parentNode.replaceChild(span, matchNode);
-                // Fix lỗi con trỏ: thêm zero-width space
-                const zws = document.createTextNode('\u200B');
+                const zws = document.createTextNode('\u200B'); // Zero-width space fix cursor
                 span.parentNode.insertBefore(zws, afterNode);
 
                 highlightCount++;
@@ -302,7 +280,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return highlightCount;
     }
 
-    // === TAB & SIDEBAR LOGIC ===
+    // === TAB SWITCHING ===
     function switchTab(tabId) {
         els.tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === tabId));
         els.contents.forEach(c => {
@@ -314,30 +292,51 @@ document.addEventListener('DOMContentLoaded', () => {
                 c.classList.remove('active');
             }
         });
-        if (els.sidebarToggle) {
-            els.sidebarToggle.classList.toggle('hidden', !(tabId === 'main-tab' || tabId === 'settings-tab'));
+        
+        // Show/Hide Toggle Button on Desktop
+        if (els.headerSidebarToggle) {
+             const visible = (tabId === 'main-tab' || tabId === 'settings-tab');
+             els.headerSidebarToggle.style.display = visible ? 'flex' : 'none';
         }
     }
     els.tabs.forEach(btn => btn.onclick = () => switchTab(btn.dataset.tab));
 
-    if (els.sidebar && els.sidebarToggle) {
-        function toggleSidebar(forceState) {
-            const isOpen = forceState !== undefined ? forceState : !state.sidebarOpen;
-            state.sidebarOpen = isOpen;
+    // === SIDEBAR TOGGLE (DESKTOP & MOBILE FIX) ===
+    function toggleSidebar(forceState) {
+        const isOpen = forceState !== undefined ? forceState : !state.sidebarOpen;
+        state.sidebarOpen = isOpen;
+
+        // Desktop Behavior
+        if (els.sidebar) {
             if (isOpen) {
                 els.sidebar.classList.remove('closed');
-                els.sidebarToggle.querySelector('.icon').textContent = '«';
+                if(els.headerSidebarToggle) els.headerSidebarToggle.querySelector('.icon').textContent = '«';
+                if(els.sidebarOverlay) els.sidebarOverlay.classList.remove('hidden'); // Mobile Overlay
             } else {
                 els.sidebar.classList.add('closed');
-                els.sidebarToggle.querySelector('.icon').textContent = '»';
+                if(els.headerSidebarToggle) els.headerSidebarToggle.querySelector('.icon').textContent = '»';
+                if(els.sidebarOverlay) els.sidebarOverlay.classList.add('hidden'); // Mobile Overlay
             }
-            saveState();
         }
-        els.sidebarToggle.onclick = () => toggleSidebar();
-        toggleSidebar(state.sidebarOpen);
+        saveState();
     }
 
-    // === KEYWORDS MANAGEMENT ===
+    // Desktop Toggle
+    if(els.headerSidebarToggle) els.headerSidebarToggle.onclick = () => toggleSidebar();
+    
+    // Mobile Toggle
+    if(els.mobileSidebarToggle) els.mobileSidebarToggle.onclick = () => toggleSidebar(true); // Always Open
+    if(els.closeSidebarMobile) els.closeSidebarMobile.onclick = () => toggleSidebar(false); // Close
+    if(els.sidebarOverlay) els.sidebarOverlay.onclick = () => toggleSidebar(false); // Click overlay to close
+
+    // Set Initial State (Default Closed on Mobile if width < 768?)
+    if (window.innerWidth < 768) {
+        state.sidebarOpen = false; 
+    }
+    toggleSidebar(state.sidebarOpen);
+
+
+    // === KEYWORDS INPUT & TAGS ===
     function addKeyword(val) {
         if (!val.trim()) return;
         const keys = val.split(/[,;\n]/).map(s => s.trim()).filter(Boolean);
@@ -372,20 +371,16 @@ document.addEventListener('DOMContentLoaded', () => {
     [els.sidebarInput, els.fullKwInput].forEach(inp => {
         if (inp) {
             inp.addEventListener('keydown', e => { 
-                if (e.key === 'Enter') { 
-                    e.preventDefault(); 
-                    addKeyword(inp.value); 
-                } 
+                if (e.key === 'Enter') { e.preventDefault(); addKeyword(inp.value); } 
             });
             inp.addEventListener('blur', () => addKeyword(inp.value));
         }
     });
 
-    // === FIX LỖI 3 & 4: EXPORT/IMPORT KEYWORDS ===
+    // Import/Export Logic
     if (els.exportKwBtn) {
         els.exportKwBtn.onclick = () => {
             if (!state.keywords.length) return notify('Danh sách trống!', 'warning');
-            // Fix lỗi 3: Thêm BOM \uFEFF cho UTF-8
             const csvContent = "\uFEFF" + state.keywords.join('\n');
             const url = URL.createObjectURL(new Blob([csvContent], {type:'text/csv;charset=utf-8;'}));
             const a = document.createElement('a'); a.href=url; a.download='keywords.csv'; a.click();
@@ -401,11 +396,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 r.onload = ev => {
                     const lines = ev.target.result.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
                     let count = 0;
-                    lines.forEach(l => {
-                        if (!state.keywords.includes(l)) {
-                            state.keywords.push(l); count++;
-                        }
-                    });
+                    lines.forEach(l => { if (!state.keywords.includes(l)) { state.keywords.push(l); count++; } });
                     renderTags(); saveState(); notify(`Đã thêm ${count} từ khóa!`);
                 };
                 r.readAsText(e.target.files[0]);
@@ -417,7 +408,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // === SETTINGS UI ===
     function renderModeUI() {
         if (!els.puncList || !els.modeSelect) return;
-
         const mode = state.modes[state.activeMode];
         if (els.matchCaseBtn) updateToggle(els.matchCaseBtn, mode.matchCase);
         if (els.wholeWordBtn) updateToggle(els.wholeWordBtn, mode.wholeWord);
@@ -435,7 +425,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateToggle(btn, isActive) {
-        btn.textContent = `${btn.id.includes('whole') ? 'Whole Word' : btn.id.includes('caps') ? 'Auto Caps' : 'Match Case'}: ${isActive ? 'BẬT' : 'Tắt'}`;
+        btn.textContent = `${btn.id.includes('whole') ? 'Whole' : btn.id.includes('caps') ? 'A.Caps' : 'M.Case'}: ${isActive ? 'ON' : 'OFF'}`;
         btn.classList.toggle('active', isActive);
     }
 
@@ -471,12 +461,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (els.renameModeBtn) els.renameModeBtn.onclick = () => { const n = prompt('Tên mới:', state.activeMode); if (n && !state.modes[n]) { state.modes[n] = state.modes[state.activeMode]; delete state.modes[state.activeMode]; state.activeMode = n; saveState(); renderModeUI(); } };
     if (els.deleteModeBtn) els.deleteModeBtn.onclick = () => { if (confirm('Xóa?')) { delete state.modes[state.activeMode]; state.activeMode = 'Mặc định'; saveState(); renderModeUI(); } };
     if (els.addPairBtn) els.addPairBtn.onclick = () => { addPairUI(); els.puncList.firstChild.querySelector('input').focus(); };
-    if (els.saveSettingsBtn) els.saveSettingsBtn.onclick = () => { savePairs(); notify('Đã lưu tất cả!'); };
+    if (els.saveSettingsBtn) els.saveSettingsBtn.onclick = () => { savePairs(); notify('Đã lưu!'); };
 
-    // Replace CSV
     if (els.exportReplaceBtn) {
         els.exportReplaceBtn.onclick = () => {
-            // Fix lỗi 3: Thêm BOM
             let csv = "\uFEFFfind,replace,mode\n";
             Object.keys(state.modes).forEach(m => state.modes[m].pairs.forEach(p => csv += `"${p.find.replace(/"/g,'""')}","${p.replace.replace(/"/g,'""')}","${m}"\n`));
             const url = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8;'}));
@@ -491,7 +479,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const r = new FileReader();
                 r.onload = ev => {
                     const lines = ev.target.result.split(/\r?\n/);
-                    if (!lines[0].toLowerCase().includes('find,replace,mode')) return notify('Lỗi file CSV!', 'error');
                     let count = 0;
                     for(let i=1; i<lines.length; i++) {
                         const m = lines[i].match(/^"(.*)","(.*)","(.*)"$/);
@@ -502,7 +489,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             count++;
                         }
                     }
-                    saveState(); renderModeUI(); notify(`Nhập ${count} cặp thay thế thành công!`);
+                    saveState(); renderModeUI(); notify(`Đã nhập ${count} dòng!`);
                 };
                 r.readAsText(e.target.files[0]);
             };
@@ -510,7 +497,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // === DISPLAY SETTINGS ===
+    // === DISPLAY FONT & OTHER ===
     function updateFont() {
         if (!els.editor || !els.fontFamily || !els.fontSize) return;
         els.editor.style.setProperty('font-family', els.fontFamily.value, 'important');
@@ -528,7 +515,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     updateKwUI();
 
-    // === EDITOR ACTIONS ===
     function updateWordCount() {
         if (!els.editor || !els.wordCount) return;
         const txt = els.editor.innerText || '';
@@ -537,38 +523,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (els.editor) els.editor.addEventListener('input', updateWordCount);
 
-    // Fix lỗi 6: Báo lỗi nếu không tìm thấy keyword
     if (els.searchBtn) {
         els.searchBtn.onclick = () => { 
             if (els.sidebarInput) addKeyword(els.sidebarInput.value); 
             const count = highlightKeywordsDOM(); 
-            if (count > 0) notify(`Đã tìm thấy & highlight ${count} từ khóa.`);
-            else notify('Không tìm thấy từ khóa nào trong văn bản.', 'warning');
+            if (count > 0) notify(`Highlight ${count} từ.`);
+            else notify('Không tìm thấy từ khóa.', 'warning');
         };
     }
+    if (els.clearBtn) els.clearBtn.onclick = () => { if (els.editor) els.editor.innerHTML = ''; updateWordCount(); };
+    if (els.copyBtn) els.copyBtn.onclick = () => { 
+        if (!els.editor || !els.editor.innerText.trim()) return notify('Trống!', 'error'); 
+        navigator.clipboard.writeText(els.editor.innerText); 
+        notify('Đã copy!'); els.editor.innerHTML = ''; updateWordCount();
+    };
+    if (els.replaceBtn) els.replaceBtn.onclick = performReplaceAll;
 
-    if (els.clearBtn) {
-        els.clearBtn.onclick = () => { 
-            if (els.editor) els.editor.innerHTML = ''; 
-            updateWordCount(); 
-        };
-    }
-
-    // Fix lỗi 5: Copy xong thì xóa editor
-    if (els.copyBtn) {
-        els.copyBtn.onclick = () => { 
-            if (!els.editor || !els.editor.innerText.trim()) return notify('Trống!', 'error'); 
-            navigator.clipboard.writeText(els.editor.innerText); 
-            notify('Đã copy vào clipboard!');
-            els.editor.innerHTML = ''; // Clear text
-            updateWordCount();
-        };
-    }
-
-    if (els.replaceBtn) {
-        els.replaceBtn.onclick = performReplaceAll;
-    }
-
-    // === INIT ===
+    // INIT
     renderTags(); renderModeUI(); updateFont(); updateWordCount();
 });
