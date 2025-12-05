@@ -1,20 +1,20 @@
 document.addEventListener('DOMContentLoaded', () => {
     // === CONFIG & STATE ===
-    const STORAGE_KEY = 'trinh_hg_pro_v20_final_fix';
+    const STORAGE_KEY = 'trinh_hg_pro_v20_final_patched';
     
+    // Ký tự Private Use Area để đánh dấu
     const MARK_REP_START = '\uE000';
     const MARK_REP_END = '\uE001';
     const MARK_CAP_START = '\uE002';
     const MARK_CAP_END = '\uE003';
     
-    // Fix lỗi 5: Loại bỏ Vàng (Replace) và Xanh dương (AutoCaps) khỏi list random
     const KW_COLORS = ['hl-pink', 'hl-green', 'hl-orange', 'hl-purple', 'hl-red'];
 
     const defaultState = {
         keywords: [],
         keywordSettings: { matchCase: false, wholeWord: false },
         activeMode: 'Mặc định',
-        sidebarOpen: false, // Fix lỗi 6: Mặc định đóng
+        sidebarOpen: false, 
         modes: {
             'Mặc định': { pairs: [], matchCase: false, wholeWord: false, autoCaps: false }
         }
@@ -61,7 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
         importReplaceBtn: document.getElementById('import-replace-csv'),
         exportReplaceBtn: document.getElementById('export-replace-csv'),
         
-        // Keywords Tab Controls (Fix lỗi 6: Thứ tự)
+        // Keywords Tab Controls
         fontFamily: document.getElementById('fontFamily'),
         fontSize: document.getElementById('fontSize'),
         kwMatchCaseBtn: document.getElementById('kw-match-case-btn'),
@@ -69,7 +69,6 @@ document.addEventListener('DOMContentLoaded', () => {
         fullKwInput: document.getElementById('full-keywords-input'),
         fullKwTags: document.getElementById('full-keywords-tags'),
         
-        // Fix lỗi 4: Import/Export Keywords
         importKwBtn: document.getElementById('import-kw-csv'),
         exportKwBtn: document.getElementById('export-kw-csv'),
         
@@ -90,50 +89,16 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => { div.style.opacity = '0'; setTimeout(() => div.remove(), 300); }, 3000);
     }
 
-    // --- TAB LOGIC ---
-    function switchTab(tabId) {
-        els.tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === tabId));
-        els.contents.forEach(c => {
-            if (c.id === tabId) {
-                c.classList.remove('hidden');
-                c.classList.add('active');
-            } else {
-                c.classList.add('hidden');
-                c.classList.remove('active');
-            }
+    // Fix Lỗi 1: Paste Text Only (Giữ cấu trúc dòng nhưng bỏ font/size)
+    if (els.editor) {
+        els.editor.addEventListener('paste', (e) => {
+            e.preventDefault();
+            const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+            document.execCommand('insertText', false, text);
         });
-        
-        // Fix lỗi 1: Sidebar Toggle chỉ hiện ở Main và Settings
-        if (els.sidebarToggle) {
-            if (tabId === 'main-tab' || tabId === 'settings-tab') {
-                els.sidebarToggle.classList.remove('hidden');
-            } else {
-                els.sidebarToggle.classList.add('hidden');
-            }
-        }
-    }
-    els.tabs.forEach(btn => btn.onclick = () => switchTab(btn.dataset.tab));
-
-    // --- SIDEBAR LOGIC (Fix lỗi 1: Hoạt động ở tab Settings) ---
-    if (els.sidebar && els.sidebarToggle) {
-        function toggleSidebar(forceState) {
-            const isOpen = forceState !== undefined ? forceState : !state.sidebarOpen;
-            state.sidebarOpen = isOpen;
-            
-            if (isOpen) {
-                els.sidebar.classList.remove('closed');
-                els.sidebarToggle.querySelector('.icon').textContent = '«';
-            } else {
-                els.sidebar.classList.add('closed');
-                els.sidebarToggle.querySelector('.icon').textContent = '»';
-            }
-            saveState();
-        }
-        els.sidebarToggle.onclick = () => toggleSidebar();
-        toggleSidebar(state.sidebarOpen);
     }
 
-    // --- UTILS ---
+    // --- UTILS (Từ mã tham khảo) ---
     function normalizeText(text) {
         if (!text) return '';
         return text
@@ -158,32 +123,39 @@ document.addEventListener('DOMContentLoaded', () => {
         return replacement;
     }
 
-    // === REPLACE LOGIC ===
+    // === FIX LỖI 2 & 7: LOGIC REPLACE MỚI ===
     function performReplaceAll() {
-        if (!els.editor) return notify('Lỗi editor: Không tìm thấy phần tử #editor', 'error');
+        if (!els.editor) return notify('Lỗi editor!', 'error');
 
         const mode = state.modes[state.activeMode];
-        let rawText = els.editor.innerText;
+        // Sử dụng innerText để lấy text cùng dấu xuống dòng (\n)
+        let rawText = els.editor.innerText; 
         if (!rawText.trim()) return notify('Editor trống!', 'error');
 
-        // Fix lỗi 7: KHÔNG thay đổi text button để tránh giật
-        
+        // UI Feedback
+        const originalTextBtn = els.replaceBtn.textContent;
+        els.replaceBtn.textContent = 'Đang xử lý...';
+        els.replaceBtn.disabled = true;
+
         setTimeout(() => {
             try {
+                // 1. Chuẩn hóa Smart Quotes
                 let processedText = normalizeText(rawText);
                 let replaceCount = 0;
 
-                // Phase 1: User Replace
+                // 2. Phase 1: User Replace
                 if (mode.pairs.length > 0) {
                     const rules = mode.pairs
                         .filter(p => p.find && p.find.trim())
                         .map(p => ({ find: normalizeText(p.find), replace: normalizeText(p.replace || '') }))
-                        .sort((a,b) => b.find.length - a.find.length);
+                        .sort((a,b) => b.find.length - a.find.length); // Ưu tiên chuỗi dài
 
                     rules.forEach(rule => {
                         const pattern = escapeRegExp(rule.find);
                         const flags = mode.matchCase ? 'g' : 'gi';
                         let regex;
+                        
+                        // Logic Whole Word chuẩn Google
                         if (mode.wholeWord) {
                             regex = new RegExp(`(?<![\\p{L}\\p{N}_])${pattern}(?![\\p{L}\\p{N}_])`, flags + 'u');
                         } else {
@@ -199,7 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 }
 
-                // Phase 2: Auto Caps
+                // 3. Phase 2: Auto Caps
                 if (mode.autoCaps) {
                     const autoCapsRegex = /(^|[\.?!\n]\s*)(?:\uE000|\uE001|\uE002|\uE003)*([\p{Ll}])/gmu;
                     processedText = processedText.replace(autoCapsRegex, (fullMatch, prefix, char) => {
@@ -207,22 +179,24 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 }
 
-                // Build HTML
+                // 4. Phase 3: Rebuild HTML (Fix lỗi vỡ layout)
+                // Vì chúng ta dùng innerText, các dòng mới là \n. Khi đưa vào innerHTML, ta giữ nguyên \n vì CSS đã có white-space: pre-wrap
                 let finalHTML = '';
                 let buffer = '';
+                
                 for (let i = 0; i < processedText.length; i++) {
                     const c = processedText[i];
                     if (c === MARK_REP_START) {
-                        finalHTML += escapeHTML(buffer) + '<span class="hl-yellow" contenteditable="false">';
+                        finalHTML += escapeHTML(buffer) + '<span class="hl-yellow">';
                         buffer = '';
                     } else if (c === MARK_REP_END) {
-                        finalHTML += escapeHTML(buffer) + '</span>&#8203;';
+                        finalHTML += escapeHTML(buffer) + '</span>';
                         buffer = '';
                     } else if (c === MARK_CAP_START) {
-                        finalHTML += escapeHTML(buffer) + '<span class="hl-blue" contenteditable="false">';
+                        finalHTML += escapeHTML(buffer) + '<span class="hl-blue">';
                         buffer = '';
                     } else if (c === MARK_CAP_END) {
-                        finalHTML += escapeHTML(buffer) + '</span>&#8203;';
+                        finalHTML += escapeHTML(buffer) + '</span>';
                         buffer = '';
                     } else {
                         buffer += c;
@@ -230,19 +204,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 finalHTML += escapeHTML(buffer);
 
+                // Cập nhật DOM
                 els.editor.innerHTML = finalHTML;
                 
-                if (state.keywords.length > 0) highlightKeywordsDOM(true); // Silent update
+                // Cập nhật lại keywords highlight nếu có
+                if (state.keywords.length > 0) highlightKeywordsDOM(true);
 
                 updateWordCount();
                 
-                if (replaceCount > 0) notify(`Thay thế ${replaceCount} từ!`);
-                else if (mode.autoCaps) notify('Đã Auto Caps!');
-                else notify('Không có gì để thay thế.', 'warning');
+                if (replaceCount > 0) notify(`Thay thế ${replaceCount} cụm từ!`);
+                else if (mode.autoCaps) notify('Đã chạy Auto Caps!');
+                else notify('Không tìm thấy gì để thay thế.', 'warning');
 
             } catch (e) {
                 console.error(e);
                 notify('Lỗi: ' + e.message, 'error');
+            } finally {
+                els.replaceBtn.textContent = originalTextBtn;
+                els.replaceBtn.disabled = false;
             }
         }, 50);
     }
@@ -251,7 +230,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function highlightKeywordsDOM(silent = false) {
         if (!els.editor) return 0;
         
-        // Remove old keyword highlights (keep replace/autocaps)
+        // Remove old keyword highlights (keep replace/autocaps spans)
         const oldKws = els.editor.querySelectorAll('.keyword');
         oldKws.forEach(span => {
             const parent = span.parentNode;
@@ -274,7 +253,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const matchCase = state.keywordSettings.matchCase;
         const wholeWord = state.keywordSettings.wholeWord;
         let wordCharRegex = /[\p{L}\p{N}_]/u;
-        let highlightCount = 0; // Fix lỗi 5: Counter
+        let highlightCount = 0;
 
         for (const textNode of textNodes) {
             if (!textNode.parentNode) continue;
@@ -312,6 +291,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 span.contentEditable = "false"; 
 
                 matchNode.parentNode.replaceChild(span, matchNode);
+                // Fix lỗi con trỏ: thêm zero-width space
                 const zws = document.createTextNode('\u200B');
                 span.parentNode.insertBefore(zws, afterNode);
 
@@ -320,6 +300,41 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         return highlightCount;
+    }
+
+    // === TAB & SIDEBAR LOGIC ===
+    function switchTab(tabId) {
+        els.tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === tabId));
+        els.contents.forEach(c => {
+            if (c.id === tabId) {
+                c.classList.remove('hidden');
+                c.classList.add('active');
+            } else {
+                c.classList.add('hidden');
+                c.classList.remove('active');
+            }
+        });
+        if (els.sidebarToggle) {
+            els.sidebarToggle.classList.toggle('hidden', !(tabId === 'main-tab' || tabId === 'settings-tab'));
+        }
+    }
+    els.tabs.forEach(btn => btn.onclick = () => switchTab(btn.dataset.tab));
+
+    if (els.sidebar && els.sidebarToggle) {
+        function toggleSidebar(forceState) {
+            const isOpen = forceState !== undefined ? forceState : !state.sidebarOpen;
+            state.sidebarOpen = isOpen;
+            if (isOpen) {
+                els.sidebar.classList.remove('closed');
+                els.sidebarToggle.querySelector('.icon').textContent = '«';
+            } else {
+                els.sidebar.classList.add('closed');
+                els.sidebarToggle.querySelector('.icon').textContent = '»';
+            }
+            saveState();
+        }
+        els.sidebarToggle.onclick = () => toggleSidebar();
+        toggleSidebar(state.sidebarOpen);
     }
 
     // === KEYWORDS MANAGEMENT ===
@@ -354,9 +369,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // KHẮC PHỤC LỖI TYPEERROR TẠI ĐÂY (Kiểm tra phần tử có tồn tại không)
     [els.sidebarInput, els.fullKwInput].forEach(inp => {
-        if (inp) { // FIX LỖI: Kiểm tra inp có phải là null trước khi gọi addEventListener
+        if (inp) {
             inp.addEventListener('keydown', e => { 
                 if (e.key === 'Enter') { 
                     e.preventDefault(); 
@@ -367,13 +381,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Fix lỗi 4: Import/Export Keywords CSV
+    // === FIX LỖI 3 & 4: EXPORT/IMPORT KEYWORDS ===
     if (els.exportKwBtn) {
         els.exportKwBtn.onclick = () => {
             if (!state.keywords.length) return notify('Danh sách trống!', 'warning');
-            // Export: Mỗi keyword 1 dòng
-            const csvContent = state.keywords.join('\n');
-            const url = URL.createObjectURL(new Blob([csvContent], {type:'text/csv'}));
+            // Fix lỗi 3: Thêm BOM \uFEFF cho UTF-8
+            const csvContent = "\uFEFF" + state.keywords.join('\n');
+            const url = URL.createObjectURL(new Blob([csvContent], {type:'text/csv;charset=utf-8;'}));
             const a = document.createElement('a'); a.href=url; a.download='keywords.csv'; a.click();
         };
     }
@@ -449,7 +463,6 @@ document.addEventListener('DOMContentLoaded', () => {
         saveState();
     }
 
-    // Toggle Handlers (Thêm kiểm tra els trước khi gán)
     if (els.matchCaseBtn) els.matchCaseBtn.onclick = () => { state.modes[state.activeMode].matchCase = !state.modes[state.activeMode].matchCase; saveState(); renderModeUI(); };
     if (els.wholeWordBtn) els.wholeWordBtn.onclick = () => { state.modes[state.activeMode].wholeWord = !state.modes[state.activeMode].wholeWord; saveState(); renderModeUI(); };
     if (els.autoCapsBtn) els.autoCapsBtn.onclick = () => { state.modes[state.activeMode].autoCaps = !state.modes[state.activeMode].autoCaps; saveState(); renderModeUI(); };
@@ -463,9 +476,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Replace CSV
     if (els.exportReplaceBtn) {
         els.exportReplaceBtn.onclick = () => {
+            // Fix lỗi 3: Thêm BOM
             let csv = "\uFEFFfind,replace,mode\n";
             Object.keys(state.modes).forEach(m => state.modes[m].pairs.forEach(p => csv += `"${p.find.replace(/"/g,'""')}","${p.replace.replace(/"/g,'""')}","${m}"\n`));
-            const url = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
+            const url = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8;'}));
             const a = document.createElement('a'); a.href=url; a.download='settings.csv'; a.click();
         };
     }
@@ -477,16 +491,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 const r = new FileReader();
                 r.onload = ev => {
                     const lines = ev.target.result.split(/\r?\n/);
-                    if (!lines[0].includes('find,replace,mode')) return notify('Lỗi file CSV!', 'error');
+                    if (!lines[0].toLowerCase().includes('find,replace,mode')) return notify('Lỗi file CSV!', 'error');
+                    let count = 0;
                     for(let i=1; i<lines.length; i++) {
                         const m = lines[i].match(/^"(.*)","(.*)","(.*)"$/);
                         if (m) {
                             const [_, f, r, mn] = m;
                             if (!state.modes[mn]) state.modes[mn] = {pairs:[], matchCase:false, wholeWord:false, autoCaps:false};
                             state.modes[mn].pairs.push({find: f.replace(/""/g,'"'), replace: r.replace(/""/g,'"')});
+                            count++;
                         }
                     }
-                    saveState(); renderModeUI(); notify('Nhập CSV thành công!');
+                    saveState(); renderModeUI(); notify(`Nhập ${count} cặp thay thế thành công!`);
                 };
                 r.readAsText(e.target.files[0]);
             };
@@ -494,10 +510,9 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // === DISPLAY SETTINGS (Fix lỗi 3) ===
+    // === DISPLAY SETTINGS ===
     function updateFont() {
         if (!els.editor || !els.fontFamily || !els.fontSize) return;
-        // Fix lỗi 3: Áp dụng style quan trọng để đè override
         els.editor.style.setProperty('font-family', els.fontFamily.value, 'important');
         els.editor.style.setProperty('font-size', els.fontSize.value, 'important');
     }
@@ -522,16 +537,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (els.editor) els.editor.addEventListener('input', updateWordCount);
 
-    // Fix lỗi 5: Thông báo số lượng highlight
+    // Fix lỗi 6: Báo lỗi nếu không tìm thấy keyword
     if (els.searchBtn) {
         els.searchBtn.onclick = () => { 
             if (els.sidebarInput) addKeyword(els.sidebarInput.value); 
             const count = highlightKeywordsDOM(); 
-            notify(`Đã tìm & highlight ${count} từ khóa.`); 
+            if (count > 0) notify(`Đã tìm thấy & highlight ${count} từ khóa.`);
+            else notify('Không tìm thấy từ khóa nào trong văn bản.', 'warning');
         };
     }
 
-    // Fix lỗi 2: Xóa không cần xác nhận, giữ keywords
     if (els.clearBtn) {
         els.clearBtn.onclick = () => { 
             if (els.editor) els.editor.innerHTML = ''; 
@@ -539,11 +554,14 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
+    // Fix lỗi 5: Copy xong thì xóa editor
     if (els.copyBtn) {
         els.copyBtn.onclick = () => { 
             if (!els.editor || !els.editor.innerText.trim()) return notify('Trống!', 'error'); 
             navigator.clipboard.writeText(els.editor.innerText); 
-            notify('Đã copy!'); 
+            notify('Đã copy vào clipboard!');
+            els.editor.innerHTML = ''; // Clear text
+            updateWordCount();
         };
     }
 
