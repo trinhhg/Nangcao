@@ -2,30 +2,21 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Tiện Ích Của Trịnh Hg - Pro Mobile Optimized</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tiện Ích Của Trịnh Hg - Pro Version Final</title>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="index.css">
 </head>
 <body class="bg-gray-100 h-screen flex flex-col overflow-hidden">
 
   <header class="app-header">
-    <div class="header-content">
-        <div class="header-left">
-          <h1>Tiện Ích Của Trịnh Hg</h1>
-          <div class="donate-info">
-            <span class="donate-label">DON@TE:</span>
-            <span class="donate-details">MB BANK - TRINH THI XUAN HUONG – 0917678211</span>
-          </div>
-        </div>
-        
-        <div class="header-right-mobile">
-            <button id="mobile-sidebar-toggle" class="sidebar-toggle-btn mobile-only" title="Menu">
-                <span class="icon">☰</span>
-             </button>
-        </div>
+    <div class="header-left">
+      <h1>Tiện Ích Của Trịnh Hg</h1>
+      <div class="donate-info">
+        <span class="donate-label">DON@TE:</span>
+        <span class="donate-details">MB BANK - TRINH THI XUAN HUONG – 0917678211</span>
+      </div>
     </div>
-
     <div class="header-center">
       <nav class="tabs">
         <button class="tab-button active" data-tab="main-tab">Nội Dung</button>
@@ -33,31 +24,17 @@
         <button class="tab-button" data-tab="display-tab">Keywords</button>
       </nav>
     </div>
-    
-    <div class="header-right desktop-only">
-      <button id="header-sidebar-toggle" class="sidebar-toggle-btn" title="Mở/Đóng Sidebar">
+    <div class="header-right">
+      <button id="header-sidebar-toggle" class="sidebar-toggle-btn" title="Mở/Đóng Sidebar Keywords">
         <span class="icon">«</span>
       </button>
     </div>
   </header>
 
   <div id="app-body">
-    <div id="keywords-sidebar" class="sidebar closed">
-        <div class="sidebar-header">
-            <h3>Quick Keywords</h3>
-            <button id="close-sidebar-mobile" class="sidebar-close-btn mobile-only">×</button>
-        </div>
-        <div class="sidebar-content custom-scrollbar">
-            <div class="mb-3">
-                <input type="text" id="sidebar-input" placeholder="Nhập từ khóa..." class="sidebar-input">
-            </div>
-            <div id="sidebar-tags" class="tags-container"></div>
-        </div>
-    </div>
-    
-    <div id="sidebar-overlay" class="overlay hidden"></div>
 
     <div id="content-wrapper">
+
         <div id="main-tab" class="tab-content active main-layout">
             <div id="central-area" class="editor-area">
                 <div id="editor-wrapper" class="editor-wrapper">
@@ -71,10 +48,10 @@
                 <div class="editor-footer">
                     <div id="word-count-display" class="badge">Words: 0</div>
                     <div id="editor-actions" class="footer-actions">
-                        <button id="search" class="btn btn-teal">Highlight</button>
-                        <button id="clear" class="btn btn-teal">Xóa</button>
-                        <button id="copy-editor-content" class="btn btn-teal">Copy</button>
-                        <button id="replace-all" class="btn btn-teal">Thay Thế</button>
+                        <button id="search" class="btn btn-teal">Highlight Keywords</button>
+                        <button id="clear" class="btn btn-teal">Xóa Trắng</button>
+                        <button id="copy-editor-content" class="btn btn-teal">Copy Result & Clear</button>
+                        <button id="replace-all" class="btn btn-teal">Thực Hiện Thay Thế</button>
                     </div>
                 </div>
             </div>
@@ -86,11 +63,12 @@
                 <h2>Quản Lý Cặp Thay Thế</h2>
                 <div class="mode-actions">
                    <div class="select-wrapper">
+                      <label>Chế độ:</label>
                       <select id="mode-select"></select>
                    </div>
-                   <button id="add-mode" class="btn btn-primary compact-btn">+</button>
-                   <button id="rename-mode" class="btn btn-warning compact-btn hidden">Sửa</button>
-                   <button id="delete-mode" class="btn btn-danger compact-btn hidden">Xóa</button>
+                   <button id="add-mode" class="btn btn-primary">+ Mới</button>
+                   <button id="rename-mode" class="btn btn-warning hidden">Đổi Tên</button>
+                   <button id="delete-mode" class="btn btn-danger hidden">Xóa</button>
                 </div>
               </div>
 
@@ -121,7 +99,7 @@
         <div id="display-tab" class="tab-content settings-layout custom-scrollbar">
             <div class="panel-container">
                 <div class="panel-header">
-                    <h2>Cài Đặt Keywords</h2>
+                    <h2>Cài Đặt Hiển Thị & Keywords</h2>
                 </div>
                 
                 <div class="toolbar">
@@ -131,8 +109,8 @@
                     </div>
 
                     <div class="toolbar-group">
-                        <button id="import-kw-csv" class="btn btn-action">Nhập</button>
-                        <button id="export-kw-csv" class="btn btn-action">Xuất</button>
+                        <button id="import-kw-csv" class="btn btn-action">Nhập Keywords</button>
+                        <button id="export-kw-csv" class="btn btn-action">Xuất Keywords</button>
                     </div>
 
                     <div class="toolbar-group">
@@ -168,6 +146,18 @@
             </div>
         </div>
     </div> 
+
+    <div id="keywords-sidebar" class="sidebar closed">
+        <div class="sidebar-header">
+            <h3>Quick Keywords</h3>
+        </div>
+        <div class="sidebar-content custom-scrollbar">
+            <div class="mb-3">
+                <input type="text" id="sidebar-input" placeholder="Nhập từ khóa..." class="sidebar-input">
+            </div>
+            <div id="sidebar-tags" class="tags-container"></div>
+        </div>
+    </div>
 
   </div> <div id="notification-container"></div>
   <script src="index.js"></script>
