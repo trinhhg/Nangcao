@@ -2,113 +2,162 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data:;">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tiện Ích Của Trịnh Hg - Pro Version</title>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="index.css">
 </head>
 <body class="bg-gray-100 h-screen flex flex-col overflow-hidden">
-  <div id="main-app" class="flex flex-1 overflow-hidden">
-      <div class="w-1/5 p-4 bg-white shadow-md flex flex-col z-10 border-r border-gray-200">
-          <h2 class="text-xl font-bold mb-4 text-gray-800 border-b pb-2">Tìm Kiếm</h2>
-          <div class="flex-1 overflow-y-auto pr-1 custom-scrollbar">
-              <div class="mb-4 grid grid-cols-2 gap-2">
-                  <div><label class="block mb-1 text-xs font-semibold">Font:</label>
-                      <select id="fontFamily" class="w-full p-1.5 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-blue-400 outline-none">
-                          <option value="Arial">Arial</option>
-                          <option value="Calibri">Calibri</option>
-                          <option value="'Montserrat', sans-serif" selected>Montserrat</option>
-                          <option value="'Times New Roman', serif">Times New Roman</option>
-                      </select>
-                  </div>
-                  <div><label class="block mb-1 text-xs font-semibold">Cỡ chữ:</label>
-                      <select id="fontSize" class="w-full p-1.5 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-blue-400 outline-none">
-                          <option value="14px">14</option>
-                          <option value="16px" selected>16</option>
-                          <option value="18px">18</option>
-                          <option value="20px">20</option>
-                          <option value="24px">24</option>
-                      </select>
-                  </div>
-              </div>
-              <div class="mb-4 space-y-2">
-                  <label class="flex items-center cursor-pointer hover:bg-gray-50 p-1 rounded">
-                      <input type="checkbox" id="matchCase" class="mr-2 form-checkbox h-4 w-4 text-blue-600"> 
-                      <span class="text-sm">Phân biệt hoa/thường</span>
-                  </label>
-                  <label class="flex items-center cursor-pointer hover:bg-gray-50 p-1 rounded">
-                      <input type="checkbox" id="wholeWords" class="mr-2 form-checkbox h-4 w-4 text-blue-600"> 
-                      <span class="text-sm">Từ hoàn chỉnh</span>
-                  </label>
-              </div>
-              <div class="mb-4">
-                  <label class="block mb-2 text-sm font-semibold">Từ khóa:</label>
-                  <input type="text" id="keywords-input" placeholder="Nhập từ rồi Enter hoặc phẩy..." class="w-full p-2 border border-gray-300 rounded bg-gray-50 text-sm focus:bg-white focus:ring-2 focus:ring-green-400 outline-none transition-all">
-              </div>
 
-              <div class="flex gap-2 mb-4">
-                  <button id="search" class="flex-1 bg-green-600 text-white py-2 rounded shadow hover:bg-green-700 active:scale-95 transition-transform text-xs font-bold uppercase tracking-wide">Tìm</button>
-                  <button id="clear" class="flex-1 bg-red-500 text-white py-2 rounded shadow hover:bg-red-600 active:scale-95 transition-transform text-xs font-bold uppercase tracking-wide">Xóa</button>
-                  <button id="copy-editor-content" class="flex-1 bg-blue-500 text-white py-2 rounded shadow hover:bg-blue-600 active:scale-95 transition-transform text-xs font-bold uppercase tracking-wide">Copy</button>
-              </div>
-
-              <div id="keywords-tags" class="flex flex-wrap gap-2 content-start"></div>
-          </div>
+  <header class="app-header">
+    <div class="header-left">
+      <h1>Tiện Ích Của Trịnh Hg</h1>
+      <div class="donate-info">
+        <span class="donate-label">DON@TE:</span>
+        <span class="donate-details">MB BANK - TRINH THI XUAN HUONG – 0917678211</span>
       </div>
+    </div>
+    <div class="header-center">
+      <nav class="tabs">
+        <button class="tab-button active" data-tab="main-tab">Nội Dung</button>
+        <button class="tab-button" data-tab="settings-tab">Cài Đặt</button>
+        <button class="tab-button" data-tab="display-tab">Keywords</button>
+      </nav>
+    </div>
+    <div class="header-right">
+      <button id="header-sidebar-toggle" class="sidebar-toggle-btn" title="Mở/Đóng Sidebar Keywords">
+        <span class="icon">«</span>
+      </button>
+    </div>
+  </header>
 
-      <div class="flex-1 p-4 bg-gray-50 mx-0 flex flex-col overflow-hidden relative">
-          <div class="flex justify-between items-end mb-2 px-2">
-              <h2 class="text-xl font-bold text-gray-800">Nội Dung Chương</h2>
-              <div class="text-xs text-right space-y-1">
-                  <div class="text-red-600 font-bold bg-red-50 px-2 py-0.5 rounded border border-red-100">DON@TE: MB BANK - TRINH THI XUAN HUONG - 0917678211</div>
-                  <div class="text-gray-600">Góp ý: <a href="https://www.facebook.com/trinh.hg.57" target="_blank" class="font-bold text-blue-600 hover:underline">fb.com/trinh.hg.57</a></div>
+  <div id="app-body">
+
+    <div id="content-wrapper">
+
+        <div id="main-tab" class="tab-content active main-layout">
+            <div id="central-area" class="editor-area">
+                <div id="editor-wrapper" class="editor-wrapper">
+                    <div id="editor" 
+                         contenteditable="true" 
+                         spellcheck="false" 
+                         class="custom-scrollbar"
+                         data-placeholder="Dán văn bản vào đây..."></div>
+                </div>
+                
+                <div class="editor-footer">
+                    <div id="word-count-display" class="badge">Words: 0</div>
+                    <div id="editor-actions" class="footer-actions">
+                        <button id="search" class="btn btn-teal">Highlight Keywords</button>
+                        <button id="clear" class="btn btn-teal">Xóa Trắng</button>
+                        <button id="copy-editor-content" class="btn btn-teal">Copy Result</button>
+                        <button id="replace-all" class="btn btn-teal">Thực Hiện Thay Thế</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="settings-tab" class="tab-content settings-layout custom-scrollbar">
+           <div class="panel-container">
+              <div class="panel-header">
+                <h2>Quản Lý Cặp Thay Thế</h2>
+                <div class="mode-actions">
+                   <div class="select-wrapper">
+                      <label>Chế độ:</label>
+                      <select id="mode-select"></select>
+                   </div>
+                   <button id="add-mode" class="btn btn-primary">+ Mới</button>
+                   <button id="rename-mode" class="btn btn-warning hidden">Đổi Tên</button>
+                   <button id="delete-mode" class="btn btn-danger hidden">Xóa</button>
+                </div>
               </div>
-          </div>
-          
-          <div id="editor-wrapper" class="relative flex-1 bg-white border border-gray-300 shadow-inner rounded-lg overflow-hidden cursor-text">
-              <div id="editor" 
-                   contenteditable="true" 
-                   spellcheck="false" 
-                   class="w-full h-full p-6 outline-none overflow-y-auto custom-scrollbar"
-                   data-placeholder="Dán văn bản vào đây..."></div>
-          </div>
-      </div>
 
-      <div class="w-1/5 p-4 bg-white shadow-md flex flex-col z-10 border-l border-gray-200">
-          <h2 class="text-xl font-bold mb-4 text-gray-800 border-b pb-2">Thay Thế</h2>
-          <div class="flex-1 overflow-y-auto pr-1 custom-scrollbar">
-              <div class="mb-4 p-3 bg-gray-50 rounded border border-gray-200 space-y-2">
-                  <label class="block text-xs font-bold text-gray-500 uppercase">Chế độ (Mode)</label>
-                  <div class="flex gap-1">
-                      <select id="mode-select" class="flex-1 p-1.5 border rounded text-xs font-medium outline-none focus:border-blue-500"></select>
-                      <button id="add-mode" class="px-2 bg-blue-500 text-white rounded hover:bg-blue-600 text-lg leading-none" title="Thêm Mode mới">+</button>
-                  </div>
-                  <div class="flex gap-1">
-                      <button id="rename-mode" class="flex-1 py-1 bg-gray-400 text-white rounded text-xs hover:bg-gray-500 hidden">Đổi tên</button>
-                      <button id="delete-mode-btn" class="flex-1 py-1 bg-red-400 text-white rounded text-xs hover:bg-red-500 hidden">Xóa</button>
-                  </div>
-                  <button id="match-case-replace" class="w-full py-1.5 mt-1 rounded text-xs font-bold transition-colors bg-gray-200 text-gray-600">Case Sensitive: TẮT</button>
-              </div>
-
-              <div class="flex gap-2 mb-4">
-                  <button id="export-csv" class="flex-1 py-1.5 bg-gray-100 text-gray-700 border border-gray-300 rounded text-xs font-semibold hover:bg-gray-200">Xuất CSV</button>
-                  <button id="import-csv" class="flex-1 py-1.5 bg-gray-100 text-gray-700 border border-gray-300 rounded text-xs font-semibold hover:bg-gray-200">Nhập CSV</button>
-              </div>
-
-              <div class="grid grid-cols-3 gap-1 mb-4">
-                  <button id="add-pair" class="py-2 bg-blue-100 text-blue-700 rounded border border-blue-200 hover:bg-blue-200 text-xs font-bold">Thêm Cặp</button>
-                  <button id="save-settings" class="py-2 bg-green-100 text-green-700 rounded border border-green-200 hover:bg-green-200 text-xs font-bold">Lưu Lại</button>
-                  <button id="replace-all" class="py-2 bg-purple-600 text-white rounded shadow hover:bg-purple-700 active:scale-95 text-xs font-bold">THAY THẾ</button>
+              <div class="toolbar">
+                <div class="toolbar-group">
+                    <button id="match-case-btn" class="btn btn-toggle">Match Case: Tắt</button>
+                    <button id="whole-word-btn" class="btn btn-toggle">Whole Word: Tắt</button>
+                    <button id="auto-caps-btn" class="btn btn-toggle">Auto Caps: Tắt</button>
+                </div>
+                <div class="toolbar-group">
+                    <button id="import-replace-csv" class="btn btn-outline">Nhập CSV</button>
+                    <button id="export-replace-csv" class="btn btn-outline">Xuất CSV</button>
+                </div>
               </div>
               
-              <div id="punctuation-list" class="space-y-2 pb-10"></div>
-          </div>
-      </div>
-  </div>
+              <div class="list-actions">
+                  <button id="add-pair" class="btn btn-success icon-btn">Thêm cặp mới</button>
+                  <button id="save-settings" class="btn btn-primary icon-btn">Lưu tất cả</button>
+              </div>
 
-  <div id="notification-container"></div>
+              <div class="scroll-area">
+                <div id="punctuation-list"></div>
+                <div id="empty-state" class="empty-message hidden">Chưa có cặp thay thế nào.</div>
+              </div>
+           </div>
+        </div>
+
+        <div id="display-tab" class="tab-content settings-layout custom-scrollbar">
+            <div class="panel-container">
+                <div class="panel-header">
+                    <h2>Cài Đặt Hiển Thị & Keywords</h2>
+                </div>
+                
+                <div class="toolbar">
+                    <div class="toolbar-group">
+                        <button id="kw-match-case-btn" class="btn btn-toggle">Match Case: Tắt</button>
+                        <button id="kw-whole-word-btn" class="btn btn-toggle">Whole Word: Tắt</button>
+                    </div>
+
+                    <div class="toolbar-group">
+                        <button id="import-kw-csv" class="btn btn-outline">Nhập Keywords</button>
+                        <button id="export-kw-csv" class="btn btn-outline">Xuất Keywords</button>
+                    </div>
+
+                    <div class="toolbar-group">
+                        <div class="control-group">
+                            <label>Font:</label>
+                            <select id="fontFamily" class="input-sm">
+                                <option value="Arial, sans-serif">Arial</option>
+                                <option value="'Montserrat', sans-serif" selected>Montserrat</option>
+                                <option value="'Times New Roman', serif">Times New Roman</option>
+                            </select>
+                        </div>
+                        <div class="control-group">
+                            <label>Size:</label>
+                            <select id="fontSize" class="input-sm">
+                                <option value="14px">14</option>
+                                <option value="16px" selected>16</option>
+                                <option value="18px">18</option>
+                                <option value="20px">20</option>
+                                <option value="24px">24</option>
+                                <option value="28px">28</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="keywords-panel p-4">
+                    <div class="keywords-input-area">
+                        <h4 class="input-label">Danh sách Keywords</h4>
+                        <input type="text" id="full-keywords-input" placeholder="Nhập từ khóa highlight (Enter hoặc phẩy)..." class="w-full-input">
+                        <div id="full-keywords-tags" class="tags-container border p-2 min-h-[100px] bg-white rounded mt-2"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div> <div id="keywords-sidebar" class="sidebar closed">
+        <div class="sidebar-header">
+            <h3>Quick Keywords</h3>
+        </div>
+        <div class="sidebar-content custom-scrollbar">
+            <div class="mb-3">
+                <input type="text" id="sidebar-input" placeholder="Nhập từ khóa..." class="sidebar-input">
+            </div>
+            <div id="sidebar-tags" class="tags-container"></div>
+        </div>
+    </div>
+
+  </div> <div id="notification-container"></div>
   <script src="index.js"></script>
 </body>
 </html>
