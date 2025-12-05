@@ -104,30 +104,34 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         // Fix lỗi 1: Sidebar Toggle chỉ hiện ở Main và Settings
-        if (tabId === 'main-tab' || tabId === 'settings-tab') {
-            els.sidebarToggle.classList.remove('hidden');
-        } else {
-            els.sidebarToggle.classList.add('hidden');
+        if (els.sidebarToggle) {
+            if (tabId === 'main-tab' || tabId === 'settings-tab') {
+                els.sidebarToggle.classList.remove('hidden');
+            } else {
+                els.sidebarToggle.classList.add('hidden');
+            }
         }
     }
     els.tabs.forEach(btn => btn.onclick = () => switchTab(btn.dataset.tab));
 
     // --- SIDEBAR LOGIC (Fix lỗi 1: Hoạt động ở tab Settings) ---
-    function toggleSidebar(forceState) {
-        const isOpen = forceState !== undefined ? forceState : !state.sidebarOpen;
-        state.sidebarOpen = isOpen;
-        
-        if (isOpen) {
-            els.sidebar.classList.remove('closed');
-            els.sidebarToggle.querySelector('.icon').textContent = '«';
-        } else {
-            els.sidebar.classList.add('closed');
-            els.sidebarToggle.querySelector('.icon').textContent = '»';
+    if (els.sidebar && els.sidebarToggle) {
+        function toggleSidebar(forceState) {
+            const isOpen = forceState !== undefined ? forceState : !state.sidebarOpen;
+            state.sidebarOpen = isOpen;
+            
+            if (isOpen) {
+                els.sidebar.classList.remove('closed');
+                els.sidebarToggle.querySelector('.icon').textContent = '«';
+            } else {
+                els.sidebar.classList.add('closed');
+                els.sidebarToggle.querySelector('.icon').textContent = '»';
+            }
+            saveState();
         }
-        saveState();
+        els.sidebarToggle.onclick = () => toggleSidebar();
+        toggleSidebar(state.sidebarOpen);
     }
-    els.sidebarToggle.onclick = () => toggleSidebar();
-    toggleSidebar(state.sidebarOpen);
 
     // --- UTILS ---
     function normalizeText(text) {
@@ -156,6 +160,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // === REPLACE LOGIC ===
     function performReplaceAll() {
+        if (!els.editor) return notify('Lỗi editor: Không tìm thấy phần tử #editor', 'error');
+
         const mode = state.modes[state.activeMode];
         let rawText = els.editor.innerText;
         if (!rawText.trim()) return notify('Editor trống!', 'error');
@@ -243,6 +249,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // === HIGHLIGHT KEYWORDS ===
     function highlightKeywordsDOM(silent = false) {
+        if (!els.editor) return 0;
+        
         // Remove old keyword highlights (keep replace/autocaps)
         const oldKws = els.editor.querySelectorAll('.keyword');
         oldKws.forEach(span => {
@@ -328,16 +336,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if (changed) {
             renderTags(); saveState(); highlightKeywordsDOM(true);
         }
-        els.sidebarInput.value = '';
-        els.fullKwInput.value = '';
+        if (els.sidebarInput) els.sidebarInput.value = '';
+        if (els.fullKwInput) els.fullKwInput.value = '';
     }
 
     function renderTags() {
         const html = state.keywords.map(k => `
             <div class="tag"><span>${escapeHTML(k)}</span><span class="remove-tag" data-kw="${escapeHTML(k)}">×</span></div>
         `).join('');
-        els.sidebarTags.innerHTML = html;
-        els.fullKwTags.innerHTML = html;
+        if (els.sidebarTags) els.sidebarTags.innerHTML = html;
+        if (els.fullKwTags) els.fullKwTags.innerHTML = html;
         document.querySelectorAll('.remove-tag').forEach(btn => {
             btn.onclick = (e) => {
                 state.keywords = state.keywords.filter(k => k !== e.target.dataset.kw);
@@ -346,56 +354,70 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // KHẮC PHỤC LỖI TYPEERROR TẠI ĐÂY (Kiểm tra phần tử có tồn tại không)
     [els.sidebarInput, els.fullKwInput].forEach(inp => {
-        inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addKeyword(inp.value); } });
-        inp.addEventListener('blur', () => addKeyword(inp.value));
+        if (inp) { // FIX LỖI: Kiểm tra inp có phải là null trước khi gọi addEventListener
+            inp.addEventListener('keydown', e => { 
+                if (e.key === 'Enter') { 
+                    e.preventDefault(); 
+                    addKeyword(inp.value); 
+                } 
+            });
+            inp.addEventListener('blur', () => addKeyword(inp.value));
+        }
     });
 
     // Fix lỗi 4: Import/Export Keywords CSV
-    els.exportKwBtn.onclick = () => {
-        if (!state.keywords.length) return notify('Danh sách trống!', 'warning');
-        // Export: Mỗi keyword 1 dòng
-        const csvContent = state.keywords.join('\n');
-        const url = URL.createObjectURL(new Blob([csvContent], {type:'text/csv'}));
-        const a = document.createElement('a'); a.href=url; a.download='keywords.csv'; a.click();
-    };
-
-    els.importKwBtn.onclick = () => {
-        const inp = document.createElement('input'); inp.type='file'; inp.accept='.csv, .txt';
-        inp.onchange = e => {
-            if(!e.target.files[0]) return;
-            const r = new FileReader();
-            r.onload = ev => {
-                const lines = ev.target.result.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-                let count = 0;
-                lines.forEach(l => {
-                    if (!state.keywords.includes(l)) {
-                        state.keywords.push(l); count++;
-                    }
-                });
-                renderTags(); saveState(); notify(`Đã thêm ${count} từ khóa!`);
-            };
-            r.readAsText(e.target.files[0]);
+    if (els.exportKwBtn) {
+        els.exportKwBtn.onclick = () => {
+            if (!state.keywords.length) return notify('Danh sách trống!', 'warning');
+            // Export: Mỗi keyword 1 dòng
+            const csvContent = state.keywords.join('\n');
+            const url = URL.createObjectURL(new Blob([csvContent], {type:'text/csv'}));
+            const a = document.createElement('a'); a.href=url; a.download='keywords.csv'; a.click();
         };
-        inp.click();
-    };
+    }
+
+    if (els.importKwBtn) {
+        els.importKwBtn.onclick = () => {
+            const inp = document.createElement('input'); inp.type='file'; inp.accept='.csv, .txt';
+            inp.onchange = e => {
+                if(!e.target.files[0]) return;
+                const r = new FileReader();
+                r.onload = ev => {
+                    const lines = ev.target.result.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+                    let count = 0;
+                    lines.forEach(l => {
+                        if (!state.keywords.includes(l)) {
+                            state.keywords.push(l); count++;
+                        }
+                    });
+                    renderTags(); saveState(); notify(`Đã thêm ${count} từ khóa!`);
+                };
+                r.readAsText(e.target.files[0]);
+            };
+            inp.click();
+        };
+    }
 
     // === SETTINGS UI ===
     function renderModeUI() {
+        if (!els.puncList || !els.modeSelect) return;
+
         const mode = state.modes[state.activeMode];
-        updateToggle(els.matchCaseBtn, mode.matchCase);
-        updateToggle(els.wholeWordBtn, mode.wholeWord);
-        updateToggle(els.autoCapsBtn, mode.autoCaps);
+        if (els.matchCaseBtn) updateToggle(els.matchCaseBtn, mode.matchCase);
+        if (els.wholeWordBtn) updateToggle(els.wholeWordBtn, mode.wholeWord);
+        if (els.autoCapsBtn) updateToggle(els.autoCapsBtn, mode.autoCaps);
         
         els.puncList.innerHTML = '';
         mode.pairs.forEach(p => addPairUI(p.find, p.replace));
         els.modeSelect.innerHTML = '';
         Object.keys(state.modes).forEach(m => els.modeSelect.add(new Option(m, m, false, m === state.activeMode)));
-        els.emptyState.classList.toggle('hidden', els.puncList.children.length > 0);
+        if (els.emptyState) els.emptyState.classList.toggle('hidden', els.puncList.children.length > 0);
         
         const isDef = state.activeMode === 'Mặc định';
-        els.renameModeBtn.classList.toggle('hidden', isDef);
-        els.deleteModeBtn.classList.toggle('hidden', isDef);
+        if (els.renameModeBtn) els.renameModeBtn.classList.toggle('hidden', isDef);
+        if (els.deleteModeBtn) els.deleteModeBtn.classList.toggle('hidden', isDef);
     }
 
     function updateToggle(btn, isActive) {
@@ -414,10 +436,11 @@ document.addEventListener('DOMContentLoaded', () => {
         div.querySelector('.remove').onclick = () => { div.remove(); savePairs(); };
         div.querySelectorAll('input').forEach(i => i.addEventListener('input', () => savePairs()));
         els.puncList.prepend(div);
-        els.emptyState.classList.add('hidden');
+        if (els.emptyState) els.emptyState.classList.add('hidden');
     }
 
     function savePairs() {
+        if (!els.puncList) return;
         const pairs = [];
         els.puncList.querySelectorAll('.punctuation-item').forEach(d => {
             pairs.push({ find: d.querySelector('.find').value, replace: d.querySelector('.replace').value });
@@ -426,92 +449,107 @@ document.addEventListener('DOMContentLoaded', () => {
         saveState();
     }
 
-    // Toggle Handlers
-    els.matchCaseBtn.onclick = () => { state.modes[state.activeMode].matchCase = !state.modes[state.activeMode].matchCase; saveState(); renderModeUI(); };
-    els.wholeWordBtn.onclick = () => { state.modes[state.activeMode].wholeWord = !state.modes[state.activeMode].wholeWord; saveState(); renderModeUI(); };
-    els.autoCapsBtn.onclick = () => { state.modes[state.activeMode].autoCaps = !state.modes[state.activeMode].autoCaps; saveState(); renderModeUI(); };
-    els.modeSelect.onchange = () => { state.activeMode = els.modeSelect.value; saveState(); renderModeUI(); };
-    els.addModeBtn.onclick = () => { const n = prompt('Tên mới:'); if (n && !state.modes[n]) { state.modes[n] = { pairs: [], matchCase:false, wholeWord:false, autoCaps:false }; state.activeMode = n; saveState(); renderModeUI(); } };
-    els.renameModeBtn.onclick = () => { const n = prompt('Tên mới:', state.activeMode); if (n && !state.modes[n]) { state.modes[n] = state.modes[state.activeMode]; delete state.modes[state.activeMode]; state.activeMode = n; saveState(); renderModeUI(); } };
-    els.deleteModeBtn.onclick = () => { if (confirm('Xóa?')) { delete state.modes[state.activeMode]; state.activeMode = 'Mặc định'; saveState(); renderModeUI(); } };
-    els.addPairBtn.onclick = () => { addPairUI(); els.puncList.firstChild.querySelector('input').focus(); };
-    els.saveSettingsBtn.onclick = () => { savePairs(); notify('Đã lưu tất cả!'); };
+    // Toggle Handlers (Thêm kiểm tra els trước khi gán)
+    if (els.matchCaseBtn) els.matchCaseBtn.onclick = () => { state.modes[state.activeMode].matchCase = !state.modes[state.activeMode].matchCase; saveState(); renderModeUI(); };
+    if (els.wholeWordBtn) els.wholeWordBtn.onclick = () => { state.modes[state.activeMode].wholeWord = !state.modes[state.activeMode].wholeWord; saveState(); renderModeUI(); };
+    if (els.autoCapsBtn) els.autoCapsBtn.onclick = () => { state.modes[state.activeMode].autoCaps = !state.modes[state.activeMode].autoCaps; saveState(); renderModeUI(); };
+    if (els.modeSelect) els.modeSelect.onchange = () => { state.activeMode = els.modeSelect.value; saveState(); renderModeUI(); };
+    if (els.addModeBtn) els.addModeBtn.onclick = () => { const n = prompt('Tên mới:'); if (n && !state.modes[n]) { state.modes[n] = { pairs: [], matchCase:false, wholeWord:false, autoCaps:false }; state.activeMode = n; saveState(); renderModeUI(); } };
+    if (els.renameModeBtn) els.renameModeBtn.onclick = () => { const n = prompt('Tên mới:', state.activeMode); if (n && !state.modes[n]) { state.modes[n] = state.modes[state.activeMode]; delete state.modes[state.activeMode]; state.activeMode = n; saveState(); renderModeUI(); } };
+    if (els.deleteModeBtn) els.deleteModeBtn.onclick = () => { if (confirm('Xóa?')) { delete state.modes[state.activeMode]; state.activeMode = 'Mặc định'; saveState(); renderModeUI(); } };
+    if (els.addPairBtn) els.addPairBtn.onclick = () => { addPairUI(); els.puncList.firstChild.querySelector('input').focus(); };
+    if (els.saveSettingsBtn) els.saveSettingsBtn.onclick = () => { savePairs(); notify('Đã lưu tất cả!'); };
 
     // Replace CSV
-    els.exportReplaceBtn.onclick = () => {
-        let csv = "\uFEFFfind,replace,mode\n";
-        Object.keys(state.modes).forEach(m => state.modes[m].pairs.forEach(p => csv += `"${p.find.replace(/"/g,'""')}","${p.replace.replace(/"/g,'""')}","${m}"\n`));
-        const url = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
-        const a = document.createElement('a'); a.href=url; a.download='settings.csv'; a.click();
-    };
-    els.importReplaceBtn.onclick = () => {
-        const inp = document.createElement('input'); inp.type='file'; inp.accept='.csv';
-        inp.onchange = e => {
-            if(!e.target.files[0]) return;
-            const r = new FileReader();
-            r.onload = ev => {
-                const lines = ev.target.result.split(/\r?\n/);
-                if (!lines[0].includes('find,replace,mode')) return notify('Lỗi file CSV!', 'error');
-                for(let i=1; i<lines.length; i++) {
-                    const m = lines[i].match(/^"(.*)","(.*)","(.*)"$/);
-                    if (m) {
-                        const [_, f, r, mn] = m;
-                        if (!state.modes[mn]) state.modes[mn] = {pairs:[], matchCase:false, wholeWord:false, autoCaps:false};
-                        state.modes[mn].pairs.push({find: f.replace(/""/g,'"'), replace: r.replace(/""/g,'"')});
-                    }
-                }
-                saveState(); renderModeUI(); notify('Nhập CSV thành công!');
-            };
-            r.readAsText(e.target.files[0]);
+    if (els.exportReplaceBtn) {
+        els.exportReplaceBtn.onclick = () => {
+            let csv = "\uFEFFfind,replace,mode\n";
+            Object.keys(state.modes).forEach(m => state.modes[m].pairs.forEach(p => csv += `"${p.find.replace(/"/g,'""')}","${p.replace.replace(/"/g,'""')}","${m}"\n`));
+            const url = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
+            const a = document.createElement('a'); a.href=url; a.download='settings.csv'; a.click();
         };
-        inp.click();
-    };
+    }
+    if (els.importReplaceBtn) {
+        els.importReplaceBtn.onclick = () => {
+            const inp = document.createElement('input'); inp.type='file'; inp.accept='.csv';
+            inp.onchange = e => {
+                if(!e.target.files[0]) return;
+                const r = new FileReader();
+                r.onload = ev => {
+                    const lines = ev.target.result.split(/\r?\n/);
+                    if (!lines[0].includes('find,replace,mode')) return notify('Lỗi file CSV!', 'error');
+                    for(let i=1; i<lines.length; i++) {
+                        const m = lines[i].match(/^"(.*)","(.*)","(.*)"$/);
+                        if (m) {
+                            const [_, f, r, mn] = m;
+                            if (!state.modes[mn]) state.modes[mn] = {pairs:[], matchCase:false, wholeWord:false, autoCaps:false};
+                            state.modes[mn].pairs.push({find: f.replace(/""/g,'"'), replace: r.replace(/""/g,'"')});
+                        }
+                    }
+                    saveState(); renderModeUI(); notify('Nhập CSV thành công!');
+                };
+                r.readAsText(e.target.files[0]);
+            };
+            inp.click();
+        };
+    }
 
     // === DISPLAY SETTINGS (Fix lỗi 3) ===
     function updateFont() {
+        if (!els.editor || !els.fontFamily || !els.fontSize) return;
         // Fix lỗi 3: Áp dụng style quan trọng để đè override
         els.editor.style.setProperty('font-family', els.fontFamily.value, 'important');
         els.editor.style.setProperty('font-size', els.fontSize.value, 'important');
     }
-    els.fontFamily.onchange = updateFont;
-    els.fontSize.onchange = updateFont;
+    if (els.fontFamily) els.fontFamily.onchange = updateFont;
+    if (els.fontSize) els.fontSize.onchange = updateFont;
     
     function updateKwUI() {
-        updateToggle(els.kwMatchCaseBtn, state.keywordSettings.matchCase);
-        updateToggle(els.kwWholeWordBtn, state.keywordSettings.wholeWord);
+        if (els.kwMatchCaseBtn) updateToggle(els.kwMatchCaseBtn, state.keywordSettings.matchCase);
+        if (els.kwWholeWordBtn) updateToggle(els.kwWholeWordBtn, state.keywordSettings.wholeWord);
     }
-    els.kwMatchCaseBtn.onclick = () => { state.keywordSettings.matchCase = !state.keywordSettings.matchCase; saveState(); updateKwUI(); highlightKeywordsDOM(true); };
-    els.kwWholeWordBtn.onclick = () => { state.keywordSettings.wholeWord = !state.keywordSettings.wholeWord; saveState(); updateKwUI(); highlightKeywordsDOM(true); };
+    if (els.kwMatchCaseBtn) els.kwMatchCaseBtn.onclick = () => { state.keywordSettings.matchCase = !state.keywordSettings.matchCase; saveState(); updateKwUI(); highlightKeywordsDOM(true); };
+    if (els.kwWholeWordBtn) els.kwWholeWordBtn.onclick = () => { state.keywordSettings.wholeWord = !state.keywordSettings.wholeWord; saveState(); updateKwUI(); highlightKeywordsDOM(true); };
     
     updateKwUI();
 
     // === EDITOR ACTIONS ===
     function updateWordCount() {
+        if (!els.editor || !els.wordCount) return;
         const txt = els.editor.innerText || '';
         const count = txt.trim() ? txt.trim().split(/\s+/).length : 0;
         els.wordCount.textContent = `Words: ${count}`;
     }
-    els.editor.addEventListener('input', updateWordCount);
+    if (els.editor) els.editor.addEventListener('input', updateWordCount);
 
     // Fix lỗi 5: Thông báo số lượng highlight
-    els.searchBtn.onclick = () => { 
-        addKeyword(els.sidebarInput.value); 
-        const count = highlightKeywordsDOM(); 
-        notify(`Đã tìm & highlight ${count} từ khóa.`); 
-    };
+    if (els.searchBtn) {
+        els.searchBtn.onclick = () => { 
+            if (els.sidebarInput) addKeyword(els.sidebarInput.value); 
+            const count = highlightKeywordsDOM(); 
+            notify(`Đã tìm & highlight ${count} từ khóa.`); 
+        };
+    }
 
     // Fix lỗi 2: Xóa không cần xác nhận, giữ keywords
-    els.clearBtn.onclick = () => { 
-        els.editor.innerHTML = ''; 
-        updateWordCount(); 
-        // highlightKeywordsDOM(true); // Không cần highlight vì rỗng
-    };
+    if (els.clearBtn) {
+        els.clearBtn.onclick = () => { 
+            if (els.editor) els.editor.innerHTML = ''; 
+            updateWordCount(); 
+        };
+    }
 
-    els.copyBtn.onclick = () => { 
-        if (!els.editor.innerText.trim()) return notify('Trống!', 'error'); 
-        navigator.clipboard.writeText(els.editor.innerText); 
-        notify('Đã copy!'); 
-    };
+    if (els.copyBtn) {
+        els.copyBtn.onclick = () => { 
+            if (!els.editor || !els.editor.innerText.trim()) return notify('Trống!', 'error'); 
+            navigator.clipboard.writeText(els.editor.innerText); 
+            notify('Đã copy!'); 
+        };
+    }
+
+    if (els.replaceBtn) {
+        els.replaceBtn.onclick = performReplaceAll;
+    }
 
     // === INIT ===
     renderTags(); renderModeUI(); updateFont(); updateWordCount();
