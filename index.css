@@ -17,7 +17,7 @@ body {
 .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-/* === HEADER === */
+/* === HEADER (Giữ nguyên) === */
 .app-header {
   background: white; border-bottom: 1px solid #e5e7eb; padding: 0 20px; height: 60px;
   display: flex; justify-content: space-between; align-items: center;
@@ -27,8 +27,7 @@ body {
 .header-right { flex: 0 0 50px; display: flex; justify-content: flex-end; }
 .header-center { flex: 1; display: flex; justify-content: center; height: 100%; }
 .header-left h1 { margin: 0; font-size: 16px; color: #111827; font-weight: 700; margin-bottom: 4px; }
-
-/* DONATE STYLES */
+/* ... (DONATE STYLES giữ nguyên) */
 .donate-info { font-size: 11px; display: flex; align-items: center; gap: 5px; white-space: nowrap; }
 .donate-label {
     background: #dc2626; color: white; padding: 2px 6px; border-radius: 4px;
@@ -41,7 +40,7 @@ body {
     100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
 }
 
-/* === TABS === */
+/* === TABS (Giữ nguyên) === */
 .tabs { display: flex; gap: 5px; height: 100%; align-items: flex-end; }
 .tab-button {
   border: none; background: transparent; padding: 0 20px; height: 45px;
@@ -59,81 +58,110 @@ body {
 #content-wrapper {
     flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative;
 }
-
 .tab-content { display: none; width: 100%; height: 100%; }
 .tab-content.active { display: flex; }
-
 .main-layout { 
     flex-direction: column; 
     padding: 15px;
     background: #f3f4f6;
 }
-
 .editor-area { 
     flex: 1; display: flex; flex-direction: column; overflow: hidden; 
     border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     background: white;
 }
-.editor-wrapper { flex: 1; background: white; position: relative; overflow: hidden; }
+/* QUAN TRỌNG: Wrapper bao gồm Editor và Overlay */
+.editor-wrapper { 
+    flex: 1; 
+    background: white; 
+    position: relative; 
+    overflow: auto; /* CUỘN Ở ĐÂY! */ 
+    border-radius: 8px;
+}
 
-/* FIX LỖI 1: white-space: pre-wrap CỰC KỲ QUAN TRỌNG ĐỂ GIỮ DÒNG TRỐNG */
-#editor { 
-    width: 100%; height: 100%; padding: 20px; outline: none; overflow-y: auto; 
-    line-height: 1.8; color: #333; 
+/* LỚP NHẬP LIỆU (TEXTAREA) */
+.editor-input {
+    position: absolute; /* Chồng lên */
+    top: 0; left: 0;
+    width: 100%; height: 100%; 
+    padding: 20px; 
+    border: none;
+    resize: none;
+    outline: none; 
+    background: transparent;
+    color: #333; 
+    line-height: 1.8;
+    z-index: 2; /* Cao hơn Overlay */
+    /* Đồng bộ với Overlay */
     white-space: pre-wrap; 
     word-break: break-word;
 }
-#editor:empty::before { content: attr(data-placeholder); color: #9ca3af; pointer-events: none; }
+.editor-input::placeholder { color: #9ca3af; }
 
-/* FOOTER */
+/* LỚP HIGHLIGHT OVERLAY */
+.highlight-layer {
+    position: absolute; /* Chồng lên */
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    padding: 20px; 
+    z-index: 1; /* Thấp hơn Input */
+    pointer-events: none; /* Không chặn click/input */
+    
+    /* Đồng bộ font và style với Input */
+    color: transparent; /* ẨN TEXT GỐC, chỉ để lại highlight background */
+    line-height: 1.8;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+/* Ẩn scrollbar trên Overlay (Chỉ Input/Wrapper cuộn) */
+.highlight-layer::-webkit-scrollbar { width: 0; }
+
+
+/* FOOTER (Giữ nguyên) */
 .editor-footer {
     padding: 10px 15px; border-top: 1px solid #e5e7eb; background: #f9fafb;
     display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;
 }
 .footer-actions { display: flex; gap: 8px; }
-
-/* BADGE */
+/* BADGE (Giữ nguyên) */
 .badge { 
   background: #1abc9c; color: white; padding: 3px 10px; border-radius: 12px; 
   font-size: 11px; font-weight: 600; box-shadow: 0 2px 4px rgba(26, 188, 156, 0.3);
 }
 
-/* === SIDEBAR === */
+/* === SIDEBAR (Giữ nguyên) === */
 .sidebar {
     width: 20%; background: white; border-left: 1px solid #e5e7eb;
     display: flex; flex-direction: column; transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     flex-shrink: 0; overflow: hidden; z-index: 50;
 }
 .sidebar.closed { width: 0 !important; border: none; }
-
+/* ... (Sidebar styles giữ nguyên) */
 .sidebar-header { padding: 12px 15px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; white-space: nowrap; }
 .sidebar-header h3 { margin: 0; font-size: 13px; font-weight: 700; color: #374151; }
 .sidebar-content { padding: 15px; flex: 1; overflow-y: auto; }
 .sidebar-input { width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 13px; outline: none; }
 .sidebar-input:focus { border-color: #2563eb; }
 .tags-container { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-
 .sidebar-toggle-btn {
     width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
     border-radius: 4px; cursor: pointer; background: #f3f4f6; border: none; font-size: 18px; color: #6b7280;
 }
 .sidebar-toggle-btn:hover { background: #e5e7eb; color: #111827; }
 
-/* === SETTINGS & KEYWORDS === */
+/* === SETTINGS & KEYWORDS (Giữ nguyên) === */
 .settings-layout { flex-direction: column; background: #f3f4f6; padding: 15px; overflow-y: auto; }
 .panel-container { background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); max-width: 1000px; width: 100%; margin: 0 auto; display: flex; flex-direction: column; }
 .panel-header { padding: 15px 20px; border-bottom: 1px solid #f3f4f6; display: flex; justify-content: space-between; align-items: center; }
 .panel-header h2 { margin: 0; font-size: 16px; color: #111827; font-weight: 700; }
-
+/* ... (Mode actions, toolbar, list-actions, scroll-area, keywords-panel giữ nguyên) */
 .mode-actions { display: flex; gap: 8px; align-items: center; }
 .select-wrapper { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-right: 10px; }
 #mode-select { padding: 6px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 13px; outline: none; }
-
 .toolbar { padding: 10px 20px; background: #f9fafb; border-bottom: 1px solid #f3f4f6; display: flex; flex-wrap: wrap; gap: 15px; align-items: center; }
 .toolbar-group { display: flex; gap: 8px; align-items: center; }
 .list-actions { padding: 10px 20px; display: flex; gap: 10px; }
 .scroll-area { padding: 10px 20px; background: #f9fafb; min-height: 200px; }
-
 /* Keywords Styles */
 .control-group { display: flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 600; color: #555; }
 .input-sm { padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 13px; outline: none; }
@@ -143,7 +171,8 @@ body {
 .w-full-input:focus { border-color: #10b981; }
 .input-label { font-size: 13px; font-weight: 700; color: #374151; margin: 0 0 8px 0; }
 
-/* === BUTTONS === */
+/* === BUTTONS & ITEMS (Giữ nguyên) === */
+/* ... (Button styles giữ nguyên) */
 .btn {
   padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer;
   font-size: 12px; font-weight: 600; transition: all 0.2s;
@@ -160,7 +189,6 @@ body {
 .btn-outline { background: white; border: 1px solid #d1d5db; color: #374151; }
 .btn-outline:hover { border-color: #9ca3af; background: #f9fafb; }
 .icon-btn { min-width: 120px; }
-
 /* Settings Toggles */
 .btn-toggle { 
   background: #e5e7eb; color: #6b7280; 
@@ -169,14 +197,12 @@ body {
 }
 .btn-toggle:hover { background: #d1d5db; color: #374151; }
 .btn-toggle.active { background: #dbeafe; color: #1e40af; border-color: #93c5fd; }
-
 .btn-action {
     background: #f3e8ff; color: #6b21a8; /* Tím nhạt */
     padding: 8px 15px; border-radius: 6px; font-size: 12px; font-weight: 700;
     border: 1px solid #d8b4fe;
 }
 .btn-action:hover { background: #e9d5ff; color: #581c87; border-color: #c084fc; }
-
 /* Teal Buttons (Editor Actions) */
 .btn-teal {
     background: #ccfbf1; color: #0f766e;
@@ -184,15 +210,13 @@ body {
     border: 1px solid #5eead4;
 }
 .btn-teal:hover { background: #99f6e4; }
-
-/* === ITEMS & TAGS === */
+/* Items & Tags */
 .punctuation-item { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; background: white; padding: 6px 10px; border-radius: 6px; border: 1px solid #e5e7eb; }
 .punctuation-item input { flex: 1; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 4px; font-size: 13px; outline: none; }
 .punctuation-item input:focus { border-color: #2563eb; }
 .punctuation-item button.remove { width: 28px; height: 28px; border-radius: 4px; border: none; background: #fee2e2; color: #dc2626; cursor: pointer; display: flex; align-items: center; justify-content: center;}
 .punctuation-item button.remove:hover { background: #ef4444; color: white; }
 .empty-message { text-align: center; color: #9ca3af; padding: 20px; font-size: 13px; }
-
 .tag {
     background: #eff6ff; color: #1e40af; padding: 4px 10px; border-radius: 20px;
     font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;
@@ -201,10 +225,12 @@ body {
 .tag .remove-tag { cursor: pointer; width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
 .tag .remove-tag:hover { background: #dbeafe; color: red; }
 
-/* HIGHLIGHT COLORS */
+/* HIGHLIGHT COLORS (Chỉ áp dụng cho highlight-layer) */
+/* Màu Replace (Vàng) và Auto Caps (Xanh dương) */
 .hl-yellow { background-color: #fde047; color: #000; border-radius: 2px; padding: 0 1px; }
 .hl-blue { background-color: #93c5fd; color: #000; border-radius: 2px; padding: 0 1px; }
 
+/* Màu Keywords */
 .keyword { border-radius: 3px; padding: 0 2px; font-weight: 600; }
 .hl-pink   { background-color: #f9a8d4; border-bottom: 2px solid #db2777; }
 .hl-green  { background-color: #86efac; border-bottom: 2px solid #16a34a; }
@@ -212,7 +238,7 @@ body {
 .hl-purple { background-color: #d8b4fe; border-bottom: 2px solid #9333ea; }
 .hl-red    { background-color: #fca5a5; border-bottom: 2px solid #dc2626; }
 
-/* === NOTIFICATION === */
+/* === NOTIFICATION (Giữ nguyên) === */
 #notification-container { 
     position: fixed; top: 70px; right: 20px; 
     z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; 
