@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tiện Ích Của Trịnh Hg - Overlay High Performance</title>
+  <title>Tiện Ích Của Trịnh Hg - Ultimate Performance</title>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="index.css">
 </head>
@@ -11,7 +11,7 @@
 
   <header class="app-header">
     <div class="header-left">
-      <h1>Tiện Ích Của Trịnh Hg (High Performance)</h1>
+      <h1>Tiện Ích Của Trịnh Hg (Ultimate)</h1>
       <div class="donate-info">
         <span class="donate-label">DON@TE:</span>
         <span class="donate-details">MB BANK - TRINH THI XUAN HUONG – 0917678211</span>
@@ -36,14 +36,16 @@
 
         <div id="main-tab" class="tab-content active main-layout">
             <div id="central-area" class="editor-area">
-                <div id="editor-wrapper" class="editor-wrapper relative">
-                    <canvas id="overlay-canvas"></canvas>
-                    
-                    <div id="editor" 
-                         contenteditable="true" 
-                         spellcheck="false" 
-                         class="custom-scrollbar"
-                         data-placeholder="Dán văn bản vào đây..."></div>
+                <div id="editor-scroller" class="editor-scroller custom-scrollbar">
+                    <div id="editor-container" class="relative">
+                        <canvas id="overlay-canvas"></canvas>
+                        
+                        <div id="editor" 
+                             contenteditable="true" 
+                             spellcheck="false" 
+                             class="editor-content"
+                             data-placeholder="Dán văn bản vào đây..."></div>
+                    </div>
                 </div>
                 
                 <div class="editor-footer">
@@ -110,7 +112,8 @@
                     </div>
 
                     <div class="toolbar-group">
-                        <button id="copy-keywords-btn" class="btn btn-action">Copy Keywords</button>
+                         <button id="copy-keywords-btn" class="btn btn-action" style="background: #f3e8ff; color: #6b21a8; border-color: #d8b4fe;">Copy Keywords</button>
+                        <button id="import-kw-csv" class="btn btn-action">Nhập Keywords</button>
                     </div>
 
                     <div class="toolbar-group">
