@@ -1,17 +1,15 @@
 document.addEventListener('DOMContentLoaded', () => {
     // === CONFIG & STATE ===
-    const STORAGE_KEY = 'trinh_hg_pro_v22_overlay_final';
+    const STORAGE_KEY = 'trinh_hg_final_ultimate';
     
-    // Màu sắc highlight cho Canvas (RGBA)
+    // MÀU SẮC NEON ĐẬM (Dễ nhìn hơn)
     const KW_COLORS_RGBA = [
-        'rgba(249, 168, 212, 0.5)', // hl-pink
-        'rgba(134, 239, 172, 0.5)', // hl-green
-        'rgba(253, 186, 116, 0.5)', // hl-orange
-        'rgba(216, 180, 254, 0.5)', // hl-purple
-        'rgba(252, 165, 165, 0.5)'  // hl-red
+        'rgba(255, 255, 0, 0.4)',    // Vàng sáng
+        'rgba(0, 255, 0, 0.4)',      // Xanh lá sáng
+        'rgba(0, 255, 255, 0.4)',    // Cyan
+        'rgba(255, 0, 255, 0.4)',    // Hồng cánh sen
+        'rgba(255, 128, 0, 0.4)'     // Cam
     ];
-    // Màu cho replace highlight
-    const REPLACE_COLOR_RGBA = 'rgba(253, 224, 71, 0.5)'; // hl-yellow
 
     const defaultState = {
         keywords: [],
@@ -32,12 +30,13 @@ document.addEventListener('DOMContentLoaded', () => {
         tabs: document.querySelectorAll('.tab-button'),
         contents: document.querySelectorAll('.tab-content'),
         
-        wrapper: document.getElementById('editor-wrapper'),
+        scroller: document.getElementById('editor-scroller'),
+        container: document.getElementById('editor-container'),
         editor: document.getElementById('editor'),
         canvas: document.getElementById('overlay-canvas'),
         wordCount: document.getElementById('word-count-display'),
         
-        refreshBtn: document.getElementById('refresh-highlight'), // Rename searchBtn
+        refreshBtn: document.getElementById('refresh-highlight'),
         clearBtn: document.getElementById('clear'),
         copyBtn: document.getElementById('copy-editor-content'),
         replaceBtn: document.getElementById('replace-all'),
@@ -70,16 +69,17 @@ document.addEventListener('DOMContentLoaded', () => {
         fullKwInput: document.getElementById('full-keywords-input'),
         fullKwTags: document.getElementById('full-keywords-tags'),
         
-        copyKwBtn: document.getElementById('copy-keywords-btn'), // Nút mới
+        copyKwBtn: document.getElementById('copy-keywords-btn'),
+        importKwBtn: document.getElementById('import-kw-csv'),
         
         notify: document.getElementById('notification-container')
     };
 
     const ctx = els.canvas.getContext('2d');
-    let highlightRanges = []; // Store ranges to redraw on scroll without recalc
+    let highlightRanges = []; 
+    let isCalculated = false;
 
-    // === CORE FUNCTIONS ===
-
+    // === STATE & NOTIFICATION ===
     function saveState() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     }
@@ -92,6 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => { div.style.opacity = '0'; setTimeout(() => div.remove(), 300); }, 3000);
     }
 
+    // === UTILS ===
     function preserveCase(original, replacement) {
         if (original === original.toUpperCase() && original !== original.toLowerCase()) return replacement.toUpperCase();
         if (original[0] === original[0].toUpperCase() && original.slice(1) === original.slice(1).toLowerCase()) {
@@ -104,42 +105,28 @@ document.addEventListener('DOMContentLoaded', () => {
         return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     }
 
-    // === OVERLAY HIGHLIGHT SYSTEM (THE FIX) ===
+    // === OVERLAY SYSTEM (OPTIMIZED) ===
 
-    /**
-     * Tạo một bản đồ (Map) ánh xạ từ index của chuỗi plain text sang TextNode trong DOM.
-     * Điều này cho phép ta tìm thấy vị trí (Node, Offset) từ vị trí (Start, End) của Regex.
-     */
+    // Map DOM Nodes to Text Offsets (Heavy, run only when text changes)
     function createTextNodeMap(rootNode) {
         const map = [];
         let currentIndex = 0;
-        
         const walker = document.createTreeWalker(rootNode, NodeFilter.SHOW_TEXT, null, false);
         let node;
         while(node = walker.nextNode()) {
             const len = node.nodeValue.length;
-            map.push({
-                node: node,
-                start: currentIndex,
-                end: currentIndex + len
-            });
+            map.push({ node: node, start: currentIndex, end: currentIndex + len });
             currentIndex += len;
         }
         return map;
     }
 
-    /**
-     * Tìm TextNode và Offset cụ thể từ global index.
-     * Sử dụng Binary Search để tối ưu tốc độ cho văn bản rất dài.
-     */
     function getNodeAndOffset(map, index) {
         let left = 0;
         let right = map.length - 1;
-        
         while (left <= right) {
             const mid = Math.floor((left + right) / 2);
             const entry = map[mid];
-            
             if (index >= entry.start && index < entry.end) {
                 return { node: entry.node, offset: index - entry.start };
             } else if (index < entry.start) {
@@ -148,340 +135,158 @@ document.addEventListener('DOMContentLoaded', () => {
                 left = mid + 1;
             }
         }
-        return null; // Should not happen if index is valid
+        return null;
     }
 
-    /**
-     * Hàm chính để tính toán vị trí Highlight.
-     * Không vẽ ngay, mà lưu trữ Ranges vào biến toàn cục highlightRanges.
-     */
+    // Calculate Highlight Ranges (Heavy, Debounced)
     function calculateHighlights() {
         if (!els.editor) return;
-        
-        const text = els.editor.innerText; // Lấy text thuần
-        // Fix: Chrome thêm \n cuối cùng cho block element, cần loại bỏ để map chính xác
+        const text = els.editor.innerText; 
         const cleanText = text.replace(/\n$/, ''); 
         
-        const nodeMap = createTextNodeMap(els.editor);
-        highlightRanges = []; // Reset
+        highlightRanges = [];
 
-        // 1. Tính toán Keyword Highlights
         if (state.keywords.length > 0) {
+            const nodeMap = createTextNodeMap(els.editor);
             const sortedKws = [...state.keywords].sort((a,b) => b.length - a.length);
             const matchCase = state.keywordSettings.matchCase;
             const wholeWord = state.keywordSettings.wholeWord;
             const wordCharRegex = /[\p{L}\p{N}_]/u;
 
-            // Gom nhóm keywords để tối ưu Regex (Tạo Regex khổng lồ)
-            // Lưu ý: Regex quá dài có thể gây lỗi, nên chia nhỏ nếu cần. Ở đây làm đơn giản.
-            // Để hỗ trợ Whole Word và Case chính xác, ta quét từng keyword hoặc tạo Regex thông minh.
-            // Cách đơn giản và an toàn nhất: Quét từng keyword (chấp nhận chậm hơn một chút nhưng chính xác).
-            // Tối ưu hơn: Dùng 1 vòng lặp text và check keywords.
-            
-            // Ở đây dùng giải pháp: Tạo 1 Regex gộp tất cả keywords (escaped).
-            // Sắp xếp keyword dài trước để match đúng (ví dụ "Công chúa" trước "Công").
-            
-            const flags = matchCase ? 'g' : 'gi';
-            const pattern = sortedKws.map(k => escapeRegExp(k)).join('|');
-            const regex = new RegExp(pattern, flags);
-            
-            let match;
-            while ((match = regex.exec(cleanText)) !== null) {
-                const start = match.index;
-                const end = start + match[0].length;
+            // Simple loop for accuracy
+            sortedKws.forEach((kw, index) => {
+                if (!kw) return;
+                const searchKw = matchCase ? kw : kw.toLowerCase();
+                const searchArea = matchCase ? cleanText : cleanText.toLowerCase();
+                const color = KW_COLORS_RGBA[index % KW_COLORS_RGBA.length];
                 
-                // Check whole word
-                if (wholeWord) {
-                    const prev = start > 0 ? cleanText[start-1] : '';
-                    const next = end < cleanText.length ? cleanText[end] : '';
-                    if (wordCharRegex.test(prev) || wordCharRegex.test(next)) continue;
-                }
-                
-                // Xác định màu (dựa trên index của keyword trong mảng gốc để nhất quán màu)
-                // Tìm keyword gốc khớp với match
-                const kwIndex = state.keywords.findIndex(k => matchCase ? k === match[0] : k.toLowerCase() === match[0].toLowerCase());
-                const color = KW_COLORS_RGBA[kwIndex % KW_COLORS_RGBA.length] || KW_COLORS_RGBA[0];
-
-                try {
-                    const startLoc = getNodeAndOffset(nodeMap, start);
-                    const endLoc = getNodeAndOffset(nodeMap, end);
+                let pos = 0;
+                while (true) {
+                    const foundIdx = searchArea.indexOf(searchKw, pos);
+                    if (foundIdx === -1) break;
                     
-                    if (startLoc && endLoc) {
-                        const range = document.createRange();
-                        range.setStart(startLoc.node, startLoc.offset);
-                        range.setEnd(endLoc.node, endLoc.offset);
-                        highlightRanges.push({ range, color });
+                    const endIdx = foundIdx + searchKw.length;
+                    
+                    let isValid = true;
+                    if (wholeWord) {
+                        const prev = foundIdx > 0 ? cleanText[foundIdx-1] : '';
+                        const next = endIdx < cleanText.length ? cleanText[endIdx] : '';
+                        if (wordCharRegex.test(prev) || wordCharRegex.test(next)) isValid = false;
                     }
-                } catch(e) { console.warn('Lỗi map range', e); }
-            }
+
+                    if (isValid) {
+                        const startLoc = getNodeAndOffset(nodeMap, foundIdx);
+                        const endLoc = getNodeAndOffset(nodeMap, endIdx);
+                        if (startLoc && endLoc) {
+                            try {
+                                const range = document.createRange();
+                                range.setStart(startLoc.node, startLoc.offset);
+                                range.setEnd(endLoc.node, endLoc.offset);
+                                highlightRanges.push({ range, color });
+                            } catch (e) { /* ignore range errors */ }
+                        }
+                    }
+                    pos = foundIdx + 1;
+                }
+            });
         }
         
+        isCalculated = true;
         requestAnimationFrame(drawHighlights);
     }
 
-    /**
-     * Vẽ lại Canvas dựa trên highlightRanges đã tính.
-     * Hàm này cực nhanh vì chỉ vẽ hình chữ nhật, không tính toán DOM.
-     */
+    // Draw Function (Fast, on scroll/resize)
     function drawHighlights() {
-        if (!els.editor || !els.canvas) return;
+        if (!isCalculated || !els.editor || !els.canvas) return;
 
-        // 1. Resize Canvas khớp với Scroll Size của Editor
-        // Quan trọng: Canvas phải đủ lớn để chứa toàn bộ nội dung cuộn
-        const width = els.editor.scrollWidth;
-        const height = els.editor.scrollHeight;
+        const width = els.editor.offsetWidth;
+        const height = els.editor.offsetHeight; // Use offsetHeight to cover full content
         
-        // Chỉ resize nếu kích thước thay đổi (tránh clear canvas không cần thiết)
         if (els.canvas.width !== width || els.canvas.height !== height) {
             els.canvas.width = width;
             els.canvas.height = height;
         } else {
-            ctx.clearRect(0, 0, width, height); // Xóa trắng để vẽ lại
+            ctx.clearRect(0, 0, width, height);
         }
+
+        // Get Editor offset relative to viewport
+        // But since we are inside a relative container, we need to correct coordinates.
+        // Range.getClientRects() returns viewport coordinates.
+        // Container.getBoundingClientRect() returns viewport coordinates.
+        // Relative Y = Rect.top - Container.top
         
-        // 2. Lấy offset của Editor so với viewport để tính tọa độ tương đối
-        const editorRect = els.editor.getBoundingClientRect();
+        const containerRect = els.container.getBoundingClientRect();
         
-        // 3. Loop và vẽ
         highlightRanges.forEach(item => {
             const rects = item.range.getClientRects();
             ctx.fillStyle = item.color;
             
             for (const rect of rects) {
-                // Tọa độ vẽ = (Rect Viewport) - (Editor Viewport) + (Scroll Amount)
-                // Vì Canvas nằm absolute top:0 left:0 trong thẻ cha relative, 
-                // và Canvas có kích thước bằng scrollHeight,
-                // nên ta cần vẽ tại tọa độ tuyệt đối so với Editor content.
+                // Tọa độ tương đối so với container (canvas nằm absolute 0,0 trong container)
+                const x = rect.left - containerRect.left;
+                const y = rect.top - containerRect.top;
                 
-                // Công thức đúng cho Overlay nằm trong cùng container scroll:
-                // Canvas được định vị absolute top:0 left:0.
-                // Scroll container cuộn cả Editor và Canvas cùng lúc.
-                // Do đó, ta cần tính vị trí của rect tương đối so với góc trên trái của Editor (không tính scroll).
-                
-                // rect.top là tọa độ màn hình.
-                // editorRect.top là tọa độ màn hình của editor visible box.
-                // editor.scrollTop là phần đã cuộn đi.
-                
-                // Vị trí Y trên Canvas = (rect.top - editorRect.top) + els.wrapper.scrollTop;
-                // Tuy nhiên, editorRect tính cả border/padding.
-                // Editor có padding 20px. rect tính từ content.
-                // Cách chính xác nhất:
-                // x = rect.left - editorRect.left + els.wrapper.scrollLeft
-                // y = rect.top - editorRect.top + els.wrapper.scrollTop
-                
-                // Lưu ý: els.wrapper là thẻ chứa scroll.
-                // getBoundingClientRect của Editor (nằm trong wrapper) sẽ thay đổi khi scroll?
-                // Không, Editor width/height full. Wrapper scroll.
-                
-                // Fix chính xác:
-                // Wrapper relative.
-                // Canvas absolute top 0 left 0.
-                // Editor absolute top 0 left 0 (hoặc relative nhưng wrapper scroll).
-                // Khi wrapper scroll, cả Canvas và Editor bị đẩy lên.
-                // getClientRects trả về vị trí trên màn hình.
-                
-                // Wrapper Rect
-                const wrapperRect = els.wrapper.getBoundingClientRect();
-                
-                const x = rect.left - wrapperRect.left + els.wrapper.scrollLeft;
-                const y = rect.top - wrapperRect.top + els.wrapper.scrollTop;
-                
-                // Vẽ chữ nhật, thêm padding nhỏ (hoặc không) tùy thẩm mỹ
-                ctx.fillRect(x, y, rect.width, rect.height);
+                // Chỉ vẽ nếu kích thước hợp lệ
+                if (rect.width > 0 && rect.height > 0) {
+                     ctx.fillRect(x, y, rect.width, rect.height);
+                }
             }
         });
     }
 
-    // === EVENT LISTENERS FOR PERFORMANCE ===
-    
-    // Debounce Input để không tính toán quá nhiều khi gõ
+    // === EVENT LISTENERS ===
+
+    // 1. Debounce Input (Fix Lag)
     let inputTimeout;
     if (els.editor) {
         els.editor.addEventListener('input', () => {
             updateWordCount();
+            ctx.clearRect(0,0, els.canvas.width, els.canvas.height); // Clear immediately while typing
             clearTimeout(inputTimeout);
             inputTimeout = setTimeout(() => {
                 calculateHighlights();
-            }, 100); // Delay 100ms sau khi ngừng gõ
+            }, 500); // Chờ 0.5s sau khi dừng gõ mới tính toán highlight
         });
 
-        // Xử lý Paste text thuần
+        // 2. Paste Clean Text (Fix Format Error)
         els.editor.addEventListener('paste', (e) => {
             e.preventDefault();
-            let text = (e.clipboardData || window.clipboardData).getData('text/plain');
+            // Lấy text thuần
+            const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+            // Chèn text vào vị trí con trỏ (deprecated but robust for this case)
             document.execCommand('insertText', false, text);
         });
     }
-
-    // Scroll: Không cần tính lại Ranges, chỉ cần vẽ lại?
-    // Thực tế nếu Canvas kích thước = scrollHeight và nằm trong wrapper scroll,
-    // thì Canvas sẽ tự trôi theo nội dung. KHÔNG CẦN VẼ LẠI KHI SCROLL.
-    // Trừ khi layout thay đổi động.
-    // Tuy nhiên, Range.getClientRects() trả về tọa độ Viewport. Khi scroll, tọa độ này thay đổi.
-    // Nhưng ta đã cộng scrollTop vào rồi. 
-    // -> Canvas tĩnh so với nội dung, nhưng động so với Viewport.
-    // -> Chỉ cần tính 1 lần, Canvas tự cuộn. OK.
     
-    // Resize window: Cần tính lại vì dòng chữ có thể bị wrap (xuống dòng) khác đi
-    window.addEventListener('resize', () => {
-        calculateHighlights();
-    });
-
-    // Font thay đổi: Cần tính lại
-    function updateFont() {
-        if (!els.editor || !els.fontFamily || !els.fontSize) return;
-        els.editor.style.setProperty('font-family', els.fontFamily.value, 'important');
-        els.editor.style.setProperty('font-size', els.fontSize.value, 'important');
-        // Đợi DOM update font xong mới tính lại highlight
-        setTimeout(calculateHighlights, 50);
-    }
-    if (els.fontFamily) els.fontFamily.onchange = updateFont;
-    if (els.fontSize) els.fontSize.onchange = updateFont;
-
-    // === REPLACE LOGIC (Updated for Overlay) ===
-    async function performReplaceAll() {
-        if (!els.editor) return notify('Lỗi editor!', 'error');
-        let text = els.editor.innerText; 
-        if (!text.trim()) return notify('Editor trống!', 'error');
-
-        const originalTextBtn = els.replaceBtn.textContent;
-        els.replaceBtn.textContent = 'Đang xử lý...';
-        els.replaceBtn.disabled = true;
-
-        // Sử dụng Promise để không chặn UI khi replace văn bản rất lớn
-        await new Promise(resolve => setTimeout(resolve, 10));
-
-        try {
-            const mode = state.modes[state.activeMode];
-            let replaceCount = 0;
-            
-            // Logic Replace trên chuỗi (String manipulation)
-            // Thay vì dùng Regex phức tạp trên DOM, ta replace trên Plain Text sau đó gán lại
-            // Điều này làm mất định dạng Rich Text (nhưng app này ưu tiên Plain Text)
-            
-            // 1. User Replace Pairs
-            mode.pairs.forEach(pair => {
-                if (!pair.find) return;
-                const flags = mode.matchCase ? 'g' : 'gi';
-                let regex;
-                if (mode.wholeWord) {
-                     regex = new RegExp(`(?<![\\p{L}\\p{N}_])${escapeRegExp(pair.find)}(?![\\p{L}\\p{N}_])`, flags + 'u');
-                } else {
-                    regex = new RegExp(escapeRegExp(pair.find), flags);
-                }
-                
-                text = text.replace(regex, (match) => {
-                    replaceCount++;
-                    let replacement = pair.replace;
-                    if (!mode.matchCase) replacement = preserveCase(match, replacement);
-                    return replacement;
-                });
-            });
-
-            // 2. Auto Caps
-            if (mode.autoCaps) {
-                const autoCapsRegex = /(^|[\.?!\n]\s*)([\p{Ll}])/gmu;
-                text = text.replace(autoCapsRegex, (m, p, c) => p + c.toUpperCase());
-            }
-
-            // Update Content
-            els.editor.innerText = text; // Gán lại text mới
-            
-            // Trigger Highlight lại
-            calculateHighlights();
-            updateWordCount();
-            
-            if (replaceCount > 0) notify(`Đã thay thế ${replaceCount} cụm từ!`);
-            else notify('Hoàn tất xử lý.', 'success');
-
-        } catch (e) {
-            console.error(e);
-            notify('Lỗi: ' + e.message, 'error');
-        } finally {
-            els.replaceBtn.textContent = originalTextBtn;
-            els.replaceBtn.disabled = false;
-        }
-    }
-    
-    if (els.replaceBtn) els.replaceBtn.onclick = performReplaceAll;
-
-    // === COPY KEYWORDS FEATURE ===
-    if (els.copyKwBtn) {
-        els.copyKwBtn.onclick = () => {
-            if (!state.keywords || state.keywords.length === 0) {
-                return notify('Danh sách keywords trống!', 'warning');
-            }
-            // Join bằng dấu phẩy và khoảng trắng
-            const textToCopy = state.keywords.join(', ');
-            navigator.clipboard.writeText(textToCopy).then(() => {
-                notify('Đã copy danh sách keywords!');
-            }).catch(err => {
-                console.error('Lỗi copy:', err);
-                notify('Không thể copy vào clipboard', 'error');
-            });
-        };
-    }
-
-    // === KEYWORDS MANAGEMENT UI (Giữ nguyên logic cũ) ===
-    function addKeyword(val) {
-        if (!val.trim()) return;
-        const keys = val.split(/[,;\n]/).map(s => s.trim()).filter(Boolean);
-        let changed = false;
-        keys.forEach(k => {
-            if (!state.keywords.includes(k)) {
-                state.keywords.push(k);
-                changed = true;
-            }
-        });
-        if (changed) {
-            renderTags(); saveState(); 
-            calculateHighlights(); // Vẽ lại ngay khi thêm
-        }
-        if (els.sidebarInput) els.sidebarInput.value = '';
-        if (els.fullKwInput) els.fullKwInput.value = '';
-    }
-
-    function renderTags() {
-        const html = state.keywords.map(k => `
-            <div class="tag"><span>${k.replace(/[&<>"']/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#039;' })[m])}</span><span class="remove-tag" data-kw="${k.replace(/"/g, '&quot;')}">×</span></div>
-        `).join('');
-        if (els.sidebarTags) els.sidebarTags.innerHTML = html;
-        if (els.fullKwTags) els.fullKwTags.innerHTML = html;
-        document.querySelectorAll('.remove-tag').forEach(btn => {
-            btn.onclick = (e) => {
-                state.keywords = state.keywords.filter(k => k !== e.target.dataset.kw);
-                renderTags(); saveState(); 
-                calculateHighlights(); // Vẽ lại ngay khi xóa
-            }
+    // 3. Scroll Sync (Mượt mà, không cần tính lại range)
+    if (els.scroller) {
+        els.scroller.addEventListener('scroll', () => {
+            // Khi scroll, Range.getClientRects() thay đổi theo viewport -> Cần vẽ lại
+            // Tuy nhiên, việc tính Range (calculateHighlights) không cần chạy lại, chỉ cần chạy drawHighlights
+            requestAnimationFrame(drawHighlights);
         });
     }
+    
+    window.addEventListener('resize', () => { calculateHighlights(); });
 
-    [els.sidebarInput, els.fullKwInput].forEach(inp => {
-        if (inp) {
-            inp.addEventListener('keydown', e => { 
-                if (e.key === 'Enter') { e.preventDefault(); addKeyword(inp.value); } 
-            });
-            inp.addEventListener('blur', () => addKeyword(inp.value));
-        }
-    });
-
-    // === SETTINGS UI HELPERS ===
+    // === SETTINGS LOGIC (Khôi phục) ===
     function renderModeUI() {
         if (!els.puncList || !els.modeSelect) return;
         const mode = state.modes[state.activeMode];
         if (els.matchCaseBtn) updateToggle(els.matchCaseBtn, mode.matchCase);
         if (els.wholeWordBtn) updateToggle(els.wholeWordBtn, mode.wholeWord);
         if (els.autoCapsBtn) updateToggle(els.autoCapsBtn, mode.autoCaps);
+        
         els.puncList.innerHTML = '';
         mode.pairs.forEach(p => addPairUI(p.find, p.replace));
         els.modeSelect.innerHTML = '';
         Object.keys(state.modes).forEach(m => els.modeSelect.add(new Option(m, m, false, m === state.activeMode)));
-        if (els.emptyState) els.emptyState.classList.toggle('hidden', els.puncList.children.length > 0);
+        
         const isDef = state.activeMode === 'Mặc định';
         if (els.renameModeBtn) els.renameModeBtn.classList.toggle('hidden', isDef);
         if (els.deleteModeBtn) els.deleteModeBtn.classList.toggle('hidden', isDef);
     }
-    
+
     function updateToggle(btn, isActive) {
         btn.textContent = `${btn.id.includes('whole') ? 'Whole Word' : btn.id.includes('caps') ? 'Auto Caps' : 'Match Case'}: ${isActive ? 'BẬT' : 'Tắt'}`;
         btn.classList.toggle('active', isActive);
@@ -494,11 +299,9 @@ document.addEventListener('DOMContentLoaded', () => {
         div.querySelector('.remove').onclick = () => { div.remove(); savePairs(); };
         div.querySelectorAll('input').forEach(i => i.addEventListener('input', () => savePairs()));
         els.puncList.prepend(div);
-        if (els.emptyState) els.emptyState.classList.add('hidden');
     }
 
     function savePairs() {
-        if (!els.puncList) return;
         const pairs = [];
         els.puncList.querySelectorAll('.punctuation-item').forEach(d => {
             pairs.push({ find: d.querySelector('.find').value, replace: d.querySelector('.replace').value });
@@ -507,10 +310,11 @@ document.addEventListener('DOMContentLoaded', () => {
         saveState();
     }
 
-    // Attach Settings Events
+    // Attach Events for Buttons
     if (els.matchCaseBtn) els.matchCaseBtn.onclick = () => { state.modes[state.activeMode].matchCase = !state.modes[state.activeMode].matchCase; saveState(); renderModeUI(); };
     if (els.wholeWordBtn) els.wholeWordBtn.onclick = () => { state.modes[state.activeMode].wholeWord = !state.modes[state.activeMode].wholeWord; saveState(); renderModeUI(); };
     if (els.autoCapsBtn) els.autoCapsBtn.onclick = () => { state.modes[state.activeMode].autoCaps = !state.modes[state.activeMode].autoCaps; saveState(); renderModeUI(); };
+    
     if (els.modeSelect) els.modeSelect.onchange = () => { state.activeMode = els.modeSelect.value; saveState(); renderModeUI(); };
     if (els.addModeBtn) els.addModeBtn.onclick = () => { const n = prompt('Tên mới:'); if (n && !state.modes[n]) { state.modes[n] = { pairs: [], matchCase:false, wholeWord:false, autoCaps:false }; state.activeMode = n; saveState(); renderModeUI(); } };
     if (els.renameModeBtn) els.renameModeBtn.onclick = () => { const n = prompt('Tên mới:', state.activeMode); if (n && !state.modes[n]) { state.modes[n] = state.modes[state.activeMode]; delete state.modes[state.activeMode]; state.activeMode = n; saveState(); renderModeUI(); } };
@@ -518,27 +322,163 @@ document.addEventListener('DOMContentLoaded', () => {
     if (els.addPairBtn) els.addPairBtn.onclick = () => { addPairUI(); els.puncList.firstChild.querySelector('input').focus(); };
     if (els.saveSettingsBtn) els.saveSettingsBtn.onclick = () => { savePairs(); notify('Đã lưu tất cả!'); };
 
-    // Standard buttons
-    if (els.clearBtn) els.clearBtn.onclick = () => { if (els.editor) els.editor.innerText = ''; updateWordCount(); calculateHighlights(); };
-    if (els.copyBtn) els.copyBtn.onclick = () => { if (els.editor) navigator.clipboard.writeText(els.editor.innerText); notify('Đã copy!'); };
-    if (els.refreshBtn) els.refreshBtn.onclick = calculateHighlights;
+    // === REPLACE LOGIC ===
+    els.replaceBtn.onclick = () => {
+        if (!els.editor) return;
+        let text = els.editor.innerText; // Get raw text
+        if (!text.trim()) return notify('Editor trống!', 'error');
 
-    // Word Count
-    function updateWordCount() {
-        if (!els.editor || !els.wordCount) return;
-        const txt = els.editor.innerText || '';
-        const count = txt.trim() ? txt.trim().split(/\s+/).length : 0;
-        els.wordCount.textContent = `Words: ${count}`;
+        const mode = state.modes[state.activeMode];
+        let count = 0;
+
+        // 1. Pairs Replace
+        mode.pairs.forEach(p => {
+            if (!p.find) return;
+            const flags = mode.matchCase ? 'g' : 'gi';
+            let regex;
+            if (mode.wholeWord) {
+                regex = new RegExp(`(?<![\\p{L}\\p{N}_])${escapeRegExp(p.find)}(?![\\p{L}\\p{N}_])`, flags + 'u');
+            } else {
+                regex = new RegExp(escapeRegExp(p.find), flags);
+            }
+            text = text.replace(regex, (m) => {
+                count++;
+                let r = p.replace;
+                if (!mode.matchCase) r = preserveCase(m, r);
+                return r;
+            });
+        });
+
+        // 2. Auto Caps
+        if (mode.autoCaps) {
+             text = text.replace(/(^|[\.?!\n]\s*)([\p{Ll}])/gmu, (m, sep, char) => sep + char.toUpperCase());
+        }
+
+        els.editor.innerText = text; // Update text
+        calculateHighlights(); // Recalculate overlay
+        updateWordCount();
+        notify(count > 0 ? `Đã thay thế ${count} cụm từ.` : 'Hoàn tất.');
+    };
+
+    // === COPY KEYWORDS & CSV ===
+    if (els.copyKwBtn) els.copyKwBtn.onclick = () => {
+        if (!state.keywords.length) return notify('Trống!', 'warning');
+        navigator.clipboard.writeText(state.keywords.join(', '));
+        notify('Đã copy keywords!');
+    };
+
+    if (els.importKwBtn) els.importKwBtn.onclick = () => {
+        const inp = document.createElement('input'); inp.type='file'; inp.accept='.csv,.txt';
+        inp.onchange = e => {
+            const f = e.target.files[0];
+            if(!f) return;
+            const r = new FileReader();
+            r.onload = ev => {
+                const lines = ev.target.result.split(/[,;\n]/).map(s=>s.trim()).filter(Boolean);
+                let c = 0;
+                lines.forEach(k => { if(!state.keywords.includes(k)){ state.keywords.push(k); c++; }});
+                if(c>0) { renderTags(); saveState(); calculateHighlights(); notify(`Thêm ${c} keywords.`); }
+            };
+            r.readAsText(f);
+        };
+        inp.click();
+    };
+
+    // CSV Import/Export Replace Pairs
+    if (els.exportReplaceBtn) els.exportReplaceBtn.onclick = () => {
+        let csv = "\uFEFFfind,replace,mode\n";
+        Object.keys(state.modes).forEach(m => state.modes[m].pairs.forEach(p => csv += `"${p.find.replace(/"/g,'""')}","${p.replace.replace(/"/g,'""')}","${m}"\n`));
+        const url = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8;'}));
+        const a = document.createElement('a'); a.href=url; a.download='replace_settings.csv'; a.click();
+    };
+
+    if (els.importReplaceBtn) els.importReplaceBtn.onclick = () => {
+         const inp = document.createElement('input'); inp.type='file'; inp.accept='.csv';
+         inp.onchange = e => {
+             const f = e.target.files[0];
+             if(!f) return;
+             const r = new FileReader();
+             r.onload = ev => {
+                const lines = ev.target.result.split(/\r?\n/);
+                let c=0;
+                for(let i=1; i<lines.length; i++) {
+                    const m = lines[i].match(/^"(.*)","(.*)","(.*)"$/);
+                    if (m) {
+                        const [_, fi, re, mo] = m;
+                        if (!state.modes[mo]) state.modes[mo] = {pairs:[], matchCase:false, wholeWord:false, autoCaps:false};
+                        state.modes[mo].pairs.push({find: fi.replace(/""/g,'"'), replace: re.replace(/""/g,'"')});
+                        c++;
+                    }
+                }
+                saveState(); renderModeUI(); notify(`Nhập ${c} cặp thay thế.`);
+             };
+             r.readAsText(f);
+         };
+         inp.click();
+    };
+
+    // Keyword Settings Toggles
+    if (els.kwMatchCaseBtn) els.kwMatchCaseBtn.onclick = () => { state.keywordSettings.matchCase = !state.keywordSettings.matchCase; saveState(); updateKwUI(); calculateHighlights(); };
+    if (els.kwWholeWordBtn) els.kwWholeWordBtn.onclick = () => { state.keywordSettings.wholeWord = !state.keywordSettings.wholeWord; saveState(); updateKwUI(); calculateHighlights(); };
+    function updateKwUI() {
+        if (els.kwMatchCaseBtn) updateToggle(els.kwMatchCaseBtn, state.keywordSettings.matchCase);
+        if (els.kwWholeWordBtn) updateToggle(els.kwWholeWordBtn, state.keywordSettings.wholeWord);
     }
 
-    // Toggle Sidebar/Tab Logic (Giữ nguyên)
+    // === KEYWORDS UI (Tags) ===
+    function addKeyword(val) {
+        if (!val.trim()) return;
+        const keys = val.split(/[,;\n]/).map(s => s.trim()).filter(Boolean);
+        let changed = false;
+        keys.forEach(k => { if (!state.keywords.includes(k)) { state.keywords.push(k); changed = true; }});
+        if (changed) { renderTags(); saveState(); calculateHighlights(); }
+        if (els.sidebarInput) els.sidebarInput.value = '';
+        if (els.fullKwInput) els.fullKwInput.value = '';
+    }
+
+    function renderTags() {
+        const html = state.keywords.map(k => `<div class="tag"><span>${escapeHTML(k)}</span><span class="remove-tag" data-kw="${k.replace(/"/g, '&quot;')}">×</span></div>`).join('');
+        if (els.sidebarTags) els.sidebarTags.innerHTML = html;
+        if (els.fullKwTags) els.fullKwTags.innerHTML = html;
+        document.querySelectorAll('.remove-tag').forEach(btn => btn.onclick = (e) => {
+            state.keywords = state.keywords.filter(k => k !== e.target.dataset.kw);
+            renderTags(); saveState(); calculateHighlights();
+        });
+    }
+    
+    function escapeHTML(str) { return str.replace(/[&<>"']/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#039;' })[m]); }
+
+    [els.sidebarInput, els.fullKwInput].forEach(inp => { if(inp) {
+        inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addKeyword(inp.value); } });
+        inp.addEventListener('blur', () => addKeyword(inp.value));
+    }});
+
+    // Font Config
+    function updateFont() {
+        if (!els.editor) return;
+        els.editor.style.setProperty('font-family', els.fontFamily.value, 'important');
+        els.editor.style.setProperty('font-size', els.fontSize.value, 'important');
+        setTimeout(calculateHighlights, 100);
+    }
+    if (els.fontFamily) els.fontFamily.onchange = updateFont;
+    if (els.fontSize) els.fontSize.onchange = updateFont;
+    
+    // Standard Utils
+    if (els.clearBtn) els.clearBtn.onclick = () => { els.editor.innerText = ''; updateWordCount(); calculateHighlights(); };
+    if (els.refreshBtn) els.refreshBtn.onclick = calculateHighlights;
+    if (els.copyBtn) els.copyBtn.onclick = () => { navigator.clipboard.writeText(els.editor.innerText); notify('Đã copy nội dung!'); };
+    
+    function updateWordCount() {
+        if (!els.editor) return;
+        const c = els.editor.innerText.trim() ? els.editor.innerText.trim().split(/\s+/).length : 0;
+        els.wordCount.textContent = `Words: ${c}`;
+    }
+    
+    // Sidebar Toggle
     function switchTab(tabId) {
         els.tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === tabId));
-        els.contents.forEach(c => {
-            if (c.id === tabId) { c.classList.remove('hidden'); c.classList.add('active'); } 
-            else { c.classList.add('hidden'); c.classList.remove('active'); }
-        });
-        if (els.sidebarToggle) els.sidebarToggle.classList.toggle('hidden', !(tabId === 'main-tab' || tabId === 'settings-tab'));
+        els.contents.forEach(c => { c.classList.toggle('active', c.id === tabId); c.classList.toggle('hidden', c.id !== tabId); });
+        if(els.sidebarToggle) els.sidebarToggle.classList.toggle('hidden', !(tabId === 'main-tab' || tabId === 'settings-tab'));
     }
     els.tabs.forEach(btn => btn.onclick = () => switchTab(btn.dataset.tab));
     
@@ -549,23 +489,11 @@ document.addEventListener('DOMContentLoaded', () => {
             els.sidebarToggle.querySelector('.icon').textContent = state.sidebarOpen ? '«' : '»';
             saveState();
         };
-        // Init sidebar state
         els.sidebar.classList.toggle('closed', !state.sidebarOpen);
         els.sidebarToggle.querySelector('.icon').textContent = state.sidebarOpen ? '«' : '»';
     }
 
-    // Export/Import Replace CSV (Giữ nguyên logic cũ nếu cần)
-    if (els.exportReplaceBtn) {
-        els.exportReplaceBtn.onclick = () => {
-            let csv = "\uFEFFfind,replace,mode\n";
-            Object.keys(state.modes).forEach(m => state.modes[m].pairs.forEach(p => csv += `"${p.find.replace(/"/g,'""')}","${p.replace.replace(/"/g,'""')}","${m}"\n`));
-            const url = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8;'}));
-            const a = document.createElement('a'); a.href=url; a.download='settings.csv'; a.click();
-        };
-    }
-
-    // === INIT ===
-    renderTags(); renderModeUI(); updateFont(); updateWordCount(); 
-    // Trigger highlight lần đầu sau 1 chút delay để DOM ổn định
-    setTimeout(calculateHighlights, 200);
+    // Init
+    renderTags(); renderModeUI(); updateKwUI(); updateFont(); updateWordCount();
+    setTimeout(calculateHighlights, 500);
 });
