@@ -12,9 +12,9 @@ body {
 }
 
 /* === SCROLLBAR === */
-.custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
+.custom-scrollbar::-webkit-scrollbar { width: 10px; height: 10px; }
 .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 5px; border: 2px solid #f1f1f1; }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
 /* === HEADER === */
@@ -64,35 +64,46 @@ body {
     border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); background: white;
 }
 
-/* --- QUAN TRỌNG: CẤU TRÚC OVERLAY --- */
-.editor-wrapper { 
-    flex: 1; background: white; position: relative; overflow: auto; /* Scroll nằm ở đây */
+/* --- OVERLAY SYSTEM (CORRECTED) --- */
+.editor-scroller {
+    flex: 1;
+    position: relative;
+    overflow-y: auto; /* Thanh cuộn nằm ở đây */
+    overflow-x: hidden;
+    padding: 0;
+    background: white;
 }
 
-/* Canvas nằm dưới, tuyệt đối ở góc trên trái, pointer-events none để click xuyên qua */
+#editor-container {
+    position: relative;
+    min-height: 100%;
+    width: 100%;
+}
+
+/* Canvas vẽ highlight: nằm dưới text */
 #overlay-canvas {
     position: absolute;
     top: 0; left: 0;
-    z-index: 1; /* Thấp hơn editor */
-    pointer-events: none; 
+    z-index: 1;
+    pointer-events: none; /* Click xuyên qua */
 }
 
-/* Editor nằm trên, nền trong suốt để nhìn thấy canvas bên dưới */
-#editor { 
-    position: absolute; /* Để chồng khít lên canvas */
-    top: 0; left: 0;
-    min-width: 100%;
+/* Editor nhập liệu: nằm trên, nền trong suốt */
+.editor-content {
+    position: relative;
+    z-index: 2;
     min-height: 100%;
-    padding: 20px; 
-    outline: none; 
-    line-height: 1.8; 
-    color: #333; 
-    white-space: pre-wrap; 
+    width: 100%;
+    padding: 20px; /* Padding đồng bộ */
+    outline: none;
+    background: transparent;
+    
+    line-height: 1.8;
+    color: #333;
+    white-space: pre-wrap; /* Quan trọng để giữ dòng */
     word-break: break-word;
-    z-index: 10; /* Cao hơn canvas */
-    background: transparent; /* Quan trọng */
 }
-#editor:empty::before { content: attr(data-placeholder); color: #9ca3af; pointer-events: none; }
+.editor-content:empty::before { content: attr(data-placeholder); color: #9ca3af; pointer-events: none; }
 
 /* FOOTER */
 .editor-footer {
@@ -174,7 +185,6 @@ body {
 .btn-toggle:hover { background: #d1d5db; color: #374151; }
 .btn-toggle.active { background: #dbeafe; color: #1e40af; border-color: #93c5fd; }
 
-/* Nút Action (Tím) - Dùng cho Copy Keywords */
 .btn-action {
     background: #f3e8ff; color: #6b21a8;
     padding: 8px 15px; border-radius: 6px; font-size: 12px; font-weight: 700;
