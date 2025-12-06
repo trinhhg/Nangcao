@@ -53,46 +53,53 @@ body {
 .tab-button.active { color: #2563eb; border-bottom-color: #2563eb; background: linear-gradient(to top, #eff6ff, transparent); }
 
 /* === MAIN LAYOUT === */
-#app-body { 
-    flex: 1; overflow: hidden; position: relative; display: flex; flex-direction: row; 
-}
-#content-wrapper {
-    flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative;
-}
-
+#app-body { flex: 1; overflow: hidden; position: relative; display: flex; flex-direction: row; }
+#content-wrapper { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
 .tab-content { display: none; width: 100%; height: 100%; }
 .tab-content.active { display: flex; }
 
-.main-layout { 
-    flex-direction: column; 
-    padding: 15px;
-    background: #f3f4f6;
-}
-
+.main-layout { flex-direction: column; padding: 15px; background: #f3f4f6; }
 .editor-area { 
     flex: 1; display: flex; flex-direction: column; overflow: hidden; 
-    border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    background: white;
+    border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); background: white;
 }
-.editor-wrapper { flex: 1; background: white; position: relative; overflow: hidden; }
 
-/* FIX LỖI 1: white-space: pre-wrap CỰC KỲ QUAN TRỌNG ĐỂ GIỮ DÒNG TRỐNG */
+/* --- QUAN TRỌNG: CẤU TRÚC OVERLAY --- */
+.editor-wrapper { 
+    flex: 1; background: white; position: relative; overflow: auto; /* Scroll nằm ở đây */
+}
+
+/* Canvas nằm dưới, tuyệt đối ở góc trên trái, pointer-events none để click xuyên qua */
+#overlay-canvas {
+    position: absolute;
+    top: 0; left: 0;
+    z-index: 1; /* Thấp hơn editor */
+    pointer-events: none; 
+}
+
+/* Editor nằm trên, nền trong suốt để nhìn thấy canvas bên dưới */
 #editor { 
-    width: 100%; height: 100%; padding: 20px; outline: none; overflow-y: auto; 
-    line-height: 1.8; color: #333; 
+    position: absolute; /* Để chồng khít lên canvas */
+    top: 0; left: 0;
+    min-width: 100%;
+    min-height: 100%;
+    padding: 20px; 
+    outline: none; 
+    line-height: 1.8; 
+    color: #333; 
     white-space: pre-wrap; 
     word-break: break-word;
+    z-index: 10; /* Cao hơn canvas */
+    background: transparent; /* Quan trọng */
 }
 #editor:empty::before { content: attr(data-placeholder); color: #9ca3af; pointer-events: none; }
 
 /* FOOTER */
 .editor-footer {
     padding: 10px 15px; border-top: 1px solid #e5e7eb; background: #f9fafb;
-    display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;
+    display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; z-index: 20;
 }
 .footer-actions { display: flex; gap: 8px; }
-
-/* BADGE */
 .badge { 
   background: #1abc9c; color: white; padding: 3px 10px; border-radius: 12px; 
   font-size: 11px; font-weight: 600; box-shadow: 0 2px 4px rgba(26, 188, 156, 0.3);
@@ -105,14 +112,12 @@ body {
     flex-shrink: 0; overflow: hidden; z-index: 50;
 }
 .sidebar.closed { width: 0 !important; border: none; }
-
 .sidebar-header { padding: 12px 15px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; white-space: nowrap; }
 .sidebar-header h3 { margin: 0; font-size: 13px; font-weight: 700; color: #374151; }
 .sidebar-content { padding: 15px; flex: 1; overflow-y: auto; }
 .sidebar-input { width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 13px; outline: none; }
 .sidebar-input:focus { border-color: #2563eb; }
 .tags-container { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-
 .sidebar-toggle-btn {
     width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
     border-radius: 4px; cursor: pointer; background: #f3f4f6; border: none; font-size: 18px; color: #6b7280;
@@ -161,7 +166,6 @@ body {
 .btn-outline:hover { border-color: #9ca3af; background: #f9fafb; }
 .icon-btn { min-width: 120px; }
 
-/* Settings Toggles */
 .btn-toggle { 
   background: #e5e7eb; color: #6b7280; 
   padding: 8px 15px; border-radius: 6px; font-size: 12px; font-weight: 700;
@@ -170,14 +174,14 @@ body {
 .btn-toggle:hover { background: #d1d5db; color: #374151; }
 .btn-toggle.active { background: #dbeafe; color: #1e40af; border-color: #93c5fd; }
 
+/* Nút Action (Tím) - Dùng cho Copy Keywords */
 .btn-action {
-    background: #f3e8ff; color: #6b21a8; /* Tím nhạt */
+    background: #f3e8ff; color: #6b21a8;
     padding: 8px 15px; border-radius: 6px; font-size: 12px; font-weight: 700;
     border: 1px solid #d8b4fe;
 }
 .btn-action:hover { background: #e9d5ff; color: #581c87; border-color: #c084fc; }
 
-/* Teal Buttons (Editor Actions) */
 .btn-teal {
     background: #ccfbf1; color: #0f766e;
     padding: 8px 15px; border-radius: 6px; font-size: 12px; font-weight: 700;
@@ -200,17 +204,6 @@ body {
 }
 .tag .remove-tag { cursor: pointer; width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
 .tag .remove-tag:hover { background: #dbeafe; color: red; }
-
-/* HIGHLIGHT COLORS */
-.hl-yellow { background-color: #fde047; color: #000; border-radius: 2px; padding: 0 1px; }
-.hl-blue { background-color: #93c5fd; color: #000; border-radius: 2px; padding: 0 1px; }
-
-.keyword { border-radius: 3px; padding: 0 2px; font-weight: 600; }
-.hl-pink   { background-color: #f9a8d4; border-bottom: 2px solid #db2777; }
-.hl-green  { background-color: #86efac; border-bottom: 2px solid #16a34a; }
-.hl-orange { background-color: #fdba74; border-bottom: 2px solid #ea580c; }
-.hl-purple { background-color: #d8b4fe; border-bottom: 2px solid #9333ea; }
-.hl-red    { background-color: #fca5a5; border-bottom: 2px solid #dc2626; }
 
 /* === NOTIFICATION === */
 #notification-container { 
