@@ -104,7 +104,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return str.replace(/[&<>"']/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#039;' })[m]);
     }
     function escapeRegExp(string) {
-        // Fix: Thêm dấu gạch chéo ngược cho dấu gạch chéo
         return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     }
     function preserveCase(original, replacement) {
@@ -117,8 +116,13 @@ document.addEventListener('DOMContentLoaded', () => {
         return replacement;
     }
 
-    // === CORE LOGIC: STRING BUILDER REPLACE (FIXED) ===
+    // === CORE LOGIC: STRING BUILDER REPLACE (FIXED OFFSET) ===
     
+    /**
+     * Thực hiện Replace/AutoCaps và tính toán ranges chính xác trên văn bản MỚI.
+     * @param {string} rawText - Văn bản đầu vào.
+     * @returns {{text: string, ranges: Array, count: number}}
+     */
     async function performReplaceAndGetRanges(rawText) {
         const mode = state.modes[state.activeMode];
         const rules = mode.pairs.filter(p => p.find && p.find.trim());
@@ -128,10 +132,9 @@ document.addEventListener('DOMContentLoaded', () => {
         let ranges = [];
         let replaceCount = 0;
         
-        // 1. Prepare Regex
+        // 1. Prepare Regex cho Replace
         const patterns = rules.map(rule => {
             const find = escapeRegExp(normalizeText(rule.find));
-            // Sử dụng boundary cho wholeWord
             const p = mode.wholeWord 
                 ? `(?<![\\p{L}\\p{N}_])(${find})(?![\\p{L}\\p{N}_])`
                 : `(${find})`;
@@ -141,18 +144,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const flags = mode.matchCase ? "gu" : "giu";
         const regex = new RegExp(patterns.join("|"), flags);
         
-        // 2. Linear Pass and Build New String (FIXED LOGIC)
+        // 2. Linear Pass và Build New String
         let match;
         while (match = regex.exec(rawText)) {
             const start = match.index;
             const end = regex.lastIndex;
 
-            // Xác định rule match
             let ruleIndex = match.findIndex((m, i) => i > 0 && m !== undefined) - 1;
             
             if (ruleIndex >= 0) {
                 const rule = rules[ruleIndex];
-                const matchedText = match[ruleIndex + 1]; // Text thực sự match
+                const matchedText = match[ruleIndex + 1]; 
                 
                 let replacement = normalizeText(rule.replace || '');
 
@@ -163,7 +165,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Append phần văn bản chưa được xử lý
                 processedText += rawText.slice(lastIndex, start);
 
-                // Tính toán range trên CHUỖI MỚI
+                // Tính toán range trên CHUỖI MỚI (Offset Accumulation)
                 const newStart = processedText.length;
                 const newEnd = newStart + replacement.length;
 
@@ -179,8 +181,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 lastIndex = end;
             } else {
-                // Xảy ra nếu match[0] bị bao quanh bởi boundary, nhưng nhóm con match[1..n] không tìm thấy
-                // Trường hợp này không nên xảy ra với cấu trúc regex hiện tại, nhưng để an toàn.
                 processedText += rawText.slice(lastIndex, end);
                 lastIndex = end;
             }
@@ -224,6 +224,12 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // --- CORE LOGIC: KEYWORD HIGHLIGHT ---
 
+    /**
+     * Tính toán ranges cho Highlight Keywords. 
+     * @param {string} text - Văn bản để tìm kiếm (có thể là văn bản gốc hoặc đã replace).
+     * @param {Array} existingRanges - Các ranges đã có (thường là Replace/AutoCaps).
+     * @returns {{ranges: Array, count: number}}
+     */
     async function performHighlight(text, existingRanges) {
         if (!state.keywords.length) return { ranges: existingRanges, count: 0 };
 
@@ -287,26 +293,14 @@ document.addEventListener('DOMContentLoaded', () => {
             return match;
         });
 
-        // 2. Xử lý chồng lấn
-        // Không xóa ranges REPALCE/AUTOCAPS. Chỉ xử lý chồng lấn giữa các KEYWORD với nhau.
+        // 2. Xử lý chồng lấn (FIXED: Chỉ xử lý chồng lấn giữa các KEYWORD với nhau)
         let finalRanges = [...existingRanges];
         
         for (const kwRange of keywordRanges) {
-            let isOverlappedWithExisting = false;
-            
-            // Chỉ kiểm tra chồng lấn với các ranges đã có (REPLACE/AUTOCAPS)
-            for (const existingRange of existingRanges) {
-                if (kwRange.start < existingRange.end && kwRange.end > existingRange.start) {
-                     isOverlappedWithExisting = true;
-                     break; 
-                }
-            }
-
-            if (isOverlappedWithExisting) continue;
-
-            // Kiểm tra chồng lấn với các KEYWORD đã thêm
             let shouldAdd = true;
-            for (let i = finalRanges.length - 1; i >= existingRanges.length; i--) {
+            
+            // Chỉ kiểm tra chồng lấn với các KEYWORD đã thêm
+            for (let i = existingRanges.length; i < finalRanges.length; i++) {
                 const prevKwRange = finalRanges[i];
                 if (kwRange.start < prevKwRange.end && kwRange.end > prevKwRange.start) {
                     // Nếu nó nằm hoàn toàn bên trong 1 range keyword khác, bỏ qua
@@ -323,7 +317,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
-        finalRanges.sort((a, b) => a.start - b.start || b.end - a.end);
+        // Sắp xếp ranges để render: start asc, sau đó ưu tiên type (REPLACE/CAPS trước KW)
+        // 1. REPLACE, 2. AUTOCAPS, 3. KEYWORD
+        finalRanges.sort((a, b) => {
+             if (a.start !== b.start) return a.start - b.start;
+             
+             const typeOrder = { [RANGE_TYPE.REPLACE]: 1, [RANGE_TYPE.AUTOCAPS]: 2, [RANGE_TYPE.KEYWORD]: 3 };
+             return typeOrder[a.type] - typeOrder[b.type];
+        });
 
         return { ranges: finalRanges, count: highlightCount };
     }
@@ -348,15 +349,30 @@ document.addEventListener('DOMContentLoaded', () => {
         let html = '';
         let lastEnd = 0;
 
-        ranges.sort((a, b) => a.start - b.start);
-
+        // Ranges đã được sắp xếp trong performHighlight
         for (const range of ranges) {
-            if (range.end <= range.start || range.start < lastEnd) {
-                 // Xử lý ranges chồng lấn hoặc không hợp lệ: Bỏ qua
-                 if (range.end > lastEnd) {
-                     lastEnd = range.end;
-                 }
-                 continue;
+            // Kiểm tra range không hợp lệ hoặc đã bị bỏ qua do chồng lấn (nếu range.start < lastEnd)
+            if (range.end <= range.start) continue;
+            
+            // Nếu range hiện tại BẮT ĐẦU trước lastEnd (vùng đã được render)
+            if (range.start < lastEnd) {
+                // Xử lý chồng lấn:
+                // Nếu là Keyword, và nó nằm hoàn toàn trong REPLACE/AUTOCAPS (vùng đã render),
+                // ta sẽ chỉ render phần còn lại của nó, hoặc bỏ qua nếu đã render toàn bộ.
+                
+                if (range.type === RANGE_TYPE.KEYWORD) {
+                    // Nếu đã render qua điểm kết thúc của keyword, bỏ qua.
+                    if (range.end <= lastEnd) continue;
+                    
+                    // Bắt đầu từ vị trí lastEnd (điểm cuối của highlight trước đó)
+                    range.start = lastEnd; 
+                } else {
+                    // Đối với REPLACE/AUTOCAPS, ta chỉ render từ lastEnd
+                    if (range.start < lastEnd) {
+                         range.start = lastEnd;
+                         if (range.start >= range.end) continue;
+                    }
+                }
             }
             
             // Thêm văn bản thuần trước range
@@ -401,46 +417,19 @@ document.addEventListener('DOMContentLoaded', () => {
         els.searchBtn.disabled = true;
 
         try {
-            // 1. Tính toán ranges cho Replace/Auto-Caps TRÊN VĂN BẢN HIỆN TẠI (Không thay thế)
-            // LƯU Ý: Vì hàm performReplaceAndGetRanges luôn trả về text ĐÃ thay thế nếu có match, 
-            // nên ta phải ĐẢM BẢO CHỈ DÙNG TEXT GỐC CHO HIGHLIGHT TRONG SEARCH MODE,
-            // HOẶC KHÔNG CHẠY REPLACE TRONG CHẾ ĐỘ NÀY.
+            // FIX 1: Chỉ chạy performHighlight trên text gốc, BỎ QUA REPLACE/AUTOCAPS ranges.
+            const highlightResult = await performHighlight(textToSearch, []); 
             
-            // Do cần highlight cả từ replace/autocaps, nên ta chỉ chạy highlight trên văn bản gốc.
-            // Để đơn giản và chính xác, ta sẽ CHỈ TÍNH RANGES trên TEXT GỐC, KHÔNG THAY THẾ CHUỖI.
-            
-            // Tạm thời, để không làm lại toàn bộ hàm performReplaceAndGetRanges, ta sử dụng 
-            // hàm hiện tại và DÙNG LẠI TEXT CŨ cho highlight layer. 
-            // Tuy nhiên, logic này vẫn có thể gây ra lỗi nếu replace làm thay đổi độ dài,
-            // nhưng vì Search mode là "Chỉ đọc", ta chỉ muốn ĐÁNH DẤU vị trí SẼ replace.
-            
-            // *** Sửa chuẩn theo yêu cầu: Khi search, ta vẫn chạy tính toán replace để lấy ranges, 
-            // nhưng thay vì dùng temp.text đã replace, ta dùng textToSearch (text gốc) để highlight.
-            // ranges tính ra từ performReplaceAndGetRanges() lúc này đang bị lệch offset.
-            // => PHẢI DÙNG CHUỖI MỚI VÀ RANGES MỚI CHO HIGHLIGHT KEYWORD
-            
-            
-            // Fix chuẩn: Dùng text gốc (textToSearch) để tìm kiếm.
-            // Tuy nhiên, để hiện thị đúng lỗi Autocaps hoặc Replace, ta vẫn dùng text đã replace
-            // và ranges đã tính offset.
-            
-            const temp = await performReplaceAndGetRanges(textToSearch);
-            const finalText = temp.text; // Text sau khi Replace/AutoCaps
-            const replaceRanges = temp.ranges;
-            
-            // 2. Tính toán Highlight Keywords trên TEXT MỚI
-            const highlightResult = await performHighlight(finalText, replaceRanges); 
-            
-            // 3. Render trên TEXT MỚI (đã có ranges chuẩn)
-            await updateHighlight(finalText, highlightResult.ranges);
+            // Render trên TEXT GỐC (textToSearch)
+            await updateHighlight(textToSearch, highlightResult.ranges);
             
             // Đặt lại văn bản editor về văn bản gốc (vì đây là Search mode)
             els.editorInput.value = textToSearch; 
 
             
-            const totalHighlights = temp.count + highlightResult.count;
-            if (totalHighlights > 0) notify(`Đã tìm thấy ${totalHighlights} vị trí cần chú ý.`);
-            else notify('Không tìm thấy từ khóa nào hoặc cặp thay thế nào.', 'warning');
+            const totalHighlights = highlightResult.count;
+            if (totalHighlights > 0) notify(`Đã tìm thấy ${totalHighlights} từ khóa.`);
+            else notify('Không tìm thấy từ khóa nào.', 'warning');
 
         } catch (e) {
             console.error(e);
@@ -451,7 +440,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    // 2. Luồng Replace & Highlight (Ghi đè) - FIXED
+    // 2. Luồng Replace & Highlight (Ghi đè)
     async function performReplaceAll() {
         if (!els.editorInput) return notify('Lỗi Editor!', 'error');
 
@@ -466,7 +455,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // 1. Thực hiện Replace và Auto-Caps (Tạo newText và ranges chuẩn)
             const replaceResult = await performReplaceAndGetRanges(rawText);
             const plainTextAfterReplace = replaceResult.text;
-            let ranges = replaceResult.ranges;
+            let ranges = replaceResult.ranges; // Bao gồm REPLACE + AUTOCAPS ranges
             const replaceCount = replaceResult.count;
             
             // 2. CẬP NHẬT EDITOR VỚI VĂN BẢN MỚI
@@ -475,6 +464,7 @@ document.addEventListener('DOMContentLoaded', () => {
             els.replaceBtn.textContent = 'Đang xử lý Highlight...';
             
             // 3. Tính toán Highlight Keywords TRÊN VĂN BẢN MỚI
+            // existingRanges là REPLACE + AUTOCAPS ranges (FIXED: logic chồng lấn được xử lý bên trong performHighlight)
             const highlightResult = await performHighlight(plainTextAfterReplace, ranges); 
             
             // 4. Render Highlight trên văn bản mới
@@ -501,11 +491,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function syncStyles() {
         if (!els.editorInput || !els.highlightLayer) return;
 
-        // Sync styles manually
         const family = els.fontFamily.value;
         const size = els.fontSize.value;
         
-        // Cập nhật giá trị
         els.editorInput.style.fontFamily = family;
         els.editorInput.style.fontSize = size;
         els.highlightLayer.style.fontFamily = family;
@@ -520,7 +508,6 @@ document.addEventListener('DOMContentLoaded', () => {
         syncStyles();
     }
     
-    // Đồng bộ cuộn
     if (els.editorInput && els.highlightLayer) {
         els.editorInput.addEventListener('scroll', () => {
             els.highlightLayer.scrollTop = els.editorInput.scrollTop;
@@ -528,12 +515,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    // Xử lý Input và Word Count
     function updateWordCount() {
         if (!els.editorInput || !els.wordCount) return;
         
         const txt = els.editorInput.value || ''; 
-        // Đếm từ: tách bằng khoảng trắng, không dùng regex /s+ để tránh performance issue trên văn bản lớn
         const count = txt.trim() ? txt.trim().split(/\s+/).length : 0;
         els.wordCount.textContent = `Words: ${count}`;
     }
@@ -617,7 +602,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if(reRender) renderModeUI();
     }
     
-    // --- KEYWORD UI (Các hàm cũ) ---
+    // --- KEYWORD UI ---
     function updateKwUI() {
         const kwSettings = state.keywordSettings;
         if(els.kwMatchCaseBtn) updateToggle(els.kwMatchCaseBtn, kwSettings.matchCase, 'Match Case');
@@ -628,11 +613,10 @@ document.addEventListener('DOMContentLoaded', () => {
         saveState();
     }
     
-    function renderTags(keywords, container, isSidebar) {
+    function renderTags(keywords, container) {
         if (!container) return;
         container.innerHTML = keywords.map((kw, index) => {
             const colorClass = KW_COLORS[index % KW_COLORS.length];
-            // Sử dụng các class mới từ CSS bạn cung cấp
             return `
                 <div class="tag ${colorClass.replace('hl-', 'kw-')}">
                     <span>${escapeHTML(kw)}</span>
@@ -650,6 +634,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    /**
+     * FIX 3: Đảm bảo trim, reset input và gọi updateKwUI/highlight
+     */
     function addKeyword(val) {
         if (!val) return;
         
@@ -659,10 +646,12 @@ document.addEventListener('DOMContentLoaded', () => {
             
         if (newKws.length > 0) {
             state.keywords = state.keywords.concat(newKws);
-            updateKwUI();
+            updateKwUI();            // Cập nhật sidebar + fullKwTags
             notify(`Đã thêm ${newKws.length} từ khóa.`);
-            performSearchHighlight();
+            performSearchHighlight(); // Highlight ngay
         }
+        
+        // Reset inputs sau khi xử lý
         if (els.sidebarInput) els.sidebarInput.value = '';
         if (els.fullKwInput) els.fullKwInput.value = '';
     }
@@ -671,6 +660,7 @@ document.addEventListener('DOMContentLoaded', () => {
         state.keywords = state.keywords.filter(k => k !== keyword);
         updateKwUI();
         notify(`Đã xóa từ khóa: ${keyword}.`);
+        performSearchHighlight(); 
     }
     
     // --- TAB & SIDEBAR LOGIC (Các hàm cũ) ---
@@ -693,7 +683,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (els.sidebar) {
             els.sidebar.classList.toggle('closed', !state.sidebarOpen);
-            // Cập nhật icon trong sidebar-toggle-btn
             const iconSpan = els.sidebarToggle.querySelector('.icon');
             if (iconSpan) {
                 iconSpan.textContent = state.sidebarOpen ? '»' : '«';
@@ -759,6 +748,7 @@ document.addEventListener('DOMContentLoaded', () => {
         els.sidebarToggle.appendChild(iconSpan);
     }
     
+    // Sidebar Input
     if (els.sidebarInput) {
         els.sidebarInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' || e.key === ',') {
@@ -768,6 +758,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Full Keywords Input
     if (els.fullKwInput) {
         els.fullKwInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') { 
@@ -778,7 +769,7 @@ document.addEventListener('DOMContentLoaded', () => {
         els.fullKwInput.addEventListener('keyup', (e) => {
              if (e.key === ',') {
                 e.preventDefault();
-                const value = els.fullKwInput.value.slice(0, -1);
+                const value = els.fullKwInput.value.slice(0, -1); // Lấy giá trị trước dấu phẩy
                 if (value.trim().length > 0) {
                      addKeyword(value);
                 } else {
@@ -847,16 +838,16 @@ document.addEventListener('DOMContentLoaded', () => {
     function init() {
         if (els.sidebar) els.sidebar.classList.toggle('closed', !state.sidebarOpen);
 
-        // Khởi tạo font size/family từ state
         if (els.fontFamily) els.fontFamily.value = state.fontFamily;
         if (els.fontSize) els.fontSize.value = state.fontSize;
         
-        updateFont(); // Đồng bộ style ban đầu
+        updateFont(); 
         updateWordCount();
         renderModeUI(); 
         updateKwUI();   
         
         switchTab('main-tab');
+        performSearchHighlight(); // Highlight keyword ngay khi load
     }
     
     init();
