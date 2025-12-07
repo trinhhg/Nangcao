@@ -74,28 +74,28 @@ body {
     border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     background: white;
 }
-/* FIX: CẤU TRÚC SCROLL TRANSFORM */
+/* FIX CHUẨN: CẤU TRÚC SCROLL SYNC */
 .editor-wrapper { 
     flex: 1; 
     background: white; 
-    position: relative; 
+    position: relative; /* Container BẮT BUỘC phải là relative */
     overflow: hidden; /* Wrapper KHÔNG CUỘN */ 
     border-radius: 8px;
 }
 .editor-input {
-    position: absolute; /* Chồng lên */
+    position: absolute; 
     top: 0; left: 0;
     width: 100%; height: 100%; 
     padding: 20px; 
     border: none;
     resize: none;
     outline: none; 
-    background: transparent;
+    background: transparent; /* background trong suốt */
     color: #333; 
     line-height: 1.8;
-    z-index: 2; 
+    z-index: 2; /* Cao hơn layer highlight */
     
-    overflow: auto; /* Chỉ input cuộn */
+    overflow: auto; /* CHỈ input cuộn và tạo scrollbar */
     
     white-space: pre-wrap; 
     word-break: break-word;
@@ -103,21 +103,22 @@ body {
 .editor-input::placeholder { color: #9ca3af; }
 
 .highlight-layer {
-    position: absolute; /* Chồng lên */
+    position: absolute; 
     top: 0; left: 0;
     width: 100%; height: 100%;
     padding: 20px; 
-    z-index: 1; 
-    pointer-events: none; 
+    z-index: 1; /* Thấp hơn input */
+    pointer-events: none; /* Không nhận tương tác chuột */
     
-    overflow: hidden; /* Overlay KHÔNG CUỘN */
+    /* BẮT BUỘC phải cuộn để nhận scrollTop từ JS */
+    overflow: auto; 
     
-    color: transparent; 
+    color: transparent; /* Text thuần trong layer highlight phải ẩn */
     line-height: 1.8;
     white-space: pre-wrap;
     word-break: break-word;
 }
-/* KẾT THÚC CẤU TRÚC SCROLL TRANSFORM */
+/* KẾT THÚC CẤU TRÚC SCROLL SYNC */
 
 /* FOOTER */
 .editor-footer {
@@ -173,7 +174,7 @@ body {
 .input-sm { padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 13px; outline: none; }
 .keywords-panel { padding: 20px; }
 .keywords-input-area { width: 100%; }
-.w-full-input { width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; outline: none; box-sizing: border-box; }
+.w-full-input { width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4-px; outline: none; box-sizing: border-box; }
 .w-full-input:focus { border-color: #10b981; }
 .input-label { font-size: 13px; font-weight: 700; color: #374151; margin: 0 0 8px 0; }
 
@@ -229,7 +230,7 @@ body {
     align-items: center;
 }
 .pair-row:last-child { border-bottom: none; }
-.pair-input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; }
+.pair-input { flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; }
 .delete-btn { 
     background-color: #fca5a5; 
     color: #dc2626; 
@@ -250,21 +251,15 @@ body {
 .tag .remove-tag { cursor: pointer; width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
 .tag .remove-tag:hover { background: #dbeafe; color: red; }
 
-/* HIGHLIGHT COLORS */
+/* HIGHLIGHT COLORS (Đậm hơn) */
 .hl-yellow { background-color: #fde047; color: #000; border-radius: 2px; padding: 0 1px; }
 .hl-blue { background-color: #93c5fd; color: #000; border-radius: 2px; padding: 0 1px; }
 
-/* MÀU KEYWORD MỚI: ĐẬM HƠN, TĂNG TÍNH THỊ GIÁC */
 .keyword { border-radius: 3px; padding: 0 2px; font-weight: 700; color: #333; }
-/* Hồng */
 .hl-pink   { background-color: #f472b6; border-bottom: 2px solid #be185d; } 
-/* Xanh lá */
 .hl-green  { background-color: #4ade80; border-bottom: 2px solid #15803d; } 
-/* Cam */
 .hl-orange { background-color: #fb923c; border-bottom: 2px solid #c2410c; } 
-/* Tím */
 .hl-purple { background-color: #a78bfa; border-bottom: 2px solid #6d28d9; } 
-/* Đỏ */
 .hl-red    { background-color: #f87171; border-bottom: 2px solid #b91c1c; } 
 
 /* === NOTIFICATION === */
