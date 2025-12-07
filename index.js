@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     // === CONFIG & STATE ===
-    const STORAGE_KEY = 'trinh_hg_pro_v28_ultimate'; 
+    const STORAGE_KEY = 'trinh_hg_pro_v29_complete'; 
     
     const RANGE_TYPE = {
         REPLACE: 'rep',
@@ -9,7 +9,8 @@ document.addEventListener('DOMContentLoaded', () => {
         KEYWORD: 'kw'
     };
     
-    const KW_COLORS = ['hl-pink', 'hl-green', 'hl-purple', 'hl-red', 'hl-cyan']; 
+    // Màu keywords cập nhật theo CSS mới
+    const KW_COLORS = ['hl-pink', 'hl-green', 'hl-orange', 'hl-purple', 'hl-red']; 
     
     const defaultState = {
         keywords: [],
@@ -98,7 +99,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function escapeRegExp(string) {
         return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     }
-    
     function normalizeTextForSearch(text) {
         if (!text) return '';
         return text
@@ -251,23 +251,14 @@ document.addEventListener('DOMContentLoaded', () => {
         return { ranges: finalRanges, count: highlightCount };
     }
 
-    // --- RENDER HTML & CARET PRESERVATION ---
     function updateHighlightPreserveCaret(textToRender, allRanges) {
         if (!els.highlightLayer || !els.editorInput) return;
-        
-        // 1. Capture Caret Position
         const selStart = els.editorInput.selectionStart;
         const selEnd = els.editorInput.selectionEnd;
-
-        // 2. Build & Render HTML
         const finalHTML = buildFinalHTML(textToRender, allRanges);
         els.highlightLayer.innerHTML = finalHTML;
-        
-        // 3. Sync Scroll
         els.highlightLayer.scrollTop = els.editorInput.scrollTop;
         els.highlightLayer.scrollLeft = els.editorInput.scrollLeft;
-        
-        // 4. Restore Caret Position
         els.editorInput.setSelectionRange(selStart, selEnd);
     }
     
@@ -307,8 +298,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!els.editorInput) return;
         const text = els.editorInput.value;
         updateWordCount();
-        
-        // Perform Highlight and Preserve Caret
         performHighlight(text, []).then(res => {
             updateHighlightPreserveCaret(text, res.ranges);
         });
@@ -338,11 +327,8 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const replaceResult = await performReplaceAndGetRanges(rawText);
             els.editorInput.value = replaceResult.text; 
-            
             const highlightResult = await performHighlight(replaceResult.text, replaceResult.ranges); 
-            // Dùng hàm Preserve Caret để render
             updateHighlightPreserveCaret(replaceResult.text, highlightResult.ranges);
-            
             updateWordCount();
             if (replaceResult.repCount > 0 || replaceResult.acCount > 0) notify(`Thay: ${replaceResult.repCount}, AutoCaps: ${replaceResult.acCount}`);
             else notify('Không có gì thay đổi.', 'warning');
@@ -350,7 +336,80 @@ document.addEventListener('DOMContentLoaded', () => {
         finally { els.replaceBtn.disabled = false; }
     }
 
-    // === REST OF UI LOGIC (Sync, Buttons, Import) ===
+    // === MODE MANAGEMENT (FIXED) ===
+    function renderModeUI() {
+        const modeKeys = Object.keys(state.modes);
+        if (els.modeSelect) {
+            els.modeSelect.innerHTML = modeKeys.map(key => 
+                `<option value="${key}" ${key === state.activeMode ? 'selected' : ''}>${key}</option>`
+            ).join('');
+        }
+        
+        // Show/Hide buttons based on mode
+        const isDefault = state.activeMode === 'Mặc định';
+        if(els.deleteModeBtn) els.deleteModeBtn.classList.toggle('hidden', isDefault);
+        if(els.renameModeBtn) els.renameModeBtn.classList.toggle('hidden', isDefault);
+
+        const mode = state.modes[state.activeMode];
+        updateToggle(els.matchCaseBtn, mode.matchCase, 'Match Case');
+        updateToggle(els.wholeWordBtn, mode.wholeWord, 'Whole Word');
+        updateToggle(els.autoCapsBtn, mode.autoCaps, 'Auto Caps');
+        renderPairs(mode.pairs); 
+    }
+
+    if (els.addModeBtn) {
+        els.addModeBtn.onclick = () => {
+            const name = prompt("Nhập tên chế độ mới:");
+            if (name && name.trim()) {
+                if (state.modes[name]) return notify("Tên đã tồn tại!", "error");
+                state.modes[name] = { pairs: [], matchCase: false, wholeWord: false, autoCaps: false };
+                state.activeMode = name;
+                renderModeUI();
+                saveState();
+                notify(`Đã tạo chế độ: ${name}`);
+            }
+        };
+    }
+
+    if (els.renameModeBtn) {
+        els.renameModeBtn.onclick = () => {
+            if (state.activeMode === 'Mặc định') return;
+            const newName = prompt("Nhập tên mới:", state.activeMode);
+            if (newName && newName.trim() && newName !== state.activeMode) {
+                if (state.modes[newName]) return notify("Tên đã tồn tại!", "error");
+                const data = state.modes[state.activeMode];
+                state.modes[newName] = data; // Copy data
+                delete state.modes[state.activeMode]; // Delete old
+                state.activeMode = newName;
+                renderModeUI();
+                saveState();
+                notify(`Đã đổi tên thành: ${newName}`);
+            }
+        };
+    }
+
+    if (els.deleteModeBtn) {
+        els.deleteModeBtn.onclick = () => {
+            if (state.activeMode === 'Mặc định') return;
+            if (confirm(`Bạn chắc chắn muốn xóa chế độ "${state.activeMode}"?`)) {
+                delete state.modes[state.activeMode];
+                state.activeMode = 'Mặc định';
+                renderModeUI();
+                saveState();
+                notify("Đã xóa chế độ.");
+            }
+        };
+    }
+
+    if (els.modeSelect) {
+        els.modeSelect.onchange = () => {
+            state.activeMode = els.modeSelect.value;
+            renderModeUI();
+            saveState();
+        };
+    }
+
+    // === REST OF UI LOGIC ===
     function syncStyles() {
         const family = els.fontFamily.value;
         const size = els.fontSize.value;
@@ -371,17 +430,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if(!btn) return;
         btn.classList.toggle('active', isActive);
         btn.textContent = `${label}: ${isActive ? 'Bật' : 'Tắt'}`;
-    }
-    function renderModeUI() {
-        const modeKeys = Object.keys(state.modes);
-        if (els.modeSelect) els.modeSelect.innerHTML = modeKeys.map(key => `<option value="${key}" ${key === state.activeMode ? 'selected' : ''}>${key}</option>`).join('');
-        const mode = state.modes[state.activeMode];
-        updateToggle(els.matchCaseBtn, mode.matchCase, 'Match Case');
-        updateToggle(els.wholeWordBtn, mode.wholeWord, 'Whole Word');
-        updateToggle(els.autoCapsBtn, mode.autoCaps, 'Auto Caps');
-        if(els.deleteModeBtn) els.deleteModeBtn.classList.toggle('hidden', modeKeys.length === 1);
-        if(els.renameModeBtn) els.renameModeBtn.classList.toggle('hidden', modeKeys.length === 1);
-        renderPairs(mode.pairs); 
     }
     function renderPairs(pairs) {
         els.puncList.innerHTML = '';
@@ -532,7 +580,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (els.searchBtn) els.searchBtn.onclick = performSearchHighlight;
     if (els.replaceBtn) els.replaceBtn.onclick = performReplaceAll;
-    if (els.clearBtn) els.clearBtn.onclick = () => { if(confirm('Xóa trắng?')) { els.editorInput.value = ''; els.highlightLayer.innerHTML = ''; updateWordCount(); } };
+    
+    // NÚT CLEAR (Đã bỏ confirm theo yêu cầu)
+    if (els.clearBtn) els.clearBtn.onclick = () => { 
+        els.editorInput.value = ''; 
+        els.highlightLayer.innerHTML = ''; 
+        updateWordCount(); 
+        notify('Đã xóa trắng.');
+    };
+    
     if (els.copyBtn) els.copyBtn.onclick = () => {
         if(!els.editorInput.value) return notify('Trống!', 'warning');
         navigator.clipboard.writeText(els.editorInput.value).then(() => { els.editorInput.value = ''; els.highlightLayer.innerHTML = ''; updateWordCount(); notify('Đã copy & xóa.'); });
@@ -540,7 +596,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (els.fontFamily) els.fontFamily.onchange = syncStyles;
     if (els.fontSize) els.fontSize.onchange = syncStyles;
-    if (els.modeSelect) els.modeSelect.onchange = () => { state.activeMode = els.modeSelect.value; renderModeUI(); saveState(); };
     if (els.addPairBtn) els.addPairBtn.onclick = () => addPairUI('', '', state.modes[state.activeMode].pairs.length, true);
     if (els.saveSettingsBtn) els.saveSettingsBtn.onclick = () => { savePairs(true); notify('Đã lưu.'); };
 
