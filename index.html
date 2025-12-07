@@ -37,18 +37,21 @@
 
         <div id="main-tab" class="tab-content active main-layout">
             <div id="central-area" class="editor-area">
-                <div id="editor-wrapper" class="editor-wrapper">
-                    <div id="editor" 
-                         contenteditable="true" 
-                         spellcheck="false" 
-                         class="custom-scrollbar"
-                         data-placeholder="Dán văn bản vào đây..."></div>
+                <div id="editor-wrapper" class="editor-wrapper custom-scrollbar">
+                    
+                    <div id="highlight-layer" aria-hidden="true" class="highlight-layer"></div>
+                    
+                    <textarea 
+                        id="editor-input" 
+                        spellcheck="false" 
+                        class="editor-input custom-scrollbar"
+                        placeholder="Dán văn bản vào đây..."></textarea>
                 </div>
                 
                 <div class="editor-footer">
                     <div id="word-count-display" class="badge">Words: 0</div>
                     <div id="editor-actions" class="footer-actions">
-                        <button id="search" class="btn btn-teal">Highlight Keywords Only</button>
+                        <button id="search" class="btn btn-teal">Tính toán lại Highlight</button>
                         <button id="clear" class="btn btn-teal">Xóa Trắng</button>
                         <button id="copy-editor-content" class="btn btn-teal">Copy Result & Clear</button>
                         <button id="replace-all" class="btn btn-teal">Thực Hiện Thay Thế</button>
@@ -109,8 +112,7 @@
                     </div>
 
                     <div class="toolbar-group">
-                        <button id="import-kw-csv" class="btn btn-action">Nhập Keywords</button>
-                        <button id="export-kw-csv" class="btn btn-action">Xuất Keywords</button>
+                        <button id="copy-kw-csv" class="btn btn-action">Copy Keywords</button>
                     </div>
 
                     <div class="toolbar-group">
