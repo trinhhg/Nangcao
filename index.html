@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="index.css">
 </head>
-<body class="bg-gray-100 h-screen flex flex-col overflow-hidden">
+<body class="custom-scrollbar">
 
   <header class="app-header">
     <div class="header-left">
@@ -36,7 +36,7 @@
     <div id="content-wrapper">
 
         <div id="main-tab" class="tab-content active main-layout">
-            <div id="central-area" class="editor-area">
+            <div class="editor-area">
                 <div id="editor-wrapper" class="editor-wrapper custom-scrollbar">
                     
                     <div id="highlight-layer" aria-hidden="true" class="highlight-layer custom-scrollbar"></div>
@@ -82,8 +82,8 @@
                     <button id="auto-caps-btn" class="btn btn-toggle">Auto Caps: Tắt</button>
                 </div>
                 <div class="toolbar-group">
-                    <button id="import-replace-csv" class="btn btn-action">Nhập CSV</button>
-                    <button id="export-replace-csv" class="btn btn-action">Xuất CSV</button>
+                    <button id="import-replace-csv" class="btn btn-action" disabled>Nhập CSV</button>
+                    <button id="export-replace-csv" class="btn btn-action" disabled>Xuất CSV</button>
                 </div>
               </div>
               
@@ -92,7 +92,7 @@
                   <button id="save-settings" class="btn btn-primary icon-btn">Lưu tất cả</button>
               </div>
 
-              <div class="scroll-area">
+              <div class="scroll-area custom-scrollbar">
                 <div id="punctuation-list"></div>
                 <div id="empty-state" class="empty-message hidden">Chưa có cặp thay thế nào.</div>
               </div>
@@ -112,7 +112,7 @@
                     </div>
 
                     <div class="toolbar-group">
-                        <button id="copy-kw-csv" class="btn btn-action">Copy Keywords</button>
+                        <button id="copy-kw-csv" class="btn btn-action" disabled>Copy Keywords</button>
                     </div>
 
                     <div class="toolbar-group">
@@ -120,7 +120,7 @@
                             <label>Font:</label>
                             <select id="fontFamily" class="input-sm">
                                 <option value="Arial, sans-serif">Arial</option>
-                                <option value="'Montserrat', sans-serif" selected>Montserrat</option>
+                                <option value="'Montserrat', sans-serif">Montserrat</option>
                                 <option value="'Times New Roman', serif">Times New Roman</option>
                             </select>
                         </div>
@@ -128,7 +128,7 @@
                             <label>Size:</label>
                             <select id="fontSize" class="input-sm">
                                 <option value="14px">14</option>
-                                <option value="16px" selected>16</option>
+                                <option value="16px">16</option>
                                 <option value="18px">18</option>
                                 <option value="20px">20</option>
                                 <option value="24px">24</option>
@@ -138,11 +138,11 @@
                     </div>
                 </div>
 
-                <div class="keywords-panel p-4">
+                <div class="keywords-panel">
                     <div class="keywords-input-area">
                         <h4 class="input-label">Danh sách Keywords</h4>
                         <input type="text" id="full-keywords-input" placeholder="Nhập từ khóa highlight (Enter hoặc phẩy)..." class="w-full-input">
-                        <div id="full-keywords-tags" class="tags-container border p-2 min-h-[100px] bg-white rounded mt-2"></div>
+                        <div id="full-keywords-tags" class="tags-container"></div>
                     </div>
                 </div>
             </div>
@@ -161,7 +161,8 @@
         </div>
     </div>
 
-  </div> <div id="notification-container"></div>
+  </div> 
+  <div id="notification-container"></div>
   <script src="index.js"></script>
 </body>
 </html>
