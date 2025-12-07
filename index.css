@@ -12,9 +12,9 @@ body {
 }
 
 /* === SCROLLBAR === */
-.custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
+.custom-scrollbar::-webkit-scrollbar { width: 10px; height: 10px; }
 .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 5px; border: 2px solid #f1f1f1; }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
 /* === HEADER === */
@@ -74,47 +74,64 @@ body {
     border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     background: white;
 }
-/* CẤU TRÚC SCROLL SYNC (Fixed V24) */
+
+/* === EDITOR & HIGHLIGHT SYNC (FIXED V25) === */
 .editor-wrapper { 
     flex: 1; 
     background: white; 
     position: relative; 
-    overflow: hidden; 
-    border-radius: 8px;
+    overflow: hidden; /* Container không scroll, con scroll */
+    border-radius: 8px 8px 0 0;
 }
+
+/* Shared styles for perfect alignment */
 .editor-input, .highlight-layer {
-    /* Đảm bảo đồng bộ wrapping và spacing */
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-    padding: 20px; 
-    line-height: 1.8;
-    box-sizing: border-box; /* Quan trọng cho padding và size khớp nhau */
-    
     position: absolute; 
     top: 0; left: 0;
     width: 100%; height: 100%; 
-}
-.editor-input {
+    
+    padding: 20px; 
+    margin: 0;
     border: none;
-    resize: none;
-    outline: none; 
+    
+    font-family: 'Montserrat', sans-serif; /* Fallback default */
+    font-size: 16px;
+    line-height: 1.8;
+    letter-spacing: normal;
+    
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    box-sizing: border-box;
+    overflow: auto; /* Cả 2 đều scroll */
+}
+
+/* Lớp dưới: Chỉ hiển thị màu nền, chữ trong suốt */
+.highlight-layer {
+    z-index: 1; 
+    color: transparent; /* Chữ trong suốt để không bị nhòe bóng */
+    pointer-events: none; /* Click xuyên qua */
+    background: transparent;
+}
+
+/* Lớp trên: Chỉ hiển thị chữ để edit */
+.editor-input {
+    z-index: 2; 
     background: transparent; 
     color: #333; 
-    z-index: 2; 
-    overflow: auto; 
+    resize: none;
+    outline: none; 
 }
 .editor-input::placeholder { color: #9ca3af; }
 
-.highlight-layer {
-    z-index: 1; 
-    pointer-events: none; 
-    color: transparent; 
-    overflow: auto; /* BẮT BUỘC phải cuộn để nhận scrollTop từ JS */
+/* Fix highlight bleeding and spacing */
+.highlight-layer span {
+    color: transparent; /* Chữ trong span highlight cũng phải trong suốt */
+    border-radius: 2px;
+    padding: 0; /* KHÔNG dùng padding ngang để tránh lệch chữ */
 }
-/* KẾT THÚC CẤU TRÚC SCROLL SYNC */
 
-/* FOOTER */
+/* === FOOTER === */
 .editor-footer {
     padding: 10px 15px; border-top: 1px solid #e5e7eb; background: #f9fafb;
     display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;
@@ -138,8 +155,17 @@ body {
 .sidebar-header { padding: 12px 15px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; white-space: nowrap; }
 .sidebar-header h3 { margin: 0; font-size: 13px; font-weight: 700; color: #374151; }
 .sidebar-content { padding: 15px; flex: 1; overflow-y: auto; }
-.sidebar-input { width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 13px; outline: none; }
+
+/* Sidebar Input Group */
+.input-group-sidebar { display: flex; gap: 5px; }
+.sidebar-input { flex: 1; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 13px; outline: none; }
 .sidebar-input:focus { border-color: #2563eb; }
+.btn-sm-add {
+    width: 34px; background: #10b981; color: white; border: none; border-radius: 4px;
+    font-weight: bold; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center;
+}
+.btn-sm-add:hover { background: #059669; }
+
 .tags-container { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 
 .sidebar-toggle-btn {
@@ -168,8 +194,13 @@ body {
 .input-sm { padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 13px; outline: none; }
 .keywords-panel { padding: 20px; }
 .keywords-input-area { width: 100%; }
-.w-full-input { width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; outline: none; box-sizing: border-box; }
+
+/* Input Group for Full Keywords */
+.input-group { display: flex; gap: 10px; align-items: center; }
+.w-full-input { flex: 1; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; outline: none; box-sizing: border-box; }
 .w-full-input:focus { border-color: #10b981; }
+.btn-add-kw { height: 34px; width: 40px; font-size: 20px; padding: 0; display: flex; align-items: center; justify-content: center; }
+
 .input-label { font-size: 13px; font-weight: 700; color: #374151; margin: 0 0 8px 0; }
 
 /* === BUTTONS === */
@@ -210,12 +241,11 @@ body {
 
 /* Actions Buttons */
 .btn-action {
-    background: #f3e8ff; color: #6b21a8; /* Tím nhạt */
+    background: #f3e8ff; color: #6b21a8; 
     padding: 8px 15px; border-radius: 6px; font-size: 12px; font-weight: 700;
     border: 1px solid #d8b4fe;
 }
 .btn-action:hover { background: #e9d5ff; color: #581c87; border-color: #c084fc; }
-
 
 /* === ITEMS & TAGS === */
 .pair-row {
@@ -248,12 +278,12 @@ body {
 .tag .remove-tag { cursor: pointer; width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
 .tag .remove-tag:hover { background: #dbeafe; color: red; }
 
-/* HIGHLIGHT COLORS (Đậm hơn) */
-.hl-yellow { background-color: #fde047; color: #000; border-radius: 2px; padding: 0 1px; } /* Vàng: Replace */
-.hl-blue { background-color: #93c5fd; color: #000; border-radius: 2px; padding: 0 1px; } /* Xanh: AutoCaps */
-.hl-orange-dark { background-color: #fb923c; color: #000; border-radius: 2px; padding: 0 1px; border-bottom: 2px solid #c2410c; } /* Cam đậm: Replace + AutoCaps */
+/* HIGHLIGHT COLORS - Background Only */
+.hl-yellow { background-color: #fde047; } 
+.hl-blue { background-color: #93c5fd; } 
+.hl-orange-dark { background-color: #fb923c; border-bottom: 2px solid #c2410c; } 
 
-.keyword { border-radius: 3px; padding: 0 2px; font-weight: 700; color: #333; }
+.keyword { font-weight: 700; }
 .hl-pink   { background-color: #f472b6; border-bottom: 2px solid #be185d; } 
 .hl-green  { background-color: #4ade80; border-bottom: 2px solid #15803d; } 
 .hl-orange { background-color: #fb923c; border-bottom: 2px solid #c2410c; } 
