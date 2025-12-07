@@ -74,16 +74,50 @@ body {
     border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     background: white;
 }
-.editor-wrapper { flex: 1; background: white; position: relative; overflow: hidden; }
-
-/* FIX LỖI 1: white-space: pre-wrap CỰC KỲ QUAN TRỌNG ĐỂ GIỮ DÒNG TRỐNG */
-#editor { 
-    width: 100%; height: 100%; padding: 20px; outline: none; overflow-y: auto; 
-    line-height: 1.8; color: #333; 
+/* FIX: CẤU TRÚC SCROLL TRANSFORM */
+.editor-wrapper { 
+    flex: 1; 
+    background: white; 
+    position: relative; 
+    overflow: hidden; /* Wrapper KHÔNG CUỘN */ 
+    border-radius: 8px;
+}
+.editor-input {
+    position: absolute; /* Chồng lên */
+    top: 0; left: 0;
+    width: 100%; height: 100%; 
+    padding: 20px; 
+    border: none;
+    resize: none;
+    outline: none; 
+    background: transparent;
+    color: #333; 
+    line-height: 1.8;
+    z-index: 2; 
+    
+    overflow: auto; /* Chỉ input cuộn */
+    
     white-space: pre-wrap; 
     word-break: break-word;
 }
-#editor:empty::before { content: attr(data-placeholder); color: #9ca3af; pointer-events: none; }
+.editor-input::placeholder { color: #9ca3af; }
+
+.highlight-layer {
+    position: absolute; /* Chồng lên */
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    padding: 20px; 
+    z-index: 1; 
+    pointer-events: none; 
+    
+    overflow: hidden; /* Overlay KHÔNG CUỘN */
+    
+    color: transparent; 
+    line-height: 1.8;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+/* KẾT THÚC CẤU TRÚC SCROLL TRANSFORM */
 
 /* FOOTER */
 .editor-footer {
@@ -186,11 +220,26 @@ body {
 .btn-teal:hover { background: #99f6e4; }
 
 /* === ITEMS & TAGS === */
-.punctuation-item { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; background: white; padding: 6px 10px; border-radius: 6px; border: 1px solid #e5e7eb; }
-.punctuation-item input { flex: 1; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 4px; font-size: 13px; outline: none; }
-.punctuation-item input:focus { border-color: #2563eb; }
-.punctuation-item button.remove { width: 28px; height: 28px; border-radius: 4px; border: none; background: #fee2e2; color: #dc2626; cursor: pointer; display: flex; align-items: center; justify-content: center;}
-.punctuation-item button.remove:hover { background: #ef4444; color: white; }
+.pair-row {
+    display: grid;
+    grid-template-columns: 0.5fr 0.5fr auto;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px dotted #e5e7eb;
+    align-items: center;
+}
+.pair-row:last-child { border-bottom: none; }
+.pair-input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; }
+.delete-btn { 
+    background-color: #fca5a5; 
+    color: #dc2626; 
+    border: none; 
+    padding: 6px 10px; 
+    border-radius: 4px; 
+    cursor: pointer; 
+    font-weight: 600;
+}
+.delete-btn:hover { background-color: #f87171; }
 .empty-message { text-align: center; color: #9ca3af; padding: 20px; font-size: 13px; }
 
 .tag {
@@ -205,12 +254,18 @@ body {
 .hl-yellow { background-color: #fde047; color: #000; border-radius: 2px; padding: 0 1px; }
 .hl-blue { background-color: #93c5fd; color: #000; border-radius: 2px; padding: 0 1px; }
 
-.keyword { border-radius: 3px; padding: 0 2px; font-weight: 600; }
-.hl-pink   { background-color: #f9a8d4; border-bottom: 2px solid #db2777; }
-.hl-green  { background-color: #86efac; border-bottom: 2px solid #16a34a; }
-.hl-orange { background-color: #fdba74; border-bottom: 2px solid #ea580c; }
-.hl-purple { background-color: #d8b4fe; border-bottom: 2px solid #9333ea; }
-.hl-red    { background-color: #fca5a5; border-bottom: 2px solid #dc2626; }
+/* MÀU KEYWORD MỚI: ĐẬM HƠN, TĂNG TÍNH THỊ GIÁC */
+.keyword { border-radius: 3px; padding: 0 2px; font-weight: 700; color: #333; }
+/* Hồng */
+.hl-pink   { background-color: #f472b6; border-bottom: 2px solid #be185d; } 
+/* Xanh lá */
+.hl-green  { background-color: #4ade80; border-bottom: 2px solid #15803d; } 
+/* Cam */
+.hl-orange { background-color: #fb923c; border-bottom: 2px solid #c2410c; } 
+/* Tím */
+.hl-purple { background-color: #a78bfa; border-bottom: 2px solid #6d28d9; } 
+/* Đỏ */
+.hl-red    { background-color: #f87171; border-bottom: 2px solid #b91c1c; } 
 
 /* === NOTIFICATION === */
 #notification-container { 
