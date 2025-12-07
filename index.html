@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tiện Ích Của Trịnh Hg - Pro Version Final Patched V24 (FIXED)</title>
+  <title>Tiện Ích Của Trịnh Hg - Pro Version Final Patched V25</title>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="index.css">
 </head>
@@ -35,8 +35,7 @@
 
         <div id="main-tab" class="tab-content active main-layout">
             <div class="editor-area">
-                <div id="editor-wrapper" class="editor-wrapper custom-scrollbar">
-                    
+                <div id="editor-wrapper" class="editor-wrapper">
                     <div id="highlight-layer" aria-hidden="true" class="highlight-layer custom-scrollbar"></div>
                     
                     <textarea 
@@ -110,15 +109,15 @@
                     </div>
 
                     <div class="toolbar-group">
-                        <button id="copy-kw-csv" class="btn btn-action" disabled>Copy Keywords</button>
+                        <button id="copy-kw-csv" class="btn btn-action">Copy Keywords</button>
                     </div>
 
                     <div class="toolbar-group">
                         <div class="control-group">
                             <label>Font:</label>
                             <select id="fontFamily" class="input-sm">
-                                <option value="Arial, sans-serif">Arial</option>
                                 <option value="'Montserrat', sans-serif">Montserrat</option>
+                                <option value="Arial, sans-serif">Arial</option>
                                 <option value="'Times New Roman', serif">Times New Roman</option>
                             </select>
                         </div>
@@ -139,7 +138,10 @@
                 <div class="keywords-panel">
                     <div class="keywords-input-area">
                         <h4 class="input-label">Danh sách Keywords</h4>
-                        <input type="text" id="full-keywords-input" placeholder="Nhập từ khóa highlight (Enter hoặc phẩy)..." class="w-full-input">
+                        <div class="input-group">
+                            <input type="text" id="full-keywords-input" placeholder="Nhập từ khóa highlight (Enter hoặc phẩy)..." class="w-full-input">
+                            <button id="add-kw-btn" class="btn btn-success btn-add-kw">+</button>
+                        </div>
                         <div id="full-keywords-tags" class="tags-container"></div>
                     </div>
                 </div>
@@ -152,8 +154,9 @@
             <h3>Quick Keywords</h3>
         </div>
         <div class="sidebar-content custom-scrollbar">
-            <div class="mb-3">
+            <div class="mb-3 input-group-sidebar">
                 <input type="text" id="sidebar-input" placeholder="Nhập từ khóa..." class="sidebar-input">
+                <button id="sidebar-add-btn" class="btn-sm-add">+</button>
             </div>
             <div id="sidebar-tags" class="tags-container"></div>
         </div>
