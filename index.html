@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tiện Ích Của Trịnh Hg - Pro Version Final Patched V24 (FIXED)</title>
+  <title>Tiện Ích Của Trịnh Hg - Pro Version V25 Final Fix</title>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="index.css">
 </head>
@@ -25,7 +25,9 @@
       </nav>
     </div>
     <div class="header-right">
-      <button id="header-sidebar-toggle" class="sidebar-toggle-btn" title="Mở/Đóng Sidebar Keywords"></button>
+      <button id="header-sidebar-toggle" class="sidebar-toggle-btn" title="Mở/Đóng Sidebar Keywords">
+        <span class="icon">«</span>
+      </button>
     </div>
   </header>
 
@@ -36,9 +38,9 @@
         <div id="main-tab" class="tab-content active main-layout">
             <div class="editor-area">
                 <div id="editor-wrapper" class="editor-wrapper custom-scrollbar">
-                    
-                    <div id="highlight-layer" aria-hidden="true" class="highlight-layer custom-scrollbar"></div>
-                    
+                    <div id="backdrop">
+                        <div id="highlight-layer" class="highlight-layer"></div>
+                    </div>
                     <textarea 
                         id="editor-input" 
                         spellcheck="false" 
@@ -110,7 +112,7 @@
                     </div>
 
                     <div class="toolbar-group">
-                        <button id="copy-kw-csv" class="btn btn-action" disabled>Copy Keywords</button>
+                        <button id="copy-kw-csv" class="btn btn-action">Copy Keywords</button>
                     </div>
 
                     <div class="toolbar-group">
@@ -125,12 +127,12 @@
                         <div class="control-group">
                             <label>Size:</label>
                             <select id="fontSize" class="input-sm">
-                                <option value="14px">14px</option>
-                                <option value="16px">16px</option>
-                                <option value="18px">18px</option>
-                                <option value="20px">20px</option>
-                                <option value="24px">24px</option>
-                                <option value="28px">28px</option>
+                                <option value="14px">14</option>
+                                <option value="16px">16</option>
+                                <option value="18px">18</option>
+                                <option value="20px">20</option>
+                                <option value="24px">24</option>
+                                <option value="28px">28</option>
                             </select>
                         </div>
                     </div>
