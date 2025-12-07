@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tiện Ích Của Trịnh Hg - Pro Version Final Patched V25</title>
+  <title>Tiện Ích Của Trịnh Hg - Pro Version V26 Final</title>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="index.css">
 </head>
@@ -25,7 +25,9 @@
       </nav>
     </div>
     <div class="header-right">
-      <button id="header-sidebar-toggle" class="sidebar-toggle-btn" title="Mở/Đóng Sidebar Keywords"></button>
+      <button id="header-sidebar-toggle" class="sidebar-toggle-btn" title="Mở/Đóng Sidebar Keywords">
+          <span class="icon">«</span>
+      </button>
     </div>
   </header>
 
@@ -79,8 +81,9 @@
                     <button id="auto-caps-btn" class="btn btn-toggle"></button>
                 </div>
                 <div class="toolbar-group">
-                    <button id="import-replace-csv" class="btn btn-action" disabled>Nhập CSV</button>
-                    <button id="export-replace-csv" class="btn btn-action" disabled>Xuất CSV</button>
+                    <button id="import-replace-csv" class="btn btn-action">Nhập CSV</button>
+                    <button id="export-replace-csv" class="btn btn-action">Xuất CSV</button>
+                    <input type="file" id="csv-file-input" accept=".csv" class="hidden">
                 </div>
               </div>
               
@@ -140,7 +143,8 @@
                         <h4 class="input-label">Danh sách Keywords</h4>
                         <div class="input-group">
                             <input type="text" id="full-keywords-input" placeholder="Nhập từ khóa highlight (Enter hoặc phẩy)..." class="w-full-input">
-                            <button id="add-kw-btn" class="btn btn-success btn-add-kw">+</button>
+                            <button id="add-kw-btn" class="btn btn-blue-toolbar" title="Thêm từ khóa">+</button>
+                            <button id="delete-all-kw-btn" class="btn btn-red-toolbar" title="Xóa tất cả">🗑</button>
                         </div>
                         <div id="full-keywords-tags" class="tags-container"></div>
                     </div>
@@ -154,9 +158,8 @@
             <h3>Quick Keywords</h3>
         </div>
         <div class="sidebar-content custom-scrollbar">
-            <div class="mb-3 input-group-sidebar">
-                <input type="text" id="sidebar-input" placeholder="Nhập từ khóa..." class="sidebar-input">
-                <button id="sidebar-add-btn" class="btn-sm-add">+</button>
+            <div class="mb-3">
+                <input type="text" id="sidebar-input" placeholder="Nhập từ khóa (Click ra ngoài để thêm)..." class="sidebar-input">
             </div>
             <div id="sidebar-tags" class="tags-container"></div>
         </div>
