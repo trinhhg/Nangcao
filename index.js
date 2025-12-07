@@ -1,10 +1,11 @@
 document.addEventListener('DOMContentLoaded', () => {
     // === CONFIG & STATE ===
-    const STORAGE_KEY = 'trinh_hg_pro_v23_final_patch_fixed'; 
+    const STORAGE_KEY = 'trinh_hg_pro_v24_final_patch_fixed'; // Cập nhật key storage
     
     const RANGE_TYPE = {
         REPLACE: 'rep',
         AUTOCAPS: 'cap',
+        REPLACE_CAP: 'rep-cap', // Loại mới
         KEYWORD: 'kw'
     };
     
@@ -116,7 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return replacement;
     }
 
-    // === CORE LOGIC: STRING BUILDER REPLACE (FIXED OFFSET) ===
+    // --- CORE LOGIC: STRING BUILDER REPLACE (FIXED OFFSET V24) ---
     
     /**
      * Thực hiện Replace/AutoCaps và tính toán ranges chính xác trên văn bản MỚI.
@@ -201,10 +202,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (char !== upperChar) { 
                     const charStart = offset + prefix.length;
                     
+                    // Kiểm tra xem vị trí này có nằm trong range REPLACE đã tạo trước đó không
+                    const isWithinReplace = ranges.some(r => 
+                        r.type === RANGE_TYPE.REPLACE && charStart >= r.start && charStart < r.end
+                    );
+                    
+                    const type = isWithinReplace ? RANGE_TYPE.REPLACE_CAP : RANGE_TYPE.AUTOCAPS;
+
                     capsRanges.push({ 
                         start: charStart, 
                         end: charStart + 1, 
-                        type: RANGE_TYPE.AUTOCAPS 
+                        type: type
                     });
                     autoCapsCount++;
                     return prefix + upperChar;
@@ -222,7 +230,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return { text: processedText, ranges, count: replaceCount };
     }
     
-    // --- CORE LOGIC: KEYWORD HIGHLIGHT ---
+    // --- CORE LOGIC: KEYWORD HIGHLIGHT (FIXED OVERLAP V24) ---
 
     /**
      * Tính toán ranges cho Highlight Keywords. 
@@ -293,21 +301,20 @@ document.addEventListener('DOMContentLoaded', () => {
             return match;
         });
 
-        // 2. Xử lý chồng lấn (FIXED: Chỉ xử lý chồng lấn giữa các KEYWORD với nhau)
+        // 2. Xử lý chồng lấn (FIXED: Keywords luôn được thêm, chỉ check chồng lấn giữa các KEYWORD với nhau)
         let finalRanges = [...existingRanges];
         
         for (const kwRange of keywordRanges) {
             let shouldAdd = true;
             
             // Chỉ kiểm tra chồng lấn với các KEYWORD đã thêm
-            for (let i = existingRanges.length; i < finalRanges.length; i++) {
-                const prevKwRange = finalRanges[i];
-                if (kwRange.start < prevKwRange.end && kwRange.end > prevKwRange.start) {
-                    // Nếu nó nằm hoàn toàn bên trong 1 range keyword khác, bỏ qua
-                    if (kwRange.start >= prevKwRange.start && kwRange.end <= prevKwRange.end) {
-                        shouldAdd = false;
-                        break;
-                    }
+            const existingKwRanges = finalRanges.filter(r => r.type === RANGE_TYPE.KEYWORD);
+            
+            for (const prevKwRange of existingKwRanges) {
+                if (kwRange.start >= prevKwRange.start && kwRange.end <= prevKwRange.end) {
+                    // Nếu nằm hoàn toàn bên trong keyword khác (do sắp xếp từ dài đến ngắn) -> bỏ qua
+                    shouldAdd = false;
+                    break;
                 }
             }
             
@@ -317,12 +324,17 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
-        // Sắp xếp ranges để render: start asc, sau đó ưu tiên type (REPLACE/CAPS trước KW)
-        // 1. REPLACE, 2. AUTOCAPS, 3. KEYWORD
+        // Sắp xếp ranges để render: start asc, sau đó ưu tiên type (REPLACE, AUTOCAPS, REPLACE_CAP trước KEYWORD)
+        // 1. REPLACE, 2. AUTOCAPS, 3. REPLACE_CAP, 4. KEYWORD
         finalRanges.sort((a, b) => {
              if (a.start !== b.start) return a.start - b.start;
              
-             const typeOrder = { [RANGE_TYPE.REPLACE]: 1, [RANGE_TYPE.AUTOCAPS]: 2, [RANGE_TYPE.KEYWORD]: 3 };
+             const typeOrder = { 
+                 [RANGE_TYPE.REPLACE]: 1, 
+                 [RANGE_TYPE.AUTOCAPS]: 2, 
+                 [RANGE_TYPE.REPLACE_CAP]: 3, 
+                 [RANGE_TYPE.KEYWORD]: 4 
+             };
              return typeOrder[a.type] - typeOrder[b.type];
         });
 
@@ -330,13 +342,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 
-    // --- CẬP NHẬT HIGHLIGHT VÀ SCROLL SYNC ---
+    // --- CẬP NHẬT HIGHLIGHT VÀ SCROLL SYNC (FIXED VIEWPORT V24) ---
     async function updateHighlight(textToRender, allRanges) {
         if (!els.highlightLayer || !els.editorInput) return;
         
         const finalHTML = buildFinalHTML(textToRender, allRanges);
         els.highlightLayer.innerHTML = finalHTML;
         
+        // Đồng bộ scroll TỪ input sang layer (đã fix trong CSS)
         els.highlightLayer.scrollTop = els.editorInput.scrollTop;
         els.highlightLayer.scrollLeft = els.editorInput.scrollLeft;
     }
@@ -351,27 +364,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Ranges đã được sắp xếp trong performHighlight
         for (const range of ranges) {
-            // Kiểm tra range không hợp lệ hoặc đã bị bỏ qua do chồng lấn (nếu range.start < lastEnd)
+            
             if (range.end <= range.start) continue;
             
-            // Nếu range hiện tại BẮT ĐẦU trước lastEnd (vùng đã được render)
+            // Xử lý chồng lấn
             if (range.start < lastEnd) {
-                // Xử lý chồng lấn:
-                // Nếu là Keyword, và nó nằm hoàn toàn trong REPLACE/AUTOCAPS (vùng đã render),
-                // ta sẽ chỉ render phần còn lại của nó, hoặc bỏ qua nếu đã render toàn bộ.
-                
+                // Nếu range hiện tại là KEYWORD, và nó bắt đầu trước lastEnd
                 if (range.type === RANGE_TYPE.KEYWORD) {
-                    // Nếu đã render qua điểm kết thúc của keyword, bỏ qua.
-                    if (range.end <= lastEnd) continue;
-                    
-                    // Bắt đầu từ vị trí lastEnd (điểm cuối của highlight trước đó)
-                    range.start = lastEnd; 
+                    // Nếu keyword nằm hoàn toàn trong vùng đã render bởi REPLACE/CAPS, 
+                    // ta chỉ cần điều chỉnh điểm bắt đầu để nó không bị trùng lặp HTML, 
+                    // nhưng vẫn cho phép nó highlight LÊN trên (do thứ tự render type).
+                    if (range.end <= lastEnd) continue; // Bỏ qua nếu đã render qua điểm kết thúc
+                    range.start = lastEnd; // Bắt đầu render từ điểm cuối của highlight trước đó
                 } else {
-                    // Đối với REPLACE/AUTOCAPS, ta chỉ render từ lastEnd
-                    if (range.start < lastEnd) {
-                         range.start = lastEnd;
-                         if (range.start >= range.end) continue;
-                    }
+                    // Đối với REPLACE/CAPS/REP_CAP, nếu nó bắt đầu trước lastEnd, 
+                    // ta coi như vùng đó đã được highlight bởi một type ưu tiên cao hơn (nếu có)
+                    // Hoặc chỉ render phần còn lại.
+                     range.start = lastEnd;
+                     if (range.start >= range.end) continue;
                 }
             }
             
@@ -380,11 +390,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
             let className = '';
             if (range.type === RANGE_TYPE.REPLACE) {
-                className = 'hl-yellow';
+                className = 'hl-yellow'; // Vàng: Thay thế
             } else if (range.type === RANGE_TYPE.AUTOCAPS) {
-                className = 'hl-blue';
+                className = 'hl-blue'; // Xanh dương: AutoCaps
+            } else if (range.type === RANGE_TYPE.REPLACE_CAP) {
+                className = 'hl-orange-dark'; // FIX V24: Cam đậm: Replace + AutoCaps
             } else if (range.type === RANGE_TYPE.KEYWORD && range.color !== undefined) {
-                className = `keyword ${KW_COLORS[range.color % KW_COLORS.length]}`; 
+                className = `keyword ${KW_COLORS[range.color % KW_COLORS.length]}`; // Keywords
             }
 
             // Thêm span highlight
@@ -402,8 +414,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // === CHỨC NĂNG CHÍNH (PIPELINE) ===
     
-    // 1. Luồng Search & Highlight (Chỉ đọc) - FIXED
+    // 1. Luồng Search & Highlight (Chỉ đọc)
     async function performSearchHighlight() {
+        // ... (Logic giữ nguyên)
         if (!els.editorInput) return notify('Lỗi Editor!', 'error');
 
         const textToSearch = els.editorInput.value; 
@@ -417,7 +430,7 @@ document.addEventListener('DOMContentLoaded', () => {
         els.searchBtn.disabled = true;
 
         try {
-            // FIX 1: Chỉ chạy performHighlight trên text gốc, BỎ QUA REPLACE/AUTOCAPS ranges.
+            // Chỉ chạy performHighlight trên text gốc, BỎ QUA REPLACE/AUTOCAPS ranges.
             const highlightResult = await performHighlight(textToSearch, []); 
             
             // Render trên TEXT GỐC (textToSearch)
@@ -442,6 +455,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // 2. Luồng Replace & Highlight (Ghi đè)
     async function performReplaceAll() {
+        // ... (Logic giữ nguyên)
         if (!els.editorInput) return notify('Lỗi Editor!', 'error');
 
         let rawText = els.editorInput.value; 
@@ -455,7 +469,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // 1. Thực hiện Replace và Auto-Caps (Tạo newText và ranges chuẩn)
             const replaceResult = await performReplaceAndGetRanges(rawText);
             const plainTextAfterReplace = replaceResult.text;
-            let ranges = replaceResult.ranges; // Bao gồm REPLACE + AUTOCAPS ranges
+            let ranges = replaceResult.ranges; // Bao gồm REPLACE + AUTOCAPS + REPLACE_CAP ranges
             const replaceCount = replaceResult.count;
             
             // 2. CẬP NHẬT EDITOR VỚI VĂN BẢN MỚI
@@ -464,7 +478,6 @@ document.addEventListener('DOMContentLoaded', () => {
             els.replaceBtn.textContent = 'Đang xử lý Highlight...';
             
             // 3. Tính toán Highlight Keywords TRÊN VĂN BẢN MỚI
-            // existingRanges là REPLACE + AUTOCAPS ranges (FIXED: logic chồng lấn được xử lý bên trong performHighlight)
             const highlightResult = await performHighlight(plainTextAfterReplace, ranges); 
             
             // 4. Render Highlight trên văn bản mới
@@ -486,7 +499,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 
-    // === UI SYNCHRONIZATION (Các hàm cũ) ===
+    // === UI SYNCHRONIZATION (V24 - Đảm bảo fix viewport) ===
 
     function syncStyles() {
         if (!els.editorInput || !els.highlightLayer) return;
@@ -509,6 +522,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     if (els.editorInput && els.highlightLayer) {
+        // SỬ DỤNG SỰ KIỆN SCROLL ĐỂ ĐỒNG BỘ VIEWPORT (Fixed)
         els.editorInput.addEventListener('scroll', () => {
             els.highlightLayer.scrollTop = els.editorInput.scrollTop;
             els.highlightLayer.scrollLeft = els.editorInput.scrollLeft;
@@ -635,7 +649,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * FIX 3: Đảm bảo trim, reset input và gọi updateKwUI/highlight
+     * FIX: Đảm bảo trim, reset input và gọi updateKwUI/highlight
      */
     function addKeyword(val) {
         if (!val) return;
