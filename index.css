@@ -75,7 +75,7 @@ body {
     background: white;
 }
 
-/* === EDITOR & HIGHLIGHT SYNC (V28 - PERFECT SYNC) === */
+/* === EDITOR & HIGHLIGHT SYNC (V28 Structure) === */
 .editor-wrapper { 
     flex: 1; 
     background: white; 
@@ -84,28 +84,21 @@ body {
     border-radius: 8px 8px 0 0;
 }
 
-/* Shared Styles - MUST BE IDENTICAL for alignment */
 .editor-input, .highlight-layer {
     position: absolute; 
     top: 0; left: 0;
     width: 100%; height: 100%; 
-    
-    /* Padding & Spacing */
     padding: 20px;
-    padding-bottom: 100px; /* Buffer cực lớn để tránh lỗi scroll cuối */
+    padding-bottom: 100px; /* Buffer */
     margin: 0;
     border: none;
-    
     font-family: 'Montserrat', sans-serif;
     font-size: 16px;
     line-height: 1.8;
     letter-spacing: normal;
-    
-    /* Fix font rendering issues */
     font-variant-ligatures: none;
     -webkit-font-feature-settings: "liga" 0;
     font-feature-settings: "liga" 0;
-    
     white-space: pre-wrap; 
     word-wrap: break-word;
     overflow-wrap: break-word;
@@ -113,47 +106,50 @@ body {
     overflow: auto; 
 }
 
-/* Layer 1: Highlight - Hiển thị chữ và màu */
+/* Layer 1: Highlight */
 .highlight-layer {
     z-index: 1; 
     background: white;
-    color: #374151; /* Màu chữ chính */
-    pointer-events: none; /* Click xuyên qua */
+    color: #374151;
+    pointer-events: none;
 }
 
-/* Layer 2: Input - Trong suốt, nhận input */
+/* Layer 2: Input (Transparent) */
 .editor-input {
     z-index: 2; 
     background: transparent; 
-    color: transparent; /* Chữ trong suốt */
-    caret-color: #000; /* Con trỏ màu đen */
+    color: transparent; 
+    caret-color: #000;
     resize: none;
     outline: none; 
 }
 .editor-input::placeholder { color: #9ca3af; }
 
-/* === HIGHLIGHT STYLES (V28 FAUX BOLD) === */
+/* === HIGHLIGHT COLORS & STYLES (UPDATED V29) === */
 .highlight-layer span {
-    /* KHÔNG dùng font-weight: bold để tránh lệch dòng */
-    font-weight: normal; 
+    border-radius: 3px;
+    padding: 0 1px;
     
-    /* Dùng text-shadow để tạo hiệu ứng in đậm mà không đổi độ rộng chữ */
+    /* Kỹ thuật "Faux Bold" (In đậm giả) để KHÔNG làm lệch dòng
+       nhưng vẫn tạo cảm giác đậm như font-weight: 600/700
+    */
     text-shadow: 0 0 0.6px currentColor; 
-    
-    border-radius: 2px;
-    padding: 0; 
 }
 
-/* Colors */
+/* Replace & AutoCaps (Nền đặc) */
 .hl-yellow { background-color: #fde047; color: #000; } 
 .hl-blue { background-color: #93c5fd; color: #000; } 
 .hl-orange-dark { background-color: #fb923c; color: #000; } 
 
-.hl-pink   { background-color: #fce7f3; color: #be185d; border-bottom: 2px solid #be185d; } 
-.hl-green  { background-color: #dcfce7; color: #15803d; border-bottom: 2px solid #15803d; } 
-.hl-purple { background-color: #f3e8ff; color: #7e22ce; border-bottom: 2px solid #7e22ce; } 
-.hl-red    { background-color: #fee2e2; color: #b91c1c; border-bottom: 2px solid #b91c1c; } 
-.hl-cyan   { background-color: #cffafe; color: #0e7490; border-bottom: 2px solid #0891b2; }
+/* Keywords (Nền nhạt + Border Bottom đậm + In đậm) */
+.keyword { font-weight: normal; } /* Reset để dùng text-shadow */
+
+.hl-pink   { background-color: #f9a8d4; color: #000; border-bottom: 2px solid #db2777; }
+.hl-green  { background-color: #86efac; color: #000; border-bottom: 2px solid #16a34a; }
+.hl-orange { background-color: #fdba74; color: #000; border-bottom: 2px solid #ea580c; }
+.hl-purple { background-color: #d8b4fe; color: #000; border-bottom: 2px solid #9333ea; }
+.hl-red    { background-color: #fca5a5; color: #000; border-bottom: 2px solid #dc2626; }
+
 
 /* === FOOTER & UI === */
 .editor-footer {
