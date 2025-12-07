@@ -75,46 +75,51 @@ body {
     background: white;
 }
 
-/* === EDITOR & HIGHLIGHT SYNC (FIXED V25) === */
+/* === EDITOR & HIGHLIGHT SYNC (FIXED V26) === */
 .editor-wrapper { 
     flex: 1; 
     background: white; 
     position: relative; 
-    overflow: hidden; /* Container không scroll, con scroll */
+    overflow: hidden; 
     border-radius: 8px 8px 0 0;
 }
 
-/* Shared styles for perfect alignment */
+/* STRICT ALIGNMENT RULES */
 .editor-input, .highlight-layer {
     position: absolute; 
     top: 0; left: 0;
     width: 100%; height: 100%; 
     
-    padding: 20px; 
+    /* V26 Fixes: Alignment & Padding Buffer */
+    padding: 20px;
+    padding-bottom: 60px; /* Thêm đệm dưới để tránh lỗi cuộn cuối trang */
     margin: 0;
     border: none;
     
-    font-family: 'Montserrat', sans-serif; /* Fallback default */
+    font-family: 'Montserrat', sans-serif;
     font-size: 16px;
     line-height: 1.8;
     letter-spacing: normal;
+    
+    /* Chống lệch ký tự đặc biệt/dấu câu */
+    font-variant-ligatures: none;
+    -webkit-font-feature-settings: "liga" 0;
+    font-feature-settings: "liga" 0;
     
     white-space: pre-wrap;
     word-wrap: break-word;
     overflow-wrap: break-word;
     box-sizing: border-box;
-    overflow: auto; /* Cả 2 đều scroll */
+    overflow: auto; 
 }
 
-/* Lớp dưới: Chỉ hiển thị màu nền, chữ trong suốt */
 .highlight-layer {
     z-index: 1; 
-    color: transparent; /* Chữ trong suốt để không bị nhòe bóng */
-    pointer-events: none; /* Click xuyên qua */
+    color: transparent; 
+    pointer-events: none; 
     background: transparent;
 }
 
-/* Lớp trên: Chỉ hiển thị chữ để edit */
 .editor-input {
     z-index: 2; 
     background: transparent; 
@@ -124,11 +129,10 @@ body {
 }
 .editor-input::placeholder { color: #9ca3af; }
 
-/* Fix highlight bleeding and spacing */
 .highlight-layer span {
-    color: transparent; /* Chữ trong span highlight cũng phải trong suốt */
+    color: transparent; 
     border-radius: 2px;
-    padding: 0; /* KHÔNG dùng padding ngang để tránh lệch chữ */
+    padding: 0; 
 }
 
 /* === FOOTER === */
@@ -137,8 +141,6 @@ body {
     display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;
 }
 .footer-actions { display: flex; gap: 8px; }
-
-/* BADGE */
 .badge { 
   background: #1abc9c; color: white; padding: 3px 10px; border-radius: 12px; 
   font-size: 11px; font-weight: 600; box-shadow: 0 2px 4px rgba(26, 188, 156, 0.3);
@@ -156,22 +158,17 @@ body {
 .sidebar-header h3 { margin: 0; font-size: 13px; font-weight: 700; color: #374151; }
 .sidebar-content { padding: 15px; flex: 1; overflow-y: auto; }
 
-/* Sidebar Input Group */
-.input-group-sidebar { display: flex; gap: 5px; }
-.sidebar-input { flex: 1; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 13px; outline: none; }
+.sidebar-input { width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 13px; outline: none; }
 .sidebar-input:focus { border-color: #2563eb; }
-.btn-sm-add {
-    width: 34px; background: #10b981; color: white; border: none; border-radius: 4px;
-    font-weight: bold; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center;
-}
-.btn-sm-add:hover { background: #059669; }
 
 .tags-container { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 
+/* Toggle Button Fix */
 .sidebar-toggle-btn {
     width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
     border-radius: 4px; cursor: pointer; background: #f3f4f6; border: none; font-size: 18px; color: #6b7280;
 }
+.sidebar-toggle-btn .icon { pointer-events: none; font-weight: bold; }
 .sidebar-toggle-btn:hover { background: #e5e7eb; color: #111827; }
 
 /* === SETTINGS & KEYWORDS === */
@@ -189,17 +186,15 @@ body {
 .list-actions { padding: 10px 20px; display: flex; gap: 10px; }
 .scroll-area { padding: 10px 20px; background: #f9fafb; min-height: 200px; }
 
-/* Keywords Styles */
+/* Keywords Input Area */
 .control-group { display: flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 600; color: #555; }
 .input-sm { padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 13px; outline: none; }
 .keywords-panel { padding: 20px; }
 .keywords-input-area { width: 100%; }
 
-/* Input Group for Full Keywords */
 .input-group { display: flex; gap: 10px; align-items: center; }
 .w-full-input { flex: 1; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; outline: none; box-sizing: border-box; }
 .w-full-input:focus { border-color: #10b981; }
-.btn-add-kw { height: 34px; width: 40px; font-size: 20px; padding: 0; display: flex; align-items: center; justify-content: center; }
 
 .input-label { font-size: 13px; font-weight: 700; color: #374151; margin: 0 0 8px 0; }
 
@@ -222,7 +217,6 @@ body {
 .btn-outline:hover { border-color: #9ca3af; background: #f9fafb; }
 .icon-btn { min-width: 120px; }
 
-/* Settings Toggles */
 .btn-toggle { 
   background: #e5e7eb; color: #6b7280; 
   padding: 8px 15px; border-radius: 6px; font-size: 12px; font-weight: 700;
@@ -231,7 +225,6 @@ body {
 .btn-toggle:hover { background: #d1d5db; color: #374151; }
 .btn-toggle.active { background: #dbeafe; color: #1e40af; border-color: #93c5fd; }
 
-/* Teal Buttons (Editor Actions) */
 .btn-teal {
     background: #ccfbf1; color: #0f766e;
     padding: 8px 15px; border-radius: 6px; font-size: 12px; font-weight: 700;
@@ -239,13 +232,27 @@ body {
 }
 .btn-teal:hover { background: #99f6e4; }
 
-/* Actions Buttons */
 .btn-action {
     background: #f3e8ff; color: #6b21a8; 
     padding: 8px 15px; border-radius: 6px; font-size: 12px; font-weight: 700;
     border: 1px solid #d8b4fe;
 }
 .btn-action:hover { background: #e9d5ff; color: #581c87; border-color: #c084fc; }
+
+/* Custom Toolbar Buttons for Keywords Tab */
+.btn-blue-toolbar {
+    background: #dbeafe; color: #1e40af;
+    padding: 8px 15px; border-radius: 6px; font-size: 16px; font-weight: 700;
+    border: 1px solid #93c5fd; width: 45px;
+}
+.btn-blue-toolbar:hover { background: #bfdbfe; }
+
+.btn-red-toolbar {
+    background: #fee2e2; color: #991b1b;
+    padding: 8px 15px; border-radius: 6px; font-size: 14px; font-weight: 700;
+    border: 1px solid #fca5a5; width: 45px;
+}
+.btn-red-toolbar:hover { background: #fecaca; }
 
 /* === ITEMS & TAGS === */
 .pair-row {
@@ -259,13 +266,8 @@ body {
 .pair-row:last-child { border-bottom: none; }
 .pair-input { flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; }
 .delete-btn { 
-    background-color: #fca5a5; 
-    color: #dc2626; 
-    border: none; 
-    padding: 6px 10px; 
-    border-radius: 4px; 
-    cursor: pointer; 
-    font-weight: 600;
+    background-color: #fca5a5; color: #dc2626; border: none; 
+    padding: 6px 10px; border-radius: 4px; cursor: pointer; font-weight: 600;
 }
 .delete-btn:hover { background-color: #f87171; }
 .empty-message { text-align: center; color: #9ca3af; padding: 20px; font-size: 13px; }
@@ -278,17 +280,24 @@ body {
 .tag .remove-tag { cursor: pointer; width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
 .tag .remove-tag:hover { background: #dbeafe; color: red; }
 
-/* HIGHLIGHT COLORS - Background Only */
-.hl-yellow { background-color: #fde047; } 
-.hl-blue { background-color: #93c5fd; } 
-.hl-orange-dark { background-color: #fb923c; border-bottom: 2px solid #c2410c; } 
+/* === HIGHLIGHT COLORS (V26 Corrected) === */
 
+/* 1. Replace Only - YELLOW */
+.hl-yellow { background-color: #fde047; } 
+
+/* 2. AutoCaps Only - BLUE */
+.hl-blue { background-color: #93c5fd; } 
+
+/* 3. Both - ORANGE (Not pastel) */
+.hl-orange-dark { background-color: #fb923c; } 
+
+/* 4. Keywords - OTHER COLORS */
 .keyword { font-weight: 700; }
 .hl-pink   { background-color: #f472b6; border-bottom: 2px solid #be185d; } 
 .hl-green  { background-color: #4ade80; border-bottom: 2px solid #15803d; } 
-.hl-orange { background-color: #fb923c; border-bottom: 2px solid #c2410c; } 
-.hl-purple { background-color: #a78bfa; border-bottom: 2px solid #6d28d9; } 
+.hl-purple { background-color: #c084fc; border-bottom: 2px solid #7e22ce; } 
 .hl-red    { background-color: #f87171; border-bottom: 2px solid #b91c1c; } 
+.hl-cyan   { background-color: #22d3ee; border-bottom: 2px solid #0891b2; }
 
 /* === NOTIFICATION === */
 #notification-container { 
