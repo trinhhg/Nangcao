@@ -74,68 +74,45 @@ body {
     border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     background: white;
 }
-
-/* --- FIX SCROLL SYNC & OVERLAY --- */
+/* CẤU TRÚC SCROLL SYNC (Fixed V24) */
 .editor-wrapper { 
     flex: 1; 
     background: white; 
     position: relative; 
-    /* Không được overflow: hidden, vì highlight có thể dài hơn */
     overflow: hidden; 
     border-radius: 8px;
-    display: flex; /* Đảm bảo con */
 }
-
-/* Cấu trúc chồng lớp chuẩn */
-#backdrop {
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    z-index: 1;
-    overflow: auto; /* Cho phép cuộn để JS sync */
-    pointer-events: none; /* Click xuyên qua */
-}
-
-.highlight-layer {
-    /* Quan trọng: phải là relative hoặc absolute để nội dung scale */
+.editor-input, .highlight-layer {
+    /* Đảm bảo đồng bộ wrapping và spacing */
     white-space: pre-wrap;
     word-wrap: break-word;
     overflow-wrap: break-word;
-    color: transparent; /* Ẩn text gốc */
-    
-    /* Padding phải khớp 100% với textarea */
     padding: 20px; 
-    width: 100%;
-    min-height: 100%; /* Đảm bảo full height */
-    box-sizing: border-box;
-}
-
-.editor-input {
+    line-height: 1.8;
+    box-sizing: border-box; /* Quan trọng cho padding và size khớp nhau */
+    
     position: absolute; 
     top: 0; left: 0;
     width: 100%; height: 100%; 
-    z-index: 2; /* Nằm trên */
-    
-    padding: 20px; /* Khớp padding */
-    margin: 0;
+}
+.editor-input {
     border: none;
     resize: none;
     outline: none; 
     background: transparent; 
     color: #333; 
-    
-    white-space: pre-wrap; 
-    word-wrap: break-word;
-    overflow-wrap: break-word;
+    z-index: 2; 
     overflow: auto; 
-    box-sizing: border-box;
-    line-height: 1.8; /* Khớp line-height với JS sync */
 }
-/* Ẩn scrollbar của backdrop để tránh double scrollbar */
-#backdrop::-webkit-scrollbar { display: none; }
-/* --- END FIX --- */
-
 .editor-input::placeholder { color: #9ca3af; }
+
+.highlight-layer {
+    z-index: 1; 
+    pointer-events: none; 
+    color: transparent; 
+    overflow: auto; /* BẮT BUỘC phải cuộn để nhận scrollTop từ JS */
+}
+/* KẾT THÚC CẤU TRÚC SCROLL SYNC */
 
 /* FOOTER */
 .editor-footer {
@@ -223,6 +200,15 @@ body {
 .btn-toggle:hover { background: #d1d5db; color: #374151; }
 .btn-toggle.active { background: #dbeafe; color: #1e40af; border-color: #93c5fd; }
 
+/* Teal Buttons (Editor Actions) */
+.btn-teal {
+    background: #ccfbf1; color: #0f766e;
+    padding: 8px 15px; border-radius: 6px; font-size: 12px; font-weight: 700;
+    border: 1px solid #5eead4;
+}
+.btn-teal:hover { background: #99f6e4; }
+
+/* Actions Buttons */
 .btn-action {
     background: #f3e8ff; color: #6b21a8; /* Tím nhạt */
     padding: 8px 15px; border-radius: 6px; font-size: 12px; font-weight: 700;
@@ -230,13 +216,6 @@ body {
 }
 .btn-action:hover { background: #e9d5ff; color: #581c87; border-color: #c084fc; }
 
-/* Teal Buttons */
-.btn-teal {
-    background: #ccfbf1; color: #0f766e;
-    padding: 8px 15px; border-radius: 6px; font-size: 12px; font-weight: 700;
-    border: 1px solid #5eead4;
-}
-.btn-teal:hover { background: #99f6e4; }
 
 /* === ITEMS & TAGS === */
 .pair-row {
@@ -269,10 +248,10 @@ body {
 .tag .remove-tag { cursor: pointer; width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
 .tag .remove-tag:hover { background: #dbeafe; color: red; }
 
-/* HIGHLIGHT COLORS */
-.hl-yellow { background-color: #fde047; color: #000; border-radius: 2px; padding: 0 1px; } 
-.hl-blue { background-color: #93c5fd; color: #000; border-radius: 2px; padding: 0 1px; } 
-.hl-orange-dark { background-color: #fb923c; color: #000; border-radius: 2px; padding: 0 1px; border-bottom: 2px solid #c2410c; } 
+/* HIGHLIGHT COLORS (Đậm hơn) */
+.hl-yellow { background-color: #fde047; color: #000; border-radius: 2px; padding: 0 1px; } /* Vàng: Replace */
+.hl-blue { background-color: #93c5fd; color: #000; border-radius: 2px; padding: 0 1px; } /* Xanh: AutoCaps */
+.hl-orange-dark { background-color: #fb923c; color: #000; border-radius: 2px; padding: 0 1px; border-bottom: 2px solid #c2410c; } /* Cam đậm: Replace + AutoCaps */
 
 .keyword { border-radius: 3px; padding: 0 2px; font-weight: 700; color: #333; }
 .hl-pink   { background-color: #f472b6; border-bottom: 2px solid #be185d; } 
