@@ -75,7 +75,7 @@ body {
     background: white;
 }
 
-/* === EDITOR & HIGHLIGHT SYNC (FIXED V26) === */
+/* === EDITOR & HIGHLIGHT SYNC (V27 TRANSPARENT MODE) === */
 .editor-wrapper { 
     flex: 1; 
     background: white; 
@@ -84,15 +84,15 @@ body {
     border-radius: 8px 8px 0 0;
 }
 
-/* STRICT ALIGNMENT RULES */
+/* Base styles for BOTH Input and Layer - MUST BE IDENTICAL */
 .editor-input, .highlight-layer {
     position: absolute; 
     top: 0; left: 0;
     width: 100%; height: 100%; 
     
-    /* V26 Fixes: Alignment & Padding Buffer */
+    /* Padding & Spacing */
     padding: 20px;
-    padding-bottom: 60px; /* Thêm đệm dưới để tránh lỗi cuộn cuối trang */
+    padding-bottom: 80px; /* Buffer lớn cho scroll cuối */
     margin: 0;
     border: none;
     
@@ -101,41 +101,62 @@ body {
     line-height: 1.8;
     letter-spacing: normal;
     
-    /* Chống lệch ký tự đặc biệt/dấu câu */
+    /* Quan trọng: Fix lệch font */
     font-variant-ligatures: none;
     -webkit-font-feature-settings: "liga" 0;
     font-feature-settings: "liga" 0;
     
-    white-space: pre-wrap;
+    white-space: pre-wrap; /* Giữ newline chuẩn */
     word-wrap: break-word;
     overflow-wrap: break-word;
     box-sizing: border-box;
     overflow: auto; 
 }
 
+/* Lớp HIỂN THỊ (Layer): Nằm dưới, nhưng hiển thị chữ và màu */
 .highlight-layer {
     z-index: 1; 
-    color: transparent; 
-    pointer-events: none; 
-    background: transparent;
+    background: white;
+    color: #374151; /* Màu chữ chính */
+    pointer-events: none; /* Click xuyên qua */
 }
 
+/* Lớp TƯƠNG TÁC (Input): Nằm trên, nhưng trong suốt */
 .editor-input {
     z-index: 2; 
     background: transparent; 
-    color: #333; 
+    color: transparent; /* Chữ trong suốt */
+    caret-color: #000; /* Con trỏ màu đen để thấy được */
     resize: none;
     outline: none; 
 }
 .editor-input::placeholder { color: #9ca3af; }
 
+/* === HIGHLIGHT SPANS === */
+/* Kỹ thuật Bold + Background */
 .highlight-layer span {
-    color: transparent; 
-    border-radius: 2px;
-    padding: 0; 
+    font-weight: 800; /* IN ĐẬM như yêu cầu */
+    border-radius: 3px;
+    padding: 2px 0; /* Padding dọc, KHÔNG padding ngang để tránh lệch */
+    
+    /* Chống lem dấu cách */
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
 }
 
-/* === FOOTER === */
+/* COLOR PALETTE (V27) */
+.hl-yellow { background-color: #fde047; color: #000; } /* Vàng: Replace */
+.hl-blue { background-color: #93c5fd; color: #000; } /* Xanh: AutoCaps */
+.hl-orange-dark { background-color: #fb923c; color: #000; } /* Cam: Both */
+
+/* Keywords Colors */
+.hl-pink   { background-color: #fce7f3; color: #be185d; border-bottom: 2px solid #be185d; } 
+.hl-green  { background-color: #dcfce7; color: #15803d; border-bottom: 2px solid #15803d; } 
+.hl-purple { background-color: #f3e8ff; color: #7e22ce; border-bottom: 2px solid #7e22ce; } 
+.hl-red    { background-color: #fee2e2; color: #b91c1c; border-bottom: 2px solid #b91c1c; } 
+.hl-cyan   { background-color: #cffafe; color: #0e7490; border-bottom: 2px solid #0891b2; }
+
+/* === FOOTER & UI === */
 .editor-footer {
     padding: 10px 15px; border-top: 1px solid #e5e7eb; background: #f9fafb;
     display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;
@@ -171,7 +192,7 @@ body {
 .sidebar-toggle-btn .icon { pointer-events: none; font-weight: bold; }
 .sidebar-toggle-btn:hover { background: #e5e7eb; color: #111827; }
 
-/* === SETTINGS & KEYWORDS === */
+/* === SETTINGS UI === */
 .settings-layout { flex-direction: column; background: #f3f4f6; padding: 15px; overflow-y: auto; }
 .panel-container { background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); max-width: 1000px; width: 100%; margin: 0 auto; display: flex; flex-direction: column; }
 .panel-header { padding: 15px 20px; border-bottom: 1px solid #f3f4f6; display: flex; justify-content: space-between; align-items: center; }
@@ -186,19 +207,17 @@ body {
 .list-actions { padding: 10px 20px; display: flex; gap: 10px; }
 .scroll-area { padding: 10px 20px; background: #f9fafb; min-height: 200px; }
 
-/* Keywords Input Area */
+/* Control Groups */
 .control-group { display: flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 600; color: #555; }
 .input-sm { padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 13px; outline: none; }
 .keywords-panel { padding: 20px; }
 .keywords-input-area { width: 100%; }
-
 .input-group { display: flex; gap: 10px; align-items: center; }
 .w-full-input { flex: 1; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; outline: none; box-sizing: border-box; }
 .w-full-input:focus { border-color: #10b981; }
-
 .input-label { font-size: 13px; font-weight: 700; color: #374151; margin: 0 0 8px 0; }
 
-/* === BUTTONS === */
+/* Buttons */
 .btn {
   padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer;
   font-size: 12px; font-weight: 600; transition: all 0.2s;
@@ -239,7 +258,6 @@ body {
 }
 .btn-action:hover { background: #e9d5ff; color: #581c87; border-color: #c084fc; }
 
-/* Custom Toolbar Buttons for Keywords Tab */
 .btn-blue-toolbar {
     background: #dbeafe; color: #1e40af;
     padding: 8px 15px; border-radius: 6px; font-size: 16px; font-weight: 700;
@@ -254,14 +272,10 @@ body {
 }
 .btn-red-toolbar:hover { background: #fecaca; }
 
-/* === ITEMS & TAGS === */
+/* Pair Rows */
 .pair-row {
-    display: grid;
-    grid-template-columns: 0.5fr 0.5fr auto;
-    gap: 10px;
-    padding: 10px 0;
-    border-bottom: 1px dotted #e5e7eb;
-    align-items: center;
+    display: grid; grid-template-columns: 0.5fr 0.5fr auto; gap: 10px;
+    padding: 10px 0; border-bottom: 1px dotted #e5e7eb; align-items: center;
 }
 .pair-row:last-child { border-bottom: none; }
 .pair-input { flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; }
@@ -272,6 +286,7 @@ body {
 .delete-btn:hover { background-color: #f87171; }
 .empty-message { text-align: center; color: #9ca3af; padding: 20px; font-size: 13px; }
 
+/* Tags */
 .tag {
     background: #eff6ff; color: #1e40af; padding: 4px 10px; border-radius: 20px;
     font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;
@@ -280,26 +295,7 @@ body {
 .tag .remove-tag { cursor: pointer; width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
 .tag .remove-tag:hover { background: #dbeafe; color: red; }
 
-/* === HIGHLIGHT COLORS (V26 Corrected) === */
-
-/* 1. Replace Only - YELLOW */
-.hl-yellow { background-color: #fde047; } 
-
-/* 2. AutoCaps Only - BLUE */
-.hl-blue { background-color: #93c5fd; } 
-
-/* 3. Both - ORANGE (Not pastel) */
-.hl-orange-dark { background-color: #fb923c; } 
-
-/* 4. Keywords - OTHER COLORS */
-.keyword { font-weight: 700; }
-.hl-pink   { background-color: #f472b6; border-bottom: 2px solid #be185d; } 
-.hl-green  { background-color: #4ade80; border-bottom: 2px solid #15803d; } 
-.hl-purple { background-color: #c084fc; border-bottom: 2px solid #7e22ce; } 
-.hl-red    { background-color: #f87171; border-bottom: 2px solid #b91c1c; } 
-.hl-cyan   { background-color: #22d3ee; border-bottom: 2px solid #0891b2; }
-
-/* === NOTIFICATION === */
+/* Notification */
 #notification-container { 
     position: fixed; top: 70px; right: 20px; 
     z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; 
