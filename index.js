@@ -8,7 +8,6 @@ document.addEventListener('DOMContentLoaded', () => {
         KEYWORD: 'kw'
     };
     
-    // MÀU KEYWORD MỚI (Đã đồng bộ với index.css)
     const KW_COLORS = ['hl-pink', 'hl-green', 'hl-orange', 'hl-purple', 'hl-red']; 
     
     const defaultState = {
@@ -40,7 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
         contents: document.querySelectorAll('.tab-content'),
         
         editorWrapper: document.getElementById('editor-wrapper'),
-        editorInput: document.getElementById('editor-input'), // TEXTAREA đã được khôi phục
+        editorInput: document.getElementById('editor-input'), 
         highlightLayer: document.getElementById('highlight-layer'),
 
         wordCount: document.getElementById('word-count-display'),
@@ -78,7 +77,6 @@ document.addEventListener('DOMContentLoaded', () => {
         fullKwInput: document.getElementById('full-keywords-input'),
         fullKwTags: document.getElementById('full-keywords-tags'),
         
-        // Nút Copy Keywords mới
         copyKwBtn: document.getElementById('copy-kw-csv'), 
         
         notify: document.getElementById('notification-container')
@@ -119,7 +117,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // === RANGE MANAGEMENT (Giữ nguyên logic chính) ===
     
     function buildFinalHTML(text, ranges) {
-        // ... (Logic buildFinalHTML giữ nguyên)
         if (ranges.length === 0) {
             return escapeHTML(text);
         }
@@ -138,7 +135,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (range.type === RANGE_TYPE.AUTOCAPS) {
                 className = 'hl-blue';
             } else if (range.type === RANGE_TYPE.KEYWORD && range.color !== undefined) {
-                className = `keyword ${KW_COLORS[range.color % KW_COLORS.length]}`; // Sử dụng KW_COLORS mới
+                className = `keyword ${KW_COLORS[range.color % KW_COLORS.length]}`; 
             }
 
             html += `<span class="${className}">${escapeHTML(text.substring(range.start, range.end))}</span>`;
@@ -151,10 +148,10 @@ document.addEventListener('DOMContentLoaded', () => {
         return html;
     }
 
-    // === XỬ LÝ TEXT (FIX 2: Master Regex) ===
-    // (Logic performReplace và performHighlight giữ nguyên, đảm bảo Range-based Rendering)
+    // --- REPLACE & HIGHLIGHT LOGIC (Giữ nguyên Master Regex) ---
 
     async function performReplace(rawText) {
+        // ... (Logic performReplace giữ nguyên)
         const mode = state.modes[state.activeMode];
         const rules = mode.pairs.filter(p => p.find && p.find.trim());
 
@@ -225,7 +222,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // --- 2. Auto Caps ---
         if (mode.autoCaps) {
             const autoCapsRegex = /(^|[\.?!\n]\s*)([\p{Ll}])/gmu;
-            
             let capsRanges = [];
 
             processedText = processedText.replace(autoCapsRegex, (match, prefix, char, offset) => {
@@ -254,6 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function performHighlight(text, existingRanges) {
+        // ... (Logic performHighlight giữ nguyên)
         if (!state.keywords.length) return { ranges: existingRanges, count: 0 };
 
         const sortedKws = [...state.keywords].sort((a,b) => b.length - a.length);
@@ -310,7 +307,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return match;
         });
 
-        // --- 2. Xử lý chồng lấn (Ưu tiên Replace/Caps hơn Keyword) ---
+        // --- 2. Xử lý chồng lấn ---
         let finalRanges = [...existingRanges];
         
         for (const kwRange of keywordRanges) {
@@ -325,11 +322,9 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (!isOverlappingWithExisting) {
                 let shouldAdd = true;
-                // Kiểm tra chồng lấn giữa các Keyword ranges 
                 for (let i = finalRanges.length - 1; i >= existingRanges.length; i--) {
                     const prevKwRange = finalRanges[i];
                     if (kwRange.start < prevKwRange.end && kwRange.end > prevKwRange.start) {
-                        // Nếu range hiện tại nằm hoàn toàn trong range đã có (hoặc trùng lặp), bỏ qua
                         if (kwRange.start >= prevKwRange.start && kwRange.end <= prevKwRange.end) {
                             shouldAdd = false;
                             break;
@@ -395,47 +390,81 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // === UI SYNCHRONIZATION ===
-    
-    // 1. Đồng bộ cuộn (Scroll Transform)
-    if (els.editorInput && els.highlightLayer) {
-        els.editorInput.addEventListener('scroll', () => {
-            const top = els.editorInput.scrollTop;
-            const left = els.editorInput.scrollLeft;
+    // === UI SYNCHRONIZATION (FIX SCROLL & STYLE SYNC) ===
 
-            els.highlightLayer.style.transform = `translate(${-left}px, ${-top}px)`;
-        });
-    }
-    
-    // 2. Đồng bộ Font
-    function updateFont() {
-        if (!els.editorInput || !els.highlightLayer || !els.fontFamily || !els.fontSize) return;
+    /**
+     * Đồng bộ các thuộc tính style quan trọng từ Input sang Layer Highlight
+     * để đảm bảo vị trí chữ trùng khớp 100%.
+     */
+    function syncStyles() {
+        if (!els.editorInput || !els.highlightLayer) return;
+
+        // Lấy style đã tính toán cuối cùng (bao gồm cả style từ CSS và inline)
+        const style = window.getComputedStyle(els.editorInput);
         
+        // Các thuộc tính BẮT BUỘC phải đồng bộ
+        const propsToSync = [
+            'font-size', 'font-family', 'line-height', 'padding',
+            'white-space', 'word-wrap', 'overflow-wrap'
+        ];
+
+        propsToSync.forEach(prop => {
+            els.highlightLayer.style[prop] = style.getPropertyValue(prop);
+        });
+        
+        // Lưu và áp dụng Font/Size đã chọn
         const family = els.fontFamily.value;
         const size = els.fontSize.value;
         
         els.editorInput.style.setProperty('font-family', family, 'important');
         els.editorInput.style.setProperty('font-size', size, 'important');
-        els.highlightLayer.style.setProperty('font-family', family, 'important');
-        els.highlightLayer.style.setProperty('font-size', size, 'important');
         
+        // Cập nhật state
         state.fontFamily = family;
         state.fontSize = size;
         saveState();
+
+        // Gọi lại syncStyles để Layer Highlight nhận Font/Size mới
+        // (Không cần gọi lại vì đã áp dụng trực tiếp lên layer trong updateFont)
+    }
+
+    // 1. Hàm Update Font/Size (đã được FIX để gọi syncStyles)
+    function updateFont() {
+        if (!els.editorInput || !els.highlightLayer || !els.fontFamily || !els.fontSize) return;
+        
+        // Cập nhật Font/Size cho Input và Layer Highlight.
+        // syncStyles sẽ đảm bảo các thuộc tính khác như padding, line-height được đồng bộ.
+        els.editorInput.style.setProperty('font-family', els.fontFamily.value, 'important');
+        els.editorInput.style.setProperty('font-size', els.fontSize.value, 'important');
+        els.highlightLayer.style.setProperty('font-family', els.fontFamily.value, 'important');
+        els.highlightLayer.style.setProperty('font-size', els.fontSize.value, 'important');
+        
+        // Gọi syncStyles để đồng bộ phần còn lại (padding, line-height, etc.)
+        syncStyles();
+
+        state.fontFamily = els.fontFamily.value;
+        state.fontSize = els.fontSize.value;
+        saveState();
     }
     
-    // 3. Xử lý Input và Word Count (Đã FIX)
+    // 2. Đồng bộ cuộn (FIX CHUẨN)
+    if (els.editorInput && els.highlightLayer) {
+        // Lắng nghe sự kiện cuộn từ TEXTAREA (editor-input)
+        els.editorInput.addEventListener('scroll', () => {
+            // Thay vì dùng transform, ta đồng bộ trực tiếp scroll position
+            els.highlightLayer.scrollTop = els.editorInput.scrollTop;
+            els.highlightLayer.scrollLeft = els.editorInput.scrollLeft;
+        });
+    }
+    
+    // 3. Xử lý Input và Word Count
     function updateWordCount() {
         if (!els.editorInput || !els.wordCount) return;
         
-        // Đảm bảo lấy giá trị từ TEXTAREA
         const txt = els.editorInput.value || ''; 
-        
-        // Regex tính từ: tách theo khoảng trắng
         const count = txt.trim() ? txt.trim().split(/\s+/).length : 0;
         els.wordCount.textContent = `Words: ${count}`;
         
-        // Khi có input, xóa highlight cũ
         if (els.highlightLayer) els.highlightLayer.innerHTML = ''; 
     }
     
@@ -489,7 +518,6 @@ document.addEventListener('DOMContentLoaded', () => {
         div.querySelector('.delete-btn').onclick = (e) => {
             const row = e.target.closest('.pair-row');
             const mode = state.modes[state.activeMode];
-            // Sử dụng filter/map để tránh lỗi index khi xóa
             mode.pairs = mode.pairs.filter((_, i) => i !== parseInt(row.dataset.index));
             savePairs(true); 
             notify('Đã xóa cặp thay thế.');
@@ -590,14 +618,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // === EVENT LISTENERS ===
     
-    // UI Events
     els.tabs.forEach(btn => btn.onclick = () => switchTab(btn.dataset.tab));
     if (els.sidebarToggle) els.sidebarToggle.onclick = toggleSidebar;
-    // FIX: Lắng nghe input trên TEXTAREA
     if (els.editorInput) els.editorInput.addEventListener('input', updateWordCount); 
     
     // Editor Actions
-    // Nút Highlight
     if (els.searchBtn) {
         els.searchBtn.onclick = async () => { 
             if (els.sidebarInput) addKeyword(els.sidebarInput.value);
@@ -622,14 +647,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
     }
-    // Nút Clear
+
     if (els.clearBtn) els.clearBtn.onclick = () => { 
         if (els.editorInput) els.editorInput.value = ''; 
         if (els.highlightLayer) els.highlightLayer.innerHTML = '';
         updateWordCount(); 
         notify('Đã xóa trắng Editor.');
     };
-    // Nút Copy Result & Clear
     if (els.copyBtn) els.copyBtn.onclick = () => { 
         if (!els.editorInput || !els.editorInput.value.trim()) return notify('Trống!', 'error'); 
         navigator.clipboard.writeText(els.editorInput.value); 
@@ -638,7 +662,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (els.highlightLayer) els.highlightLayer.innerHTML = '';
         updateWordCount();
     };
-    // Nút Replace All
     if (els.replaceBtn) els.replaceBtn.onclick = performReplaceAll;
 
     // Settings Events
@@ -690,7 +713,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // NÚT COPY KEYWORDS (Mới)
+    // NÚT COPY KEYWORDS
     if (els.copyKwBtn) {
         els.copyKwBtn.onclick = () => {
             const keywordString = state.keywords.join(', ');
@@ -707,7 +730,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // --- INIT ---
     function init() {
-        // Khôi phục trạng thái Sidebar
         if (els.sidebar) els.sidebar.classList.toggle('closed', !state.sidebarOpen);
         if (els.sidebarToggle) els.sidebarToggle.classList.toggle('open', state.sidebarOpen);
 
@@ -715,12 +737,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (els.fontFamily) els.fontFamily.value = state.fontFamily;
         if (els.fontSize) els.fontSize.value = state.fontSize;
         
-        updateFont(); 
+        updateFont(); // Khởi tạo font và gọi syncStyles
         updateWordCount();
         renderModeUI(); 
         updateKwUI();   
         
-        // Đảm bảo tab Main Content hiển thị
         switchTab('main-tab');
     }
     
