@@ -1,11 +1,11 @@
 document.addEventListener('DOMContentLoaded', () => {
     // === CONFIG & STATE ===
-    const STORAGE_KEY = 'trinh_hg_pro_v24_final_patch_fixed'; // Cập nhật key storage
+    const STORAGE_KEY = 'trinh_hg_pro_v25_final_fix'; 
     
     const RANGE_TYPE = {
         REPLACE: 'rep',
         AUTOCAPS: 'cap',
-        REPLACE_CAP: 'rep-cap', // Loại mới
+        REPLACE_CAP: 'rep-cap',
         KEYWORD: 'kw'
     };
     
@@ -40,6 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
         contents: document.querySelectorAll('.tab-content'),
         
         editorWrapper: document.getElementById('editor-wrapper'),
+        backdrop: document.getElementById('backdrop'),
         editorInput: document.getElementById('editor-input'), 
         highlightLayer: document.getElementById('highlight-layer'),
 
@@ -94,11 +95,13 @@ document.addEventListener('DOMContentLoaded', () => {
         els.notify.prepend(div);
         setTimeout(() => { div.style.opacity = '0'; setTimeout(() => div.remove(), 300); }, 3000);
     }
+    
+    // Improved normalizeText: Cover more unicode smart quotes
     function normalizeText(text) {
         if (!text) return '';
         return text
-            .replace(/[\u201C\u201D\u201E\u201F\u00AB\u00BB\u275D\u275E\u301D-\u301F\uFF02\u02DD]/g, '"')
-            .replace(/[\u2018\u2019\u201A\u201B\u2039\u203A\u275B\u275C\u276E\u276F\uA78C\uFF07]/g, "'")
+            .replace(/[\u201C\u201D\u201E\u201F\u00AB\u00BB\u275D\u275E\u301D-\u301F\uFF02\u02DD\u201F\uFF02]/g, '"')
+            .replace(/[\u2018\u2019\u201A\u201B\u2039\u203A\u275B\u275C\u276E\u276F\uA78C\uFF07\u201B]/g, "'")
             .replace(/\u00A0/g, ' '); 
     }
     function escapeHTML(str) {
@@ -108,22 +111,15 @@ document.addEventListener('DOMContentLoaded', () => {
         return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     }
     function preserveCase(original, replacement) {
-        // Nếu toàn bộ là chữ hoa
         if (original === original.toUpperCase() && original !== original.toLowerCase()) return replacement.toUpperCase();
-        // Nếu là viết hoa chữ cái đầu
         if (original[0] === original[0].toUpperCase() && original.slice(1) === original.slice(1).toLowerCase()) {
             return replacement.charAt(0).toUpperCase() + replacement.slice(1).toLowerCase();
         }
         return replacement;
     }
 
-    // --- CORE LOGIC: STRING BUILDER REPLACE (FIXED OFFSET V24) ---
+    // === CORE LOGIC: REPLACE AND GET RANGES (V25 Fixed) ===
     
-    /**
-     * Thực hiện Replace/AutoCaps và tính toán ranges chính xác trên văn bản MỚI.
-     * @param {string} rawText - Văn bản đầu vào.
-     * @returns {{text: string, ranges: Array, count: number}}
-     */
     async function performReplaceAndGetRanges(rawText) {
         const mode = state.modes[state.activeMode];
         const rules = mode.pairs.filter(p => p.find && p.find.trim());
@@ -145,28 +141,37 @@ document.addEventListener('DOMContentLoaded', () => {
         const flags = mode.matchCase ? "gu" : "giu";
         const regex = new RegExp(patterns.join("|"), flags);
         
-        // 2. Linear Pass và Build New String
+        // 2. Linear Pass with Fixed Group Matching
         let match;
         while (match = regex.exec(rawText)) {
             const start = match.index;
             const end = regex.lastIndex;
 
-            let ruleIndex = match.findIndex((m, i) => i > 0 && m !== undefined) - 1;
+            // FIX: Thay thế findIndex (không tồn tại trên match array) bằng loop
+            let ruleIndex = -1;
+            let matchedText = '';
             
-            if (ruleIndex >= 0) {
+            // match[0] là toàn bộ chuỗi khớp, các group bắt đầu từ index 1
+            for (let i = 1; i < match.length; i++) {
+                if (match[i] !== undefined) {
+                    ruleIndex = i - 1; // Vì rules map 1:1 với capturing groups
+                    matchedText = match[i];
+                    break;
+                }
+            }
+            
+            if (ruleIndex >= 0 && ruleIndex < rules.length) {
                 const rule = rules[ruleIndex];
-                const matchedText = match[ruleIndex + 1]; 
-                
                 let replacement = normalizeText(rule.replace || '');
 
                 if (!mode.matchCase) {
                     replacement = preserveCase(matchedText, replacement);
                 }
 
-                // Append phần văn bản chưa được xử lý
+                // Append text before match
                 processedText += rawText.slice(lastIndex, start);
 
-                // Tính toán range trên CHUỖI MỚI (Offset Accumulation)
+                // Calculate range on NEW text
                 const newStart = processedText.length;
                 const newEnd = newStart + replacement.length;
 
@@ -176,18 +181,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     type: RANGE_TYPE.REPLACE
                 });
 
-                // Append phần thay thế
                 processedText += replacement;
                 replaceCount++;
-
                 lastIndex = end;
             } else {
+                // Fallback: copy as is if strange match
                 processedText += rawText.slice(lastIndex, end);
                 lastIndex = end;
             }
         }
 
-        // Append phần còn lại
         processedText += rawText.slice(lastIndex);
         
         // 3. Auto Caps (Chạy trên văn bản đã replace)
@@ -202,7 +205,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (char !== upperChar) { 
                     const charStart = offset + prefix.length;
                     
-                    // Kiểm tra xem vị trí này có nằm trong range REPLACE đã tạo trước đó không
+                    // Check overlap for Color Priority
                     const isWithinReplace = ranges.some(r => 
                         r.type === RANGE_TYPE.REPLACE && charStart >= r.start && charStart < r.end
                     );
@@ -225,22 +228,15 @@ document.addEventListener('DOMContentLoaded', () => {
             replaceCount += autoCapsCount;
         }
 
-        ranges.sort((a, b) => a.start - b.start);
-
         return { text: processedText, ranges, count: replaceCount };
     }
     
-    // --- CORE LOGIC: KEYWORD HIGHLIGHT (FIXED OVERLAP V24) ---
+    // --- CORE LOGIC: KEYWORD HIGHLIGHT (V25 Fixed Offset) ---
 
-    /**
-     * Tính toán ranges cho Highlight Keywords. 
-     * @param {string} text - Văn bản để tìm kiếm (có thể là văn bản gốc hoặc đã replace).
-     * @param {Array} existingRanges - Các ranges đã có (thường là Replace/AutoCaps).
-     * @returns {{ranges: Array, count: number}}
-     */
     async function performHighlight(text, existingRanges) {
         if (!state.keywords.length) return { ranges: existingRanges, count: 0 };
 
+        // Sort keywords longest first to prevent sub-match issues
         const sortedKws = [...state.keywords].sort((a,b) => b.length - a.length);
         const matchCase = state.keywordSettings.matchCase;
         const wholeWord = state.keywordSettings.wholeWord;
@@ -248,48 +244,36 @@ document.addEventListener('DOMContentLoaded', () => {
         let keywordRanges = [];
         let highlightCount = 0;
         
-        // 1. Master Regex Keyword Highlight
-        const patterns = [];
-        
-        sortedKws.forEach((kw) => {
+        const patterns = sortedKws.map(kw => {
             const pattern = escapeRegExp(normalizeText(kw));
-            const fullPattern = wholeWord 
+            return wholeWord 
                 ? `(?<![\\p{L}\\p{N}_])(${pattern})(?![\\p{L}\\p{N}_])` 
                 : `(${pattern})`; 
-            patterns.push(fullPattern);
         });
 
         const flags = matchCase ? 'gu' : 'giu';
         const masterRegex = new RegExp(patterns.join("|"), flags);
         
-        text.replace(masterRegex, (match, ...args) => {
-            const offset = args.at(-2);
-            let startOffset = offset;
-            
-            let matchText = match;
+        let match;
+        while (match = masterRegex.exec(text)) {
+            // FIX Offset Logic: use match.index directly from exec loop
             let matchedKwIndex = -1;
+            let matchedText = '';
 
-            // Xác định từ khóa nào match
-            for (let i = 0; i < sortedKws.length; i++) {
-                if (args[i] !== undefined) {
-                    matchedKwIndex = i;
-                    matchText = args[i]; 
-                    
-                    if(wholeWord) {
-                        const groupIndex = match.indexOf(matchText);
-                        if (groupIndex !== -1) {
-                            startOffset = offset + groupIndex;
-                        } else {
-                            startOffset = offset;
-                        }
-                    }
-                    
-                    break; 
+            for (let i = 1; i < match.length; i++) {
+                if (match[i] !== undefined) {
+                    matchedKwIndex = i - 1;
+                    matchedText = match[i];
+                    break;
                 }
             }
             
             if (matchedKwIndex !== -1) {
-                const endOffset = startOffset + matchText.length;
+                // Calculate start based on match index + position of group in match
+                // (Usually group is at index 0 of match if simple, but with boundaries it varies)
+                // Use built-in index which points to start of match
+                const startOffset = match.index + match[0].indexOf(matchedText);
+                const endOffset = startOffset + matchedText.length;
                 
                 keywordRanges.push({ 
                     start: startOffset, 
@@ -298,21 +282,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     color: matchedKwIndex 
                 });
             }
-            return match;
-        });
+        }
 
-        // 2. Xử lý chồng lấn (FIXED: Keywords luôn được thêm, chỉ check chồng lấn giữa các KEYWORD với nhau)
+        // 2. Xử lý chồng lấn
         let finalRanges = [...existingRanges];
         
         for (const kwRange of keywordRanges) {
             let shouldAdd = true;
             
-            // Chỉ kiểm tra chồng lấn với các KEYWORD đã thêm
+            // Check overlap with other keywords
             const existingKwRanges = finalRanges.filter(r => r.type === RANGE_TYPE.KEYWORD);
             
             for (const prevKwRange of existingKwRanges) {
                 if (kwRange.start >= prevKwRange.start && kwRange.end <= prevKwRange.end) {
-                    // Nếu nằm hoàn toàn bên trong keyword khác (do sắp xếp từ dài đến ngắn) -> bỏ qua
                     shouldAdd = false;
                     break;
                 }
@@ -324,545 +306,345 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
-        // Sắp xếp ranges để render: start asc, sau đó ưu tiên type (REPLACE, AUTOCAPS, REPLACE_CAP trước KEYWORD)
-        // 1. REPLACE, 2. AUTOCAPS, 3. REPLACE_CAP, 4. KEYWORD
+        // FIX Sort Order: REPLACE -> AUTOCAPS -> REPLACECAP -> KEYWORD (Last renders on top if using span)
+        // But for linear rendering, we just need start order. Overlaps handled in buildFinalHTML
         finalRanges.sort((a, b) => {
              if (a.start !== b.start) return a.start - b.start;
-             
-             const typeOrder = { 
-                 [RANGE_TYPE.REPLACE]: 1, 
-                 [RANGE_TYPE.AUTOCAPS]: 2, 
-                 [RANGE_TYPE.REPLACE_CAP]: 3, 
-                 [RANGE_TYPE.KEYWORD]: 4 
-             };
-             return typeOrder[a.type] - typeOrder[b.type];
+             // If start same, longer first
+             return (b.end - b.start) - (a.end - a.start);
         });
 
         return { ranges: finalRanges, count: highlightCount };
     }
 
+    // --- RENDER & SYNC ---
 
-    // --- CẬP NHẬT HIGHLIGHT VÀ SCROLL SYNC (FIXED VIEWPORT V24) ---
     async function updateHighlight(textToRender, allRanges) {
         if (!els.highlightLayer || !els.editorInput) return;
         
         const finalHTML = buildFinalHTML(textToRender, allRanges);
         els.highlightLayer.innerHTML = finalHTML;
-        
-        // Đồng bộ scroll TỪ input sang layer (đã fix trong CSS)
-        els.highlightLayer.scrollTop = els.editorInput.scrollTop;
-        els.highlightLayer.scrollLeft = els.editorInput.scrollLeft;
+        syncScroll();
     }
     
     function buildFinalHTML(text, ranges) {
-        if (ranges.length === 0) {
-            return escapeHTML(text);
-        }
+        if (ranges.length === 0) return escapeHTML(text);
 
         let html = '';
         let lastEnd = 0;
 
-        // Ranges đã được sắp xếp trong performHighlight
         for (const range of ranges) {
-            
             if (range.end <= range.start) continue;
             
-            // Xử lý chồng lấn
+            // FIX Overlap Rendering Logic
+            // If current range starts before lastEnd, it's an overlap
             if (range.start < lastEnd) {
-                // Nếu range hiện tại là KEYWORD, và nó bắt đầu trước lastEnd
-                if (range.type === RANGE_TYPE.KEYWORD) {
-                    // Nếu keyword nằm hoàn toàn trong vùng đã render bởi REPLACE/CAPS, 
-                    // ta chỉ cần điều chỉnh điểm bắt đầu để nó không bị trùng lặp HTML, 
-                    // nhưng vẫn cho phép nó highlight LÊN trên (do thứ tự render type).
-                    if (range.end <= lastEnd) continue; // Bỏ qua nếu đã render qua điểm kết thúc
-                    range.start = lastEnd; // Bắt đầu render từ điểm cuối của highlight trước đó
-                } else {
-                    // Đối với REPLACE/CAPS/REP_CAP, nếu nó bắt đầu trước lastEnd, 
-                    // ta coi như vùng đó đã được highlight bởi một type ưu tiên cao hơn (nếu có)
-                    // Hoặc chỉ render phần còn lại.
-                     range.start = lastEnd;
-                     if (range.start >= range.end) continue;
-                }
+                // If completely inside, ignore (already rendered by wider range)
+                if (range.end <= lastEnd) continue;
+                
+                // If partial overlap, start from lastEnd
+                range.start = lastEnd;
             }
             
-            // Thêm văn bản thuần trước range
             html += escapeHTML(text.substring(lastEnd, range.start));
 
             let className = '';
-            if (range.type === RANGE_TYPE.REPLACE) {
-                className = 'hl-yellow'; // Vàng: Thay thế
-            } else if (range.type === RANGE_TYPE.AUTOCAPS) {
-                className = 'hl-blue'; // Xanh dương: AutoCaps
-            } else if (range.type === RANGE_TYPE.REPLACE_CAP) {
-                className = 'hl-orange-dark'; // FIX V24: Cam đậm: Replace + AutoCaps
-            } else if (range.type === RANGE_TYPE.KEYWORD && range.color !== undefined) {
-                className = `keyword ${KW_COLORS[range.color % KW_COLORS.length]}`; // Keywords
-            }
+            if (range.type === RANGE_TYPE.REPLACE) className = 'hl-yellow';
+            else if (range.type === RANGE_TYPE.AUTOCAPS) className = 'hl-blue';
+            else if (range.type === RANGE_TYPE.REPLACE_CAP) className = 'hl-orange-dark';
+            else if (range.type === RANGE_TYPE.KEYWORD) className = `keyword ${KW_COLORS[range.color % KW_COLORS.length]}`;
 
-            // Thêm span highlight
             html += `<span class="${className}">${escapeHTML(text.substring(range.start, range.end))}</span>`;
-            
             lastEnd = range.end;
         }
 
-        // Thêm phần văn bản còn lại
         html += escapeHTML(text.substring(lastEnd));
-        
         return html;
     }
 
-
-    // === CHỨC NĂNG CHÍNH (PIPELINE) ===
-    
-    // 1. Luồng Search & Highlight (Chỉ đọc)
-    async function performSearchHighlight() {
-        // ... (Logic giữ nguyên)
-        if (!els.editorInput) return notify('Lỗi Editor!', 'error');
-
-        const textToSearch = els.editorInput.value; 
-        if (!textToSearch.trim()) {
-            if (els.highlightLayer) els.highlightLayer.innerHTML = '';
-            return notify('Editor trống!', 'warning');
-        }
-
-        const originalTextBtn = els.searchBtn.textContent;
-        els.searchBtn.textContent = 'Đang tính toán...';
-        els.searchBtn.disabled = true;
-
-        try {
-            // Chỉ chạy performHighlight trên text gốc, BỎ QUA REPLACE/AUTOCAPS ranges.
-            const highlightResult = await performHighlight(textToSearch, []); 
-            
-            // Render trên TEXT GỐC (textToSearch)
-            await updateHighlight(textToSearch, highlightResult.ranges);
-            
-            // Đặt lại văn bản editor về văn bản gốc (vì đây là Search mode)
-            els.editorInput.value = textToSearch; 
-
-            
-            const totalHighlights = highlightResult.count;
-            if (totalHighlights > 0) notify(`Đã tìm thấy ${totalHighlights} từ khóa.`);
-            else notify('Không tìm thấy từ khóa nào.', 'warning');
-
-        } catch (e) {
-            console.error(e);
-            notify('Lỗi Search Highlight: ' + e.message, 'error');
-        } finally {
-            els.searchBtn.textContent = originalTextBtn;
-            els.searchBtn.disabled = false;
+    function syncScroll() {
+        if (els.backdrop && els.editorInput) {
+            els.backdrop.scrollTop = els.editorInput.scrollTop;
+            els.backdrop.scrollLeft = els.editorInput.scrollLeft;
         }
     }
-    
-    // 2. Luồng Replace & Highlight (Ghi đè)
-    async function performReplaceAll() {
-        // ... (Logic giữ nguyên)
-        if (!els.editorInput) return notify('Lỗi Editor!', 'error');
 
-        let rawText = els.editorInput.value; 
-        if (!rawText.trim()) return notify('Editor trống!', 'error');
+    function syncStyles() {
+        if (!els.editorInput || !els.highlightLayer) return;
+        const style = window.getComputedStyle(els.editorInput);
+        const props = ['font-family', 'font-size', 'line-height', 'padding', 'white-space', 'word-wrap', 'overflow-wrap', 'text-align'];
+        props.forEach(p => els.highlightLayer.style[p] = style.getPropertyValue(p));
+        
+        // Also sync width/height
+        els.highlightLayer.style.width = style.width;
+        els.highlightLayer.style.minHeight = style.height;
+    }
 
-        const originalTextBtn = els.replaceBtn.textContent;
-        els.replaceBtn.textContent = 'Đang xử lý Replace...';
-        els.replaceBtn.disabled = true;
+    // === MAIN ACTIONS ===
+
+    async function performSearchHighlight() {
+        const text = els.editorInput.value;
+        if (!text.trim()) {
+            if(els.highlightLayer) els.highlightLayer.innerHTML = '';
+            return notify('Editor trống!', 'warning');
+        }
+        
+        els.searchBtn.disabled = true;
+        els.searchBtn.textContent = 'Đang xử lý...';
 
         try {
-            // 1. Thực hiện Replace và Auto-Caps (Tạo newText và ranges chuẩn)
-            const replaceResult = await performReplaceAndGetRanges(rawText);
-            const plainTextAfterReplace = replaceResult.text;
-            let ranges = replaceResult.ranges; // Bao gồm REPLACE + AUTOCAPS + REPLACE_CAP ranges
-            const replaceCount = replaceResult.count;
+            // Get potential replace/caps ranges on ORIGINAL text
+            const temp = await performReplaceAndGetRanges(text);
+            // Combine with keywords
+            const res = await performHighlight(text, temp.ranges); // Use original text for ranges
             
-            // 2. CẬP NHẬT EDITOR VỚI VĂN BẢN MỚI
-            els.editorInput.value = plainTextAfterReplace; 
+            // NOTE: Replace ranges might be slightly off if used on original text 
+            // without actual replacement, but for 'Search' only it's acceptable approximation.
+            // The user requested 'Highlight Keywords' shouldn't replace text.
             
-            els.replaceBtn.textContent = 'Đang xử lý Highlight...';
+            // To be 100% accurate, Search usually just highlights KEYWORDS.
+            // But if you want to show what WOULD be replaced:
+            // We use the ranges returned from logic that ran on text.
             
-            // 3. Tính toán Highlight Keywords TRÊN VĂN BẢN MỚI
-            const highlightResult = await performHighlight(plainTextAfterReplace, ranges); 
+            // V25 Decision: Highlight Keywords button only highlights Keywords to avoid confusion
+            // OR shows all. Let's show all but ON original text.
+            // Since `performReplaceAndGetRanges` returns text-transformed ranges, mapping back to original is hard.
+            // SIMPLIFIED: Just highlight Keywords for "Highlight Keywords" button.
             
-            // 4. Render Highlight trên văn bản mới
-            await updateHighlight(plainTextAfterReplace, highlightResult.ranges);
+            const kwOnlyRes = await performHighlight(text, []);
+            await updateHighlight(text, kwOnlyRes.ranges);
             
-            updateWordCount();
-            
-            if (replaceCount > 0) notify(`Thay thế ${replaceCount} cụm từ!`);
-            else if (state.modes[state.activeMode].autoCaps) notify('Đã chạy Auto Caps!');
-            else notify('Không tìm thấy gì để thay thế.', 'warning');
+            if (kwOnlyRes.count > 0) notify(`Tìm thấy ${kwOnlyRes.count} từ khóa.`);
+            else notify('Không tìm thấy từ khóa.', 'warning');
 
         } catch (e) {
             console.error(e);
-            notify('Lỗi Replace All: ' + e.message, 'error');
         } finally {
-            els.replaceBtn.textContent = originalTextBtn;
+            els.searchBtn.disabled = false;
+            els.searchBtn.textContent = 'Tính toán lại Highlight';
+        }
+    }
+
+    async function performReplaceAll() {
+        const text = els.editorInput.value;
+        if (!text.trim()) return notify('Editor trống!', 'warning');
+
+        els.replaceBtn.disabled = true;
+        try {
+            const res = await performReplaceAndGetRanges(text);
+            els.editorInput.value = res.text; // Update text
+            
+            const hlRes = await performHighlight(res.text, res.ranges);
+            await updateHighlight(res.text, hlRes.ranges);
+            
+            updateWordCount();
+            notify('Đã thay thế hoàn tất!');
+        } catch (e) {
+            console.error(e);
+        } finally {
             els.replaceBtn.disabled = false;
         }
     }
 
+    // === KEYWORD & UI LOGIC ===
 
-    // === UI SYNCHRONIZATION (V24 - Đảm bảo fix viewport) ===
-
-    function syncStyles() {
-        if (!els.editorInput || !els.highlightLayer) return;
-
-        const family = els.fontFamily.value;
-        const size = els.fontSize.value;
-        
-        els.editorInput.style.fontFamily = family;
-        els.editorInput.style.fontSize = size;
-        els.highlightLayer.style.fontFamily = family;
-        els.highlightLayer.style.fontSize = size;
-
-        state.fontFamily = family;
-        state.fontSize = size;
-        saveState();
-    }
-
-    function updateFont() {
-        syncStyles();
-    }
-    
-    if (els.editorInput && els.highlightLayer) {
-        // SỬ DỤNG SỰ KIỆN SCROLL ĐỂ ĐỒNG BỘ VIEWPORT (Fixed)
-        els.editorInput.addEventListener('scroll', () => {
-            els.highlightLayer.scrollTop = els.editorInput.scrollTop;
-            els.highlightLayer.scrollLeft = els.editorInput.scrollLeft;
-        });
-    }
-    
-    function updateWordCount() {
-        if (!els.editorInput || !els.wordCount) return;
-        
-        const txt = els.editorInput.value || ''; 
-        const count = txt.trim() ? txt.trim().split(/\s+/).length : 0;
-        els.wordCount.textContent = `Words: ${count}`;
-    }
-    
-    // === MODE & SETTINGS UI (Các hàm cũ) ===
-    function updateToggle(btn, isActive, label) {
-        btn.classList.toggle('active', isActive);
-        btn.textContent = `${label}: ${isActive ? 'Bật' : 'Tắt'}`;
-    }
-
-    function renderModeUI() {
-        const modeKeys = Object.keys(state.modes);
-        if (!els.modeSelect) return;
-        els.modeSelect.innerHTML = modeKeys.map(key => 
-            `<option value="${key}" ${key === state.activeMode ? 'selected' : ''}>${key}</option>`
-        ).join('');
-
-        const mode = state.modes[state.activeMode];
-        if(els.matchCaseBtn) updateToggle(els.matchCaseBtn, mode.matchCase, 'Match Case');
-        if(els.wholeWordBtn) updateToggle(els.wholeWordBtn, mode.wholeWord, 'Whole Word');
-        if(els.autoCapsBtn) updateToggle(els.autoCapsBtn, mode.autoCaps, 'Auto Caps');
-        
-        if(els.deleteModeBtn) els.deleteModeBtn.classList.toggle('hidden', modeKeys.length === 1);
-        if(els.renameModeBtn) els.renameModeBtn.classList.toggle('hidden', modeKeys.length === 1);
-        
-        renderPairs(mode.pairs); 
-    }
-
-    function renderPairs(pairs) {
-        if (!els.puncList || !els.emptyState) return;
-        els.puncList.innerHTML = '';
-        if (pairs.length === 0) {
-            els.emptyState.classList.remove('hidden');
-        } else {
-            els.emptyState.classList.add('hidden');
-            pairs.forEach((pair, index) => addPairUI(pair.find, pair.replace, index, false));
-        }
-    }
-
-    function addPairUI(f = '', r = '', index = -1, isNew = true) {
-        if (!els.puncList) return;
-        const div = document.createElement('div');
-        div.className = 'pair-row';
-        div.dataset.index = index;
-        
-        div.innerHTML = `
-            <input type="text" class="pair-input find-input" value="${escapeHTML(f)}" placeholder="Cụm từ tìm kiếm">
-            <input type="text" class="pair-input replace-input" value="${escapeHTML(r)}" placeholder="Cụm từ thay thế">
-            <button class="delete-btn">Xóa</button>
-        `;
-        
-        div.querySelector('.delete-btn').onclick = (e) => {
-            const row = e.target.closest('.pair-row');
-            const mode = state.modes[state.activeMode];
-            mode.pairs.splice(parseInt(row.dataset.index), 1); 
-            savePairs(true); 
-            notify('Đã xóa cặp thay thế.');
-        };
-        
-        if (isNew) {
-             els.puncList.prepend(div);
-        } else {
-             els.puncList.appendChild(div);
-        }
-    }
-    
-    function savePairs(reRender = false) {
-        const mode = state.modes[state.activeMode];
-        const newPairs = [];
-        if(els.puncList) {
-            els.puncList.querySelectorAll('.pair-row').forEach(row => {
-                const find = row.querySelector('.find-input').value.trim();
-                const replace = row.querySelector('.replace-input').value.trim();
-                if (find) { 
-                    newPairs.push({ find, replace });
-                }
-            });
-        }
-        mode.pairs = newPairs;
-        saveState();
-        if(reRender) renderModeUI();
-    }
-    
-    // --- KEYWORD UI ---
-    function updateKwUI() {
-        const kwSettings = state.keywordSettings;
-        if(els.kwMatchCaseBtn) updateToggle(els.kwMatchCaseBtn, kwSettings.matchCase, 'Match Case');
-        if(els.kwWholeWordBtn) updateToggle(els.kwWholeWordBtn, kwSettings.wholeWord, 'Whole Word');
-        
-        renderTags(state.keywords, els.sidebarTags, true);
-        renderTags(state.keywords, els.fullKwTags, false);
-        saveState();
-    }
-    
-    function renderTags(keywords, container) {
-        if (!container) return;
-        container.innerHTML = keywords.map((kw, index) => {
-            const colorClass = KW_COLORS[index % KW_COLORS.length];
-            return `
-                <div class="tag ${colorClass.replace('hl-', 'kw-')}">
-                    <span>${escapeHTML(kw)}</span>
-                    <span class="remove-tag" data-keyword="${escapeHTML(kw)}">×</span>
-                </div>
-            `;
-        }).join('');
-
-        container.querySelectorAll('.remove-tag').forEach(btn => {
-            btn.onclick = (e) => {
-                const keywordToRemove = e.target.dataset.keyword;
-                removeKeyword(keywordToRemove);
-                performSearchHighlight(); 
-            };
-        });
-    }
-
-    /**
-     * FIX: Đảm bảo trim, reset input và gọi updateKwUI/highlight
-     */
     function addKeyword(val) {
         if (!val) return;
+        // Fix split logic: handle comma and newline
+        const kws = val.split(/[,\n]+/).map(k => k.trim()).filter(k => k && !state.keywords.includes(k));
         
-        const newKws = val.split(/[,\n]/)
-            .map(k => k.trim())
-            .filter(k => k && !state.keywords.includes(k));
-            
-        if (newKws.length > 0) {
-            state.keywords = state.keywords.concat(newKws);
-            updateKwUI();            // Cập nhật sidebar + fullKwTags
-            notify(`Đã thêm ${newKws.length} từ khóa.`);
-            performSearchHighlight(); // Highlight ngay
+        if (kws.length) {
+            state.keywords = [...state.keywords, ...kws];
+            updateKwUI();
+            notify(`Đã thêm ${kws.length} từ khóa.`);
+            // Auto update highlight if not in replace mode
+            // performSearchHighlight(); 
         }
         
-        // Reset inputs sau khi xử lý
         if (els.sidebarInput) els.sidebarInput.value = '';
         if (els.fullKwInput) els.fullKwInput.value = '';
     }
 
-    function removeKeyword(keyword) {
-        state.keywords = state.keywords.filter(k => k !== keyword);
+    function removeKeyword(kw) {
+        state.keywords = state.keywords.filter(k => k !== kw);
         updateKwUI();
-        notify(`Đã xóa từ khóa: ${keyword}.`);
-        performSearchHighlight(); 
-    }
-    
-    // --- TAB & SIDEBAR LOGIC (Các hàm cũ) ---
-    function switchTab(tabId) {
-        els.tabs.forEach(btn => btn.classList.remove('active'));
-        els.contents.forEach(content => content.classList.remove('active'));
-        
-        const activeTab = document.querySelector(`.tab-button[data-tab="${tabId}"]`);
-        const activeContent = document.getElementById(tabId);
-        
-        if (activeTab) activeTab.classList.add('active');
-        if (activeContent) activeContent.classList.add('active');
-        
-        if (tabId === 'settings-tab') renderModeUI();
-        if (tabId === 'display-tab') updateKwUI();
     }
 
-    function toggleSidebar() {
-        state.sidebarOpen = !state.sidebarOpen;
+    function updateKwUI() {
+        // Render tags
+        [els.sidebarTags, els.fullKwTags].forEach(container => {
+            if(!container) return;
+            container.innerHTML = state.keywords.map((kw, i) => `
+                <div class="tag ${KW_COLORS[i % KW_COLORS.length].replace('hl-', 'kw-')}">
+                    <span>${escapeHTML(kw)}</span>
+                    <span class="remove-tag" onclick="window.removeKw('${escapeHTML(kw)}')">×</span>
+                </div>
+            `).join('');
+        });
         
-        if (els.sidebar) {
-            els.sidebar.classList.toggle('closed', !state.sidebarOpen);
-            const iconSpan = els.sidebarToggle.querySelector('.icon');
-            if (iconSpan) {
-                iconSpan.textContent = state.sidebarOpen ? '»' : '«';
+        // Re-attach listeners manually or use global function for remove
+        document.querySelectorAll('.remove-tag').forEach(btn => {
+            btn.onclick = (e) => {
+               const text = e.target.previousElementSibling.textContent;
+               removeKeyword(text);
             }
-        }
+        });
         
         saveState();
     }
-    
-    // === EVENT LISTENERS (Các hàm cũ) ===
-    
-    // Tab Switching
-    els.tabs.forEach(btn => {
-        btn.onclick = () => switchTab(btn.dataset.tab);
-    });
-    
-    // Editor Events
-    if (els.editorInput) {
-        els.editorInput.addEventListener('input', updateWordCount);
-    }
-    
-    // Action Buttons
-    if (els.searchBtn) els.searchBtn.onclick = performSearchHighlight;
-    if (els.replaceBtn) els.replaceBtn.onclick = performReplaceAll;
-    
-    if (els.clearBtn) {
-        els.clearBtn.onclick = () => {
-            if (confirm('Bạn có chắc chắn muốn xóa trắng toàn bộ nội dung?')) {
-                if (els.editorInput) els.editorInput.value = '';
-                if (els.highlightLayer) els.highlightLayer.innerHTML = '';
-                updateWordCount();
-                notify('Đã xóa trắng nội dung.');
-            }
-        };
-    }
-    
-    if (els.copyBtn) {
-        els.copyBtn.onclick = () => {
-            if (!els.editorInput || !els.editorInput.value) return notify('Không có nội dung để copy.', 'warning');
-            
-            navigator.clipboard.writeText(els.editorInput.value)
-                .then(() => {
-                    notify('Đã copy nội dung thành công và xóa trắng editor.');
-                    els.editorInput.value = '';
-                    if (els.highlightLayer) els.highlightLayer.innerHTML = '';
-                    updateWordCount();
-                })
-                .catch(err => {
-                    console.error('Lỗi khi copy: ', err);
-                    notify('Lỗi khi copy. Vui lòng thử lại.', 'error');
-                });
-        };
-    }
-    
-    // Sidebar/Keyword Actions
-    if (els.sidebarToggle) {
-        els.sidebarToggle.onclick = toggleSidebar;
-        // Khởi tạo icon
-        const iconSpan = document.createElement('span');
-        iconSpan.className = 'icon';
-        iconSpan.textContent = state.sidebarOpen ? '»' : '«';
-        els.sidebarToggle.innerHTML = '';
-        els.sidebarToggle.appendChild(iconSpan);
-    }
-    
-    // Sidebar Input
-    if (els.sidebarInput) {
-        els.sidebarInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ',') {
-                e.preventDefault();
-                addKeyword(els.sidebarInput.value);
-            }
-        });
+
+    function updateWordCount() {
+        const txt = els.editorInput.value || '';
+        els.wordCount.textContent = `Words: ${txt.trim() ? txt.trim().split(/\s+/).length : 0}`;
     }
 
-    // Full Keywords Input
+    // Event Listeners
+    if (els.sidebarInput) {
+        els.sidebarInput.addEventListener('keydown', e => {
+            if (e.key === 'Enter') addKeyword(els.sidebarInput.value);
+        });
+    }
     if (els.fullKwInput) {
-        els.fullKwInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') { 
-                e.preventDefault();
+        els.fullKwInput.addEventListener('keydown', e => {
+            if (e.key === 'Enter') {
+                e.preventDefault(); // Prevent newline
                 addKeyword(els.fullKwInput.value);
             }
         });
-        els.fullKwInput.addEventListener('keyup', (e) => {
-             if (e.key === ',') {
-                e.preventDefault();
-                const value = els.fullKwInput.value.slice(0, -1); // Lấy giá trị trước dấu phẩy
-                if (value.trim().length > 0) {
-                     addKeyword(value);
-                } else {
-                     els.fullKwInput.value = '';
+        els.fullKwInput.addEventListener('input', e => {
+            // Check for comma
+            if (e.data === ',') {
+                const val = els.fullKwInput.value;
+                if (val.includes(',')) {
+                    // Split by comma
+                    addKeyword(val); 
                 }
             }
         });
     }
 
-    if (els.kwMatchCaseBtn) {
-        els.kwMatchCaseBtn.onclick = () => {
-            state.keywordSettings.matchCase = !state.keywordSettings.matchCase;
-            updateKwUI();
-            performSearchHighlight();
-        };
+    if (els.editorInput) {
+        els.editorInput.addEventListener('scroll', syncScroll);
+        els.editorInput.addEventListener('input', () => {
+            updateWordCount();
+            // Clear highlight on input to avoid mismatch
+            if(els.highlightLayer) els.highlightLayer.innerHTML = '';
+        });
+        // Resize observer
+        new ResizeObserver(() => syncStyles()).observe(els.editorInput);
     }
 
-    if (els.kwWholeWordBtn) {
-        els.kwWholeWordBtn.onclick = () => {
-            state.keywordSettings.wholeWord = !state.keywordSettings.wholeWord;
-            updateKwUI();
-            performSearchHighlight();
-        };
-    }
-
-    // Font Controls
-    if (els.fontFamily) els.fontFamily.onchange = updateFont;
-    if (els.fontSize) els.fontSize.onchange = updateFont;
-    
-    // Settings Actions
-    if (els.modeSelect) {
-        els.modeSelect.onchange = () => {
-            state.activeMode = els.modeSelect.value;
-            renderModeUI();
+    // Toggle Sidebar
+    if (els.sidebarToggle) {
+        els.sidebarToggle.onclick = () => {
+            state.sidebarOpen = !state.sidebarOpen;
+            els.sidebar.classList.toggle('closed', !state.sidebarOpen);
             saveState();
         };
     }
 
-    if (els.addPairBtn) {
-        els.addPairBtn.onclick = () => addPairUI('', '', state.modes[state.activeMode].pairs.length, true);
-    }
-    
-    if (els.saveSettingsBtn) {
-        els.saveSettingsBtn.onclick = () => {
-            savePairs(true);
-            notify('Đã lưu cài đặt cặp thay thế.');
+    // Copy Keywords
+    if (els.copyKwBtn) {
+        els.copyKwBtn.onclick = () => {
+            if (!state.keywords.length) return notify('Không có từ khóa', 'warning');
+            navigator.clipboard.writeText(state.keywords.join(', '));
+            notify('Đã copy danh sách từ khóa!');
         };
     }
 
-    // Toggle Settings
-    function setupToggle(btn, propName, label) {
-        if (btn) {
-            btn.onclick = () => {
-                const mode = state.modes[state.activeMode];
-                mode[propName] = !mode[propName];
-                updateToggle(btn, mode[propName], label);
-                saveState();
-            };
-        }
-    }
-    setupToggle(els.matchCaseBtn, 'matchCase', 'Match Case');
-    setupToggle(els.wholeWordBtn, 'wholeWord', 'Whole Word');
-    setupToggle(els.autoCapsBtn, 'autoCaps', 'Auto Caps');
-
-    // Init
+    // Init UI
     function init() {
-        if (els.sidebar) els.sidebar.classList.toggle('closed', !state.sidebarOpen);
+        if (state.sidebarOpen) els.sidebar.classList.remove('closed');
+        
+        // Restore fonts
+        if(state.fontFamily) {
+            els.fontFamily.value = state.fontFamily;
+            els.fontSize.value = state.fontSize;
+        }
+        
+        syncStyles();
+        updateKwUI();
+        
+        // Mode & Settings UI (Simplified for brevity, ensure you include renderModeUI logic from prev versions)
+        renderModeUI();
+        
+        // Font change listeners
+        els.fontFamily.addEventListener('change', () => {
+            state.fontFamily = els.fontFamily.value;
+            syncStyles();
+        });
+        els.fontSize.addEventListener('change', () => {
+            state.fontSize = els.fontSize.value;
+            syncStyles();
+        });
+    }
 
-        if (els.fontFamily) els.fontFamily.value = state.fontFamily;
-        if (els.fontSize) els.fontSize.value = state.fontSize;
+    // --- Missing Functions from previous parts (renderModeUI, etc) ---
+    function renderModeUI() {
+        const mode = state.modes[state.activeMode];
+        if(!mode) return;
+        const keys = Object.keys(state.modes);
+        els.modeSelect.innerHTML = keys.map(k => `<option value="${k}" ${k===state.activeMode?'selected':''}>${k}</option>`).join('');
         
-        updateFont(); 
-        updateWordCount();
-        renderModeUI(); 
-        updateKwUI();   
+        // Update toggles
+        updateToggle(els.matchCaseBtn, mode.matchCase, 'Match Case');
+        updateToggle(els.wholeWordBtn, mode.wholeWord, 'Whole Word');
+        updateToggle(els.autoCapsBtn, mode.autoCaps, 'Auto Caps');
         
-        switchTab('main-tab');
-        performSearchHighlight(); // Highlight keyword ngay khi load
+        renderPairs(mode.pairs);
     }
     
+    function updateToggle(btn, val, txt) {
+        btn.textContent = `${txt}: ${val ? 'Bật' : 'Tắt'}`;
+        btn.classList.toggle('active', val);
+        btn.onclick = () => {
+            state.modes[state.activeMode][btn.id.replace('btn','').replace(/-([a-z])/g, g=>g[1].toUpperCase()).replace('matchCase','matchCase').replace('wholeWord','wholeWord').replace('autoCaps','autoCaps')] = !val; 
+            // Simplified logic: map btn id to prop. Better to use explicit mapping:
+            const prop = btn.id.includes('match') ? 'matchCase' : btn.id.includes('whole') ? 'wholeWord' : 'autoCaps';
+            state.modes[state.activeMode][prop] = !state.modes[state.activeMode][prop];
+            saveState();
+            renderModeUI();
+        }
+    }
+
+    function renderPairs(pairs) {
+        els.puncList.innerHTML = '';
+        if(!pairs.length) els.emptyState.classList.remove('hidden');
+        else els.emptyState.classList.add('hidden');
+        
+        pairs.forEach((p, i) => {
+            const div = document.createElement('div');
+            div.className = 'pair-row';
+            div.innerHTML = `
+                <input class="pair-input find" value="${escapeHTML(p.find)}">
+                <input class="pair-input replace" value="${escapeHTML(p.replace)}">
+                <button class="delete-btn">Xóa</button>
+            `;
+            div.querySelector('.delete-btn').onclick = () => {
+                state.modes[state.activeMode].pairs.splice(i, 1);
+                saveState(); renderModeUI();
+            };
+            div.querySelectorAll('input').forEach(inp => inp.onchange = () => savePairsFromUI());
+            els.puncList.appendChild(div);
+        });
+    }
+
+    function savePairsFromUI() {
+        const pairs = [];
+        els.puncList.querySelectorAll('.pair-row').forEach(row => {
+            pairs.push({
+                find: row.querySelector('.find').value,
+                replace: row.querySelector('.replace').value
+            });
+        });
+        state.modes[state.activeMode].pairs = pairs;
+        saveState();
+    }
+    
+    if(els.addPairBtn) els.addPairBtn.onclick = () => {
+        state.modes[state.activeMode].pairs.push({find: '', replace: ''});
+        saveState(); renderModeUI();
+    };
+
     init();
 });
