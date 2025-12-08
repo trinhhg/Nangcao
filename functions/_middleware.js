@@ -127,8 +127,8 @@ function renderLoginPage(errorMsg, isError) {
         Lấy mật khẩu xác minh free tại: <a href="https://t.me/trinhhg57" target="_blank">t.me/trinhhg57</a>
       </div>
       <div class="donate-box">
-        <span class="donate-label">DON@TE (MOMO/BANK)</span>
-        <div class="donate-details">MB BANK - TRINH THI XUAN HUONG<br>0917678211</div>
+        <span class="donate-label">DON@TE (MOMO/MB BANK)</span>
+        <div class="donate-details">TRINH THI XUAN HUONG<br>0917678211</div>
       </div>
     </div>
   </div>
