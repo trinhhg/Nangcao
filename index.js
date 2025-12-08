@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     // === CONFIG & STATE ===
-    const STORAGE_KEY = 'trinh_hg_pro_v29_complete'; 
+    const STORAGE_KEY = 'trinh_hg_pro_v31_final'; 
     
     const RANGE_TYPE = {
         REPLACE: 'rep',
@@ -9,7 +9,6 @@ document.addEventListener('DOMContentLoaded', () => {
         KEYWORD: 'kw'
     };
     
-    // Màu keywords cập nhật theo CSS mới
     const KW_COLORS = ['hl-pink', 'hl-green', 'hl-orange', 'hl-purple', 'hl-red']; 
     
     const defaultState = {
@@ -29,6 +28,10 @@ document.addEventListener('DOMContentLoaded', () => {
         state.modes = defaultState.modes;
         state.activeMode = 'Mặc định';
     }
+
+    // NEW: Trạng thái tạm thời cho Replace Ranges
+    let cachedReplaceRanges = [];
+    let lastTextLength = 0;
 
     // === DOM ELEMENTS ===
     const els = {
@@ -121,7 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // === CORE LOGIC ===
-    async function performReplaceAndGetRanges(rawText) {
+    function performReplaceAndGetRanges(rawText) {
         const mode = state.modes[state.activeMode];
         const rules = mode.pairs.filter(p => p.find && p.find.trim());
         let processedText = "";
@@ -189,7 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return { text: processedText, ranges, repCount: replaceCount, acCount: autoCapsCount };
     }
     
-    async function performHighlight(text, existingRanges) {
+    function performHighlight(text, existingRanges) {
         if (!state.keywords.length) return { ranges: existingRanges, count: 0 };
         const sortedKws = [...state.keywords].sort((a,b) => b.length - a.length);
         const matchCase = state.keywordSettings.matchCase;
@@ -293,14 +296,53 @@ document.addEventListener('DOMContentLoaded', () => {
         return html;
     }
 
+    // === NEW LOGIC: SHIFT RANGES ON INPUT ===
+    function shiftRanges(ranges, delta, editPos) {
+        if (ranges.length === 0) return [];
+        return ranges.map(r => {
+            if (r.end <= editPos) return r; // Range trước điểm sửa: Giữ nguyên
+            if (r.start >= editPos) { // Range sau điểm sửa: Dịch chuyển
+                return { ...r, start: r.start + delta, end: r.end + delta };
+            }
+            return null; // Range bị sửa đè lên: Xóa (hoặc có thể giữ nếu muốn)
+        }).filter(r => r !== null);
+    }
+
     // === ACTION HANDLERS ===
     function handleInput() {
         if (!els.editorInput) return;
-        const text = els.editorInput.value;
+        const newText = els.editorInput.value;
+        const delta = newText.length - lastTextLength;
+        const cursorPos = els.editorInput.selectionEnd;
+        
+        // Tính toán vị trí sửa đổi (tương đối)
+        // Nếu thêm: điểm sửa là cursor - delta
+        // Nếu xóa: điểm sửa là cursor
+        let editPos = delta > 0 ? cursorPos - delta : cursorPos;
+
+        // Cập nhật vị trí các range Replace cũ
+        if (cachedReplaceRanges.length > 0 && delta !== 0) {
+            cachedReplaceRanges = shiftRanges(cachedReplaceRanges, delta, editPos);
+        }
+        
+        lastTextLength = newText.length;
         updateWordCount();
-        performHighlight(text, []).then(res => {
-            updateHighlightPreserveCaret(text, res.ranges);
-        });
+
+        // Kết hợp Replace Ranges cũ + Keywords mới
+        const res = performHighlight(newText, cachedReplaceRanges);
+        updateHighlightPreserveCaret(newText, res.ranges);
+    }
+
+    // Xử lý sự kiện Paste để cuộn lên đầu
+    function handlePaste() {
+        // Dùng setTimeout để chạy sau khi trình duyệt paste xong
+        setTimeout(() => {
+             els.editorInput.scrollTop = 0;
+             els.highlightLayer.scrollTop = 0;
+             // Cập nhật lại length và highlight sau khi paste
+             lastTextLength = els.editorInput.value.length;
+             handleInput(); 
+        }, 0);
     }
 
     async function performSearchHighlight() {
@@ -310,8 +352,12 @@ document.addEventListener('DOMContentLoaded', () => {
             els.highlightLayer.innerHTML = ''; return notify('Editor trống!', 'warning');
         }
         els.searchBtn.disabled = true;
+        
+        // RESET highlight cũ khi ấn nút Search
+        cachedReplaceRanges = []; 
+
         try {
-            const highlightResult = await performHighlight(textToSearch, []); 
+            const highlightResult = performHighlight(textToSearch, []); 
             updateHighlightPreserveCaret(textToSearch, highlightResult.ranges);
             if (highlightResult.count > 0) notify(`Tìm thấy ${highlightResult.count} từ khóa.`);
             else notify('Không tìm thấy từ khóa nào.', 'warning');
@@ -325,18 +371,30 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!rawText.trim()) return notify('Editor trống!', 'error');
         els.replaceBtn.disabled = true;
         try {
-            const replaceResult = await performReplaceAndGetRanges(rawText);
-            els.editorInput.value = replaceResult.text; 
-            const highlightResult = await performHighlight(replaceResult.text, replaceResult.ranges); 
-            updateHighlightPreserveCaret(replaceResult.text, highlightResult.ranges);
+            const replaceResult = performReplaceAndGetRanges(rawText);
+            
+            // LOGIC QUAN TRỌNG: Chỉ cập nhật cachedReplaceRanges nếu có thay đổi
+            if (replaceResult.repCount > 0 || replaceResult.acCount > 0) {
+                cachedReplaceRanges = replaceResult.ranges;
+                els.editorInput.value = replaceResult.text;
+                lastTextLength = replaceResult.text.length;
+                
+                const highlightResult = performHighlight(replaceResult.text, cachedReplaceRanges); 
+                updateHighlightPreserveCaret(replaceResult.text, highlightResult.ranges);
+                
+                notify(`Thay: ${replaceResult.repCount}, AutoCaps: ${replaceResult.acCount}`);
+            } else {
+                // Không thay đổi gì: Giữ nguyên highlight cũ, chỉ highlight lại keywords trên text cũ
+                const highlightResult = performHighlight(rawText, cachedReplaceRanges);
+                updateHighlightPreserveCaret(rawText, highlightResult.ranges);
+                notify('Không có gì thay đổi.', 'warning');
+            }
             updateWordCount();
-            if (replaceResult.repCount > 0 || replaceResult.acCount > 0) notify(`Thay: ${replaceResult.repCount}, AutoCaps: ${replaceResult.acCount}`);
-            else notify('Không có gì thay đổi.', 'warning');
         } catch (e) { notify('Lỗi: ' + e.message, 'error'); } 
         finally { els.replaceBtn.disabled = false; }
     }
 
-    // === MODE MANAGEMENT (FIXED) ===
+    // === MODE MANAGEMENT ===
     function renderModeUI() {
         const modeKeys = Object.keys(state.modes);
         if (els.modeSelect) {
@@ -344,8 +402,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 `<option value="${key}" ${key === state.activeMode ? 'selected' : ''}>${key}</option>`
             ).join('');
         }
-        
-        // Show/Hide buttons based on mode
         const isDefault = state.activeMode === 'Mặc định';
         if(els.deleteModeBtn) els.deleteModeBtn.classList.toggle('hidden', isDefault);
         if(els.renameModeBtn) els.renameModeBtn.classList.toggle('hidden', isDefault);
@@ -370,7 +426,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
     }
-
     if (els.renameModeBtn) {
         els.renameModeBtn.onclick = () => {
             if (state.activeMode === 'Mặc định') return;
@@ -378,8 +433,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (newName && newName.trim() && newName !== state.activeMode) {
                 if (state.modes[newName]) return notify("Tên đã tồn tại!", "error");
                 const data = state.modes[state.activeMode];
-                state.modes[newName] = data; // Copy data
-                delete state.modes[state.activeMode]; // Delete old
+                state.modes[newName] = data; 
+                delete state.modes[state.activeMode]; 
                 state.activeMode = newName;
                 renderModeUI();
                 saveState();
@@ -387,7 +442,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
     }
-
     if (els.deleteModeBtn) {
         els.deleteModeBtn.onclick = () => {
             if (state.activeMode === 'Mặc định') return;
@@ -400,7 +454,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
     }
-
     if (els.modeSelect) {
         els.modeSelect.onchange = () => {
             state.activeMode = els.modeSelect.value;
@@ -492,6 +545,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Event Wiring
     if (els.editorInput) {
         els.editorInput.addEventListener('input', handleInput);
+        els.editorInput.addEventListener('paste', handlePaste); // NEW
         els.editorInput.addEventListener('scroll', () => {
             els.highlightLayer.scrollTop = els.editorInput.scrollTop;
             els.highlightLayer.scrollLeft = els.editorInput.scrollLeft;
@@ -581,7 +635,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (els.searchBtn) els.searchBtn.onclick = performSearchHighlight;
     if (els.replaceBtn) els.replaceBtn.onclick = performReplaceAll;
     
-    // NÚT CLEAR (Đã bỏ confirm theo yêu cầu)
+    // Clear btn with NO confirm
     if (els.clearBtn) els.clearBtn.onclick = () => { 
         els.editorInput.value = ''; 
         els.highlightLayer.innerHTML = ''; 
